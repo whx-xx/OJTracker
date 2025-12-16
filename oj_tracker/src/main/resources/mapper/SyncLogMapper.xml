@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hdc.rjxy.mapper.SyncLogMapper">
+
+    <insert id="insertJob">
+        INSERT INTO sync_job_log(job_type, status, start_time, trigger_source)
+        VALUES (#{jobType}, #{status}, #{startTime}, #{triggerSource})
+    </insert>
+
+    <select id="lastInsertId" resultType="long">
+        SELECT LAST_INSERT_ID()
+    </select>
+
+    <update id="updateJobFinish">
+        UPDATE sync_job_log
+        SET status = #{status},
+        end_time = #{endTime},
+        duration_ms = #{durationMs},
+        total_count = #{totalCount},
+        success_count = #{successCount},
+        fail_count = #{failCount},
+        message = #{message}
+        WHERE id = #{id}
+    </update>
+
+    <insert id="insertUserLog">
+        INSERT INTO sync_user_log(job_id, user_id, platform_id, status, error_code, error_message)
+        VALUES (#{jobId}, #{userId}, #{platformId}, #{status}, #{errorCode}, #{errorMessage})
+    </insert>
+
+    <select id="pageJobs" resultType="hdc.rjxy.pojo.vo.SyncJobLogVO">
+        SELECT id, job_type AS jobType, status,
+        start_time AS startTime, end_time AS endTime,
+        duration_ms AS durationMs,
+        total_count AS totalCount, success_count AS successCount, fail_count AS failCount,
+        trigger_source AS triggerSource,
+        message
+        FROM sync_job_log
+        <where>
+            <if test="jobType != null and jobType != ''">
+                job_type = #{jobType}
+            </if>
+        </where>
+        ORDER BY id DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countJobs" resultType="long">
+        SELECT COUNT(1)
+        FROM sync_job_log
+        <where>
+            <if test="jobType != null and jobType != ''">
+                job_type = #{jobType}
+            </if>
+        </where>
+    </select>
+
+    <select id="findJob" resultType="hdc.rjxy.pojo.vo.SyncJobLogVO">
+        SELECT id, job_type AS jobType, status,
+        start_time AS startTime, end_time AS endTime,
+        duration_ms AS durationMs,
+        total_count AS totalCount, success_count AS successCount, fail_count AS failCount,
+        trigger_source AS triggerSource,
+        message
+        FROM sync_job_log
+        WHERE id = #{jobId}
+    </select>
+
+    <select id="listFailUsers" resultType="hdc.rjxy.pojo.vo.SyncUserFailVO">
+        SELECT
+        ul.user_id     AS userId,
+        u.student_no   AS studentNo,
+        u.nickname     AS nickname,
+        ul.platform_id AS platformId,
+        p.code         AS platformCode,
+        p.name         AS platformName,
+        ul.status      AS status,
+        ul.error_code  AS errorCode,
+        ul.error_message AS errorMessage,
+        ul.fetched_at  AS fetchedAt
+        FROM sync_user_log ul
+        LEFT JOIN user u ON u.id = ul.user_id
+        LEFT JOIN platform p ON p.id = ul.platform_id
+        WHERE ul.job_id = #{jobId}
+        AND ul.status = 'FAIL'
+        ORDER BY ul.fetched_at DESC
+    </select>
+
+
+    <select id="findLatestByType" resultType="hdc.rjxy.pojo.vo.SyncJobLogVO">
+        SELECT
+        id,
+        job_type AS jobType,
+        status,
+        start_time AS startTime,
+        end_time AS endTime,
+        duration_ms AS durationMs,
+        total_count AS totalCount,
+        success_count AS successCount,
+        fail_count AS failCount,
+        message,
+        trigger_source AS triggerSource
+        FROM sync_job_log
+        WHERE job_type = #{jobType}
+        ORDER BY start_time DESC
+        LIMIT 1
+    </select>
+
+    <select id="listRecent" resultType="hdc.rjxy.pojo.vo.SyncJobLogVO">
+        SELECT
+        id,
+        job_type AS jobType,
+        status,
+        start_time AS startTime,
+        end_time AS endTime,
+        duration_ms AS durationMs,
+        total_count AS totalCount,
+        success_count AS successCount,
+        fail_count AS failCount,
+        message,
+        trigger_source AS triggerSource
+        FROM sync_job_log
+        <where>
+            <if test="jobType != null and jobType != ''">
+                job_type = #{jobType}
+            </if>
+        </where>
+        ORDER BY start_time DESC
+        LIMIT #{limit}
+    </select>
+
+
+</mapper>

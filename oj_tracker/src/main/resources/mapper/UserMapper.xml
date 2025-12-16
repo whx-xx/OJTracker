@@ -1,0 +1,125 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hdc.rjxy.mapper.UserMapper">
+
+    <select id="findByUsername" resultType="hdc.rjxy.pojo.User">
+        SELECT
+        id,
+        student_no,
+        username,
+        nickname,
+        role,
+        status,
+        password_hash,
+        must_change_password,
+        created_at,
+        updated_at
+        FROM user
+        WHERE username = #{username}
+        LIMIT 1
+    </select>
+
+    <insert id="insertAdmin" keyProperty="id" useGeneratedKeys="true">
+        INSERT INTO user (
+        student_no,
+        username,
+        nickname,
+        role,
+        status,
+        password_hash,
+        must_change_password
+        )
+        VALUES (
+        NULL,
+        #{username},
+        #{nickname},
+        #{role},
+        #{status},
+        #{passwordHash},
+        #{mustChangePassword}
+        )
+    </insert>
+
+    <select id="findByStudentNo" resultType="hdc.rjxy.pojo.User">
+        SELECT id, student_no, username, nickname, role, status, password_hash, must_change_password, created_at, updated_at
+        FROM user
+        WHERE student_no = #{studentNo}
+        LIMIT 1
+    </select>
+
+    <select id="findById" resultType="hdc.rjxy.pojo.User">
+        SELECT id, student_no, username, nickname, role, status, password_hash, must_change_password, created_at, updated_at
+        FROM user
+        WHERE id = #{id}
+        LIMIT 1
+    </select>
+
+    <insert id="insertUser" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user(student_no, username, nickname, role, status, password_hash, must_change_password)
+        VALUES (#{studentNo}, #{username}, #{nickname}, #{role}, #{status}, #{passwordHash}, #{mustChangePassword})
+    </insert>
+
+    <update id="updatePasswordAndMustChange">
+        UPDATE user
+        SET password_hash = #{passwordHash},
+        must_change_password = #{mustChangePassword}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateMustChangePassword">
+        UPDATE user
+        SET must_change_password = #{mustChangePassword}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE user
+        SET status = #{status}
+        WHERE id = #{id}
+    </update>
+
+    <select id="listAll" resultType="hdc.rjxy.pojo.User">
+        SELECT id, student_no, username, nickname, role, status, must_change_password, created_at, updated_at
+        FROM user
+        ORDER BY id DESC
+    </select>
+
+    <select id="pageAdminList" resultType="hdc.rjxy.pojo.vo.UserAdminVO">
+        SELECT
+        id, student_no, username, nickname, role, status, must_change_password, created_at, updated_at
+        FROM user
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                username LIKE CONCAT('%', #{keyword}, '%')
+                OR nickname LIKE CONCAT('%', #{keyword}, '%')
+                OR student_no LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+        </where>
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAdminList" resultType="long">
+        SELECT COUNT(1)
+        FROM user
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                username LIKE CONCAT('%', #{keyword}, '%')
+                OR nickname LIKE CONCAT('%', #{keyword}, '%')
+                OR student_no LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+        </where>
+    </select>
+
+    <update id="updateNickname">
+        UPDATE user
+        SET nickname = #{nickname}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

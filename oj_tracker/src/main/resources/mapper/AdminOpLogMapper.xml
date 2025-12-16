@@ -1,0 +1,45 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hdc.rjxy.mapper.AdminOpLogMapper">
+
+    <!-- Minimal insert mapping compatible with existing AdminOpLogMapper.insert(adminId,targetUserId,opType,ip,remark) -->
+    <insert id="insert">
+        INSERT INTO admin_op_log(admin_id, target_user_id, op_type, op_time, ip, remark)
+        VALUES (#{param1}, #{param2}, #{param3}, NOW(), #{param4}, #{param5})
+    </insert>
+
+    <select id="pageLogs" resultType="hdc.rjxy.pojo.vo.AdminOpLogVO">
+        SELECT
+        l.id,
+        l.admin_id,
+        a.username AS admin_name,
+        l.target_user_id,
+        t.username AS target_name,
+        l.op_type,
+        l.op_time,
+        l.ip,
+        l.remark
+        FROM admin_op_log l
+        LEFT JOIN user a ON a.id = l.admin_id
+        LEFT JOIN user t ON t.id = l.target_user_id
+        <where>
+            <if test="opType != null and opType != ''">
+                AND l.op_type = #{opType}
+            </if>
+        </where>
+        ORDER BY l.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countLogs" resultType="long">
+        SELECT COUNT(1)
+        FROM admin_op_log l
+        <where>
+            <if test="opType != null and opType != ''">
+                AND l.op_type = #{opType}
+            </if>
+        </where>
+    </select>
+
+</mapper>

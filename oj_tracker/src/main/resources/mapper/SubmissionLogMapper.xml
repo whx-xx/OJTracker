@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hdc.rjxy.mapper.SubmissionLogMapper">
+
+    <insert id="insertIgnore">
+        INSERT IGNORE INTO submission_log(
+            user_id, platform_id, handle,
+            submission_id, contest_id, problem_index,
+            problem_name, problem_url,
+            verdict, submit_time
+        )
+        VALUES (
+            #{userId}, #{platformId}, #{handle},
+            #{submissionId}, #{contestId}, #{problemIndex},
+            #{problemName}, #{problemUrl},
+            #{verdict}, #{submitTime}
+        )
+    </insert>
+
+    <select id="findMaxSubmissionId" resultType="long">
+        SELECT MAX(submission_id)
+        FROM submission_log
+        WHERE user_id = #{userId}
+        AND platform_id = #{platformId}
+        AND handle = #{handle}
+    </select>
+
+    <!-- 本周题目：按题目去重，AC(OK)优先；否则取最新一次的非OK -->
+    <select id="listWeeklyProblems" resultType="hdc.rjxy.pojo.vo.WeeklyProblemVO">
+        SELECT contestId, problemIndex, problemName, problemUrl, verdict, submitTime, submissionId
+        FROM (
+        SELECT
+        contest_id AS contestId,
+        problem_index AS problemIndex,
+        problem_name AS problemName,
+        problem_url  AS problemUrl,
+        verdict      AS verdict,
+        submit_time  AS submitTime,
+        submission_id AS submissionId,
+        ROW_NUMBER() OVER (
+        PARTITION BY handle, contest_id, problem_index
+        ORDER BY
+        CASE WHEN verdict = 'OK' THEN 0 ELSE 1 END ASC,
+        submit_time DESC
+        ) AS rn
+        FROM submission_log
+        WHERE user_id = #{userId}
+        AND platform_id = #{platformId}
+        AND handle = #{handle}
+        AND submit_time <![CDATA[>=]]> #{start}
+        AND submit_time <![CDATA[<]]>  #{end}
+        ) t
+        WHERE rn = 1
+        ORDER BY submitTime DESC
+    </select>
+
+    <select id="findLastSubmitTime" resultType="java.time.LocalDateTime">
+        SELECT MAX(submit_time)
+        FROM submission_log
+        WHERE user_id = #{userId}
+        AND platform_id = #{platformId}
+        AND handle = #{handle}
+    </select>
+
+    <select id="listTimeline" resultType="hdc.rjxy.pojo.vo.SubmissionTimelineVO">
+        SELECT
+        submission_id AS submissionId,
+        contest_id AS contestId,
+        problem_index AS problemIndex,
+        problem_name AS problemName,
+        problem_url AS problemUrl,
+        verdict AS verdict,
+        submit_time AS submitTime
+        FROM submission_log
+        WHERE user_id = #{userId}
+        AND platform_id = #{platformId}
+        AND handle = #{handle}
+        AND submit_time <![CDATA[>=]]> #{start}
+        AND submit_time <![CDATA[<]]>  #{end}
+        ORDER BY submit_time DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

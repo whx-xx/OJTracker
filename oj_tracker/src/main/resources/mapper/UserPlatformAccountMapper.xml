@@ -1,0 +1,43 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hdc.rjxy.mapper.UserPlatformAccountMapper">
+
+    <select id="listMine" resultType="hdc.rjxy.pojo.vo.MyPlatformAccountVO">
+        SELECT
+        p.id         AS platformId,
+        p.code       AS platformCode,
+        p.name       AS platformName,
+        a.identifier_type  AS identifierType,
+        a.identifier_value AS identifierValue,
+        a.verified   AS verified
+        FROM platform p
+        LEFT JOIN user_platform_account a
+        ON a.platform_id = p.id AND a.user_id = #{userId}
+        WHERE p.enabled = 1
+        ORDER BY p.id ASC
+    </select>
+
+    <insert id="upsert">
+        INSERT INTO user_platform_account(user_id, platform_id, identifier_type, identifier_value, verified)
+        VALUES (#{userId}, #{platformId}, #{identifierType}, #{identifierValue}, 0)
+        ON DUPLICATE KEY UPDATE
+        identifier_type  = VALUES(identifier_type),
+        identifier_value = VALUES(identifier_value),
+        verified         = 0,
+        updated_at       = NOW()
+    </insert>
+
+    <delete id="deleteOne">
+        DELETE FROM user_platform_account
+        WHERE user_id = #{userId} AND platform_id = #{platformId}
+    </delete>
+
+    <select id="findIdentifierValue" resultType="string">
+        SELECT identifier_value
+        FROM user_platform_account
+        WHERE user_id = #{userId} AND platform_id = #{platformId}
+        LIMIT 1
+    </select>
+
+</mapper>

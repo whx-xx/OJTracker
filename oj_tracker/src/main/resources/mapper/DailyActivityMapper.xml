@@ -1,0 +1,53 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hdc.rjxy.mapper.DailyActivityMapper">
+
+    <insert id="upsert">
+        INSERT INTO daily_activity(user_id, platform_id, handle, day, submit_cnt, accept_cnt, solved_cnt)
+        VALUES (#{userId}, #{platformId}, #{handle}, #{day}, #{submitCnt}, #{acceptCnt}, #{solvedCnt})
+        ON DUPLICATE KEY UPDATE
+        submit_cnt = VALUES(submit_cnt),
+        accept_cnt = VALUES(accept_cnt),
+        solved_cnt = VALUES(solved_cnt),
+        updated_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <select id="listHeatmap" resultType="hdc.rjxy.pojo.vo.HeatmapDayVO">
+        SELECT
+        day AS day,
+        submit_cnt AS submitCnt,
+        accept_cnt AS acceptCnt,
+        solved_cnt AS solvedCnt
+        FROM daily_activity
+        WHERE user_id = #{userId}
+        AND platform_id = #{platformId}
+        AND handle = #{handle}
+        AND day BETWEEN #{startDay} AND #{endDay}
+        ORDER BY day ASC
+    </select>
+
+    <select id="sumByRange" resultType="hdc.rjxy.pojo.vo.DailyActivitySummaryVO">
+        SELECT
+        COALESCE(SUM(submit_cnt), 0) AS submitTotal,
+        COALESCE(SUM(accept_cnt), 0) AS acceptTotal,
+        COALESCE(SUM(solved_cnt), 0) AS solvedTotal,
+        COALESCE(SUM(CASE WHEN submit_cnt &gt; 0 THEN 1 ELSE 0 END), 0) AS activeDays
+        FROM daily_activity
+        WHERE user_id = #{userId}
+        AND platform_id = #{platformId}
+        AND handle = #{handle}
+        AND day &gt;= #{start}
+        AND day &lt;= #{end}
+    </select>
+
+    <select id="findLastDay" resultType="java.time.LocalDate">
+        SELECT MAX(day)
+        FROM daily_activity
+        WHERE user_id = #{userId}
+        AND platform_id = #{platformId}
+        AND handle = #{handle}
+    </select>
+
+
+</mapper>

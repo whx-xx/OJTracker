@@ -1,0 +1,25 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="hdc.rjxy.mapper.TeamMemberMapper">
+
+    <select id="listEnabledMembers"
+            resultType="hdc.rjxy.pojo.vo.TeamMemberSimpleVO">
+        SELECT u.id AS userId,
+        u.student_no AS studentNo,
+        u.nickname AS nickname
+        FROM team_member tm
+        JOIN team t ON t.id = tm.team_id
+        JOIN user u ON u.id = tm.user_id
+        WHERE t.code = #{teamCode}
+        AND u.status = 1
+    </select>
+
+
+    <insert id="addMember">
+        INSERT IGNORE INTO team_member(team_id, user_id)
+        VALUES (#{teamId}, #{userId})
+    </insert>
+
+</mapper>

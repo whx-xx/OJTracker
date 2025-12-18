@@ -9,6 +9,6 @@ public class TeamRankingVO {
     private String studentNo;
     private String nickname;
     private Integer rating;
-//    private Integer maxRating;
     private LocalDateTime snapshotTime;
+    private String handle;
 }

@@ -1,34 +1,29 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper
-        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="hdc.rjxy.mapper.TeamRankingMapper">
 
     <select id="listRanking" resultType="hdc.rjxy.pojo.vo.TeamRankingVO">
-        SELECT u.id AS userId,
+        SELECT
+        u.id AS userId,
+        u.nickname,
         u.student_no AS studentNo,
-        u.nickname AS nickname,
-        rs.rating AS rating,
-<!--        rs.max_rating AS maxRating,-->
+        pa.identifier_value AS handle,
+        COALESCE(rs.rating, 0) AS rating,
         rs.snapshot_time AS snapshotTime
-        FROM team_member tm
-        JOIN team t ON t.id = tm.team_id
-        JOIN user u ON u.id = tm.user_id
-        LEFT JOIN (
-        SELECT r1.*
-        FROM rating_snapshot r1
-        JOIN (
-        SELECT user_id, platform_id, MAX(snapshot_time) AS mx
+        FROM user u
+        LEFT JOIN user_platform_account pa ON u.id = pa.user_id
+        AND pa.platform_id = #{platformId}
+
+        LEFT JOIN rating_snapshot rs ON u.id = rs.user_id
+        AND rs.platform_id = #{platformId}
+        AND rs.snapshot_time = (
+        SELECT MAX(snapshot_time)
         FROM rating_snapshot
-        WHERE platform_id = #{platformId}
-        GROUP BY user_id, platform_id
-        ) t2 ON t2.user_id = r1.user_id
-        AND t2.platform_id = r1.platform_id
-        AND t2.mx = r1.snapshot_time
-        ) rs ON rs.user_id = u.id
-        WHERE t.code = #{teamCode}
-        AND u.status = 1
-        ORDER BY (rs.rating IS NULL), rs.rating DESC
+        WHERE user_id = u.id AND platform_id = #{platformId}
+        )
+        WHERE u.status = 1
+        AND pa.identifier_value IS NOT NULL
+        ORDER BY rating DESC, snapshotTime DESC
     </select>
 
 </mapper>

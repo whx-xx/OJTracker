@@ -1,0 +1,42 @@
+/* === Codeforces Rating 颜色补全与优化 === */
+
+/* 1. 核心修复：补充缺失的紫色 (Candidate Master: 1900-2100) */
+.text-purple {
+    color: #aa00aa !important; /* 紫罗兰色 */
+    font-weight: 600;
+}
+
+/* 2. 优化：Master 应该是橙色，Bootstrap 默认 warning 是黄色，这里强制改为橙色 */
+.text-warning {
+    color: #ff8c00 !important; /* 橙色 */
+    font-weight: 600;
+}
+
+/* 3. 优化：Expert 应该是纯蓝 */
+.text-primary {
+    color: #0000ff !important;
+    font-weight: 600;
+}
+
+/* 4. 优化：Specialist 应该是青色 */
+.text-info {
+    color: #03a89e !important;
+    font-weight: 600;
+}
+
+/* 5. 优化：Pupil 是绿色 */
+.text-success {
+    color: #008000 !important;
+    font-weight: 600;
+}
+
+/* 6. 优化：Grandmaster 是红色 */
+.text-danger {
+    color: #ff0000 !important;
+    font-weight: 600;
+}
+
+/* 7. 优化：Newbie 是灰色 */
+.text-secondary {
+    color: #808080 !important;
+}

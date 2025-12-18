@@ -30,7 +30,7 @@ public class UserStatsController {
     }
 
     @GetMapping("/summary")
-    public R<UserStatsSummaryVO> summary(@RequestParam("platformCode") String platformCode,
+    public R<UserStatsSummaryVO> summary(@RequestParam(value = "platformCode", required = false) String platformCode,
                                          @RequestParam(value = "days", defaultValue = "30") int days,
                                          HttpSession session) {
         UserSession me = (UserSession) session.getAttribute(LOGIN_USER);

@@ -22,7 +22,7 @@ public class UserRatingController {
 
     @GetMapping("/history")
     public R<List<RatingHistoryPointVO>> history(
-            @RequestParam("platformCode") String platformCode,
+            @RequestParam(value = "platformCode", required = false) String platformCode,
             @RequestParam(value = "days", defaultValue = "365") int days,
             HttpSession session
     ) {

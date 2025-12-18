@@ -1,4 +1,24 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // 检查是否处于“强制改密”状态
+    if (window.MUST_CHANGE_PASSWORD) {
+        Swal.fire({
+            title: '安全提醒',
+            text: '检测到您的账号处于初始密码状态，请立即前往修改密码以保障账号安全！',
+            icon: 'warning',
+            confirmButtonText: '立即修改',
+            allowOutsideClick: false, // 强制用户关注
+            allowEscapeKey: false
+        }).then(() => {
+            // 自动激活“修改密码”标签页
+            const pwdTabTrigger = document.querySelector('#password-tab');
+            if (pwdTabTrigger) {
+                const tab = new bootstrap.Tab(pwdTabTrigger);
+                tab.show();
+                // 平滑滚动到修改区域
+                document.getElementById('password').scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    }
     loadMyPlatforms();
 });
 

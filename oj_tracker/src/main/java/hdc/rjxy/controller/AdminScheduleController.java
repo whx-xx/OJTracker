@@ -19,12 +19,13 @@ public class AdminScheduleController {
     }
 
     @PostMapping("/enable")
-    public R<Void> enable(@RequestParam("enabled") boolean enabled, HttpSession session) {
-        UserSession me = (UserSession) session.getAttribute(LOGIN_USER);
-        if (me == null) return R.fail(401, "未登录");
-        if (!"ADMIN".equals(me.getRole())) return R.fail(403, "无权限");
-
+    public R<Void> enable(@RequestParam("enabled") boolean enabled) {
         scheduler.setEnabled(enabled);
         return R.ok(null);
+    }
+
+    @GetMapping("/status")
+    public R<Boolean> getStatus() {
+        return R.ok(scheduler.isEnabled());
     }
 }

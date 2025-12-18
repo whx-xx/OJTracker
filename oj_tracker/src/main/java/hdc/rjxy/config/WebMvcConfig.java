@@ -22,22 +22,25 @@ import java.util.List;
 
 @Configuration
 @EnableWebMvc
-@ComponentScan(basePackages = "hdc.rjxy.controller")
+@ComponentScan(basePackages = {"hdc.rjxy.controller", "hdc.rjxy.common"}) // 确保扫描到 AuthInterceptor
 public class WebMvcConfig implements WebMvcConfigurer {
 
     @Autowired
     private ApplicationContext applicationContext;
 
-    // 拦截器（登录/改密强制）
+    @Autowired
+    private AuthInterceptor authInterceptor; // 自动注入拦截器
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new AuthInterceptor())
+        // 使用注入的实例，而不是 new
+        registry.addInterceptor(authInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns(
-                        "/",               // 根路径
-                        "/login",          // 登录页面
-                        "/api/auth/**",    // 登录/注册接口
-                        "/static/**",      // 静态资源（CSS/JS）
+                        "/",
+                        "/login",
+                        "/api/auth/**",
+                        "/static/**",
                         "/favicon.ico"
                 );
     }

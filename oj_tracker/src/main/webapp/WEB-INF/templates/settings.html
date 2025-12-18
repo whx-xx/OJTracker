@@ -107,7 +107,10 @@
         </div>
     </div>
 </div>
-
+<script th:inline="javascript">
+    // 获取当前登录用户的强制改密状态
+    window.MUST_CHANGE_PASSWORD = [[${session.LOGIN_USER.mustChangePassword == 1}]];
+</script>
 <script th:src="@{/static/js/settings.js}"></script>
 </body>
 </html>

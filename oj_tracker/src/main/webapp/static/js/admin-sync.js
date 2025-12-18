@@ -7,7 +7,46 @@ const pageSize = 8;
 document.addEventListener('DOMContentLoaded', () => {
     loadOverview();
     fetchJobs(1);
+    initScheduleStatus();
 });
+
+/**
+ * 初始化调度开关状态 [接口: GET /api/admin/schedule/status]
+ */
+async function initScheduleStatus() {
+    try {
+        const res = await fetch('/api/admin/schedule/status');
+        const r = await res.json();
+        if (r.code === 200) {
+            // 将后端传回的 boolean 值同步到 HTML 开关上
+            document.getElementById('scheduleSwitch').checked = r.data;
+        }
+    } catch (e) {
+        console.error("无法获取调度状态", e);
+    }
+}
+
+/**
+ * 切换调度开关 [接口: POST /api/admin/schedule/enable]
+ */
+async function toggleSchedule(enabled) {
+    try {
+        const res = await fetch(`/api/admin/schedule/enable?enabled=${enabled}`, {
+            method: 'POST'
+        });
+        const r = await res.json();
+        if (r.code === 200) {
+            showToast('success', `自动调度已${enabled ? '启用' : '禁用'}`);
+        } else {
+            // 如果后端处理失败，恢复开关的原始视觉状态
+            document.getElementById('scheduleSwitch').checked = !enabled;
+            Swal.fire('失败', r.msg, 'error');
+        }
+    } catch (e) {
+        document.getElementById('scheduleSwitch').checked = !enabled;
+        showToast('error', '网络请求失败');
+    }
+}
 
 /**
  * 加载概览数据 [接口: GET /api/admin/sync/overview]
@@ -86,7 +125,9 @@ async function triggerSync(type) {
         title: '确认手动触发?',
         text: `系统将立即开始执行 ${type} 同步任务`,
         icon: 'question',
-        showCancelButton: true
+        showCancelButton: true,
+        confirmButtonText: '确定',
+        cancelButtonText: '取消'
     });
     if (!isConfirmed) return;
 
@@ -142,17 +183,6 @@ async function viewDetail(jobId) {
     };
 
     new bootstrap.Modal(document.getElementById('detailModal')).show();
-}
-
-/**
- * 定时任务开关 [接口: POST /api/admin/schedule/enable]
- */
-async function toggleSchedule(enabled) {
-    const res = await fetch(`/api/admin/schedule/enable?enabled=${enabled}`, { method: 'POST' });
-    const r = await res.json();
-    if (r.code === 200) {
-        showToast('success', `定时同步已${enabled ? '启用' : '禁用'}`);
-    }
 }
 
 // 辅助：分页渲染 (复用之前的逻辑)

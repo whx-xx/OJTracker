@@ -8,12 +8,13 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class JacksonConfig {
-
     @Bean
     public ObjectMapper objectMapper() {
-        ObjectMapper om = new ObjectMapper();
-        om.registerModule(new JavaTimeModule());
-        om.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        return om;
+        ObjectMapper mapper = new ObjectMapper();
+        // 1. 注册 Java 8 时间模块
+        mapper.registerModule(new JavaTimeModule());
+        // 2. 关键点：禁用将日期序列化为数组/时间戳
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        return mapper;
     }
 }

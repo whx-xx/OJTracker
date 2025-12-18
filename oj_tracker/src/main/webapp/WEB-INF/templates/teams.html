@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: common-head('团队排行榜 - OJ Tracker')}"></head>
+<body style="background: #f0f2f5; display: block; height: auto;">
+
+<div th:replace="~{fragments/navbar :: common-nav}"></div>
+
+<div class="container main-container">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-bar-chart-line-fill me-2 text-primary"></i>团队积分排行榜</h5>
+
+            <div class="d-flex align-items-center">
+                <span class="me-2 text-muted small">选择平台:</span>
+                <select id="platformSelect" class="form-select form-select-sm" style="width: auto;">
+                    <option value="CF" selected>Codeforces</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th class="ps-4" style="width: 80px;">排名</th>
+                        <th>成员</th>
+                        <th>学号</th>
+                        <th>当前 Rating</th>
+                        <th class="text-end pe-4">最后同步时间</th>
+                    </tr>
+                    </thead>
+                    <tbody id="rankingTableBody">
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            正在加载排名数据...
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/static/js/teams.js}"></script>
+</body>
+</html>

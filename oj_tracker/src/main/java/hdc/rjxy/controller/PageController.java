@@ -7,6 +7,10 @@ import jakarta.servlet.http.HttpSession;
 @Controller // 这里不是 @RestController
 public class PageController {
 
+    @GetMapping("/")
+    public String index() {
+        return "redirect:/login";
+    }
     @GetMapping("/login")
     public String loginPage() {
         return "login"; // 寻找 /WEB-INF/templates/login.html
@@ -21,8 +25,12 @@ public class PageController {
         return "dashboard"; // 对应 templates/dashboard.html
     }
 
-    @GetMapping("/")
-    public String index() {
-        return "redirect:/login";
+    @GetMapping("/teams")
+    public String teamsPage(HttpSession session) {
+        // 检查登录状态
+        if (session.getAttribute("LOGIN_USER") == null) {
+            return "redirect:/login";
+        }
+        return "teams"; // 对应 WEB-INF/templates/teams.html
     }
 }

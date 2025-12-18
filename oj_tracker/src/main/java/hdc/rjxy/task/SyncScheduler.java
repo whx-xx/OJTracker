@@ -12,7 +12,7 @@ public class SyncScheduler {
     private final SyncService syncService;
 
     // 开关
-    private volatile boolean enabled = false;
+    private volatile boolean enabled = true;
 
     public SyncScheduler(SyncService syncService) {
         this.syncService = syncService;

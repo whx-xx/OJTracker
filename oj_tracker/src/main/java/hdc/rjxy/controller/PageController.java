@@ -61,4 +61,14 @@ public class PageController {
         }
         return "admin-sync"; // 返回 WEB-INF/templates/admin-sync.html
     }
+
+    @GetMapping("/admin/op-logs")
+    public String adminOpLogsPage(HttpSession session) {
+        // 简单鉴权，实际上 AuthInterceptor 会再次拦截
+        UserSession user = (UserSession) session.getAttribute(AuthController.LOGIN_USER);
+        if (user == null || !"ADMIN".equals(user.getRole())) {
+            return "redirect:/dashboard";
+        }
+        return "admin-op-logs"; // 对应 templates/admin-op-logs.html
+    }
 }

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: common-head('个人看板 - OJ Tracker')}"></head>
+<body style="background: #f0f2f5; display: block; height: auto;">
+
+<div th:replace="~{fragments/navbar :: common-nav}"></div>
+
+<div class="container main-container">
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <div class="text-muted small">总解题数</div>
+                <div class="h2 fw-bold text-primary" id="totalSolved">0</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <div class="text-muted small">本周新增</div>
+                <div class="h2 fw-bold text-success" id="weeklySolved">0</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <div class="text-muted small">绑定平台</div>
+                <div class="h2 fw-bold text-info" id="platformCount">0</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <div class="text-muted small">活跃天数</div>
+                <div class="h2 fw-bold text-warning" id="activeDays">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white fw-bold">Rating 趋势图</div>
+                <div class="card-body">
+                    <div id="ratingChart" style="width: 100%; height: 350px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white fw-bold">绑定的平台</div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush" id="platformList">
+                        <li class="list-group-item text-center text-muted py-4">加载中...</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white fw-bold">提交热力图 (最近一年)</div>
+                <div class="card-body overflow-auto">
+                    <div id="heatmapChart" style="width: 100%; min-width: 800px; height: 250px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script th:src="@{/static/js/dashboard.js}"></script>
+</body>
+</html>

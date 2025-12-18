@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<nav th:fragment="common-nav" class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="/dashboard">
+            <i class="bi bi-trophy-fill me-2"></i>OJ Tracker
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item"><a class="nav-link active" href="/dashboard">个人看板</a></li>
+                <li class="nav-item"><a class="nav-link" href="/teams">团队排名</a></li>
+                <li class="nav-item"><a class="nav-link" href="/settings">个人设置</a></li>
+            </ul>
+            <div class="d-flex align-items-center text-light">
+                <span class="me-3" th:text="${session.LOGIN_USER.nickname}">用户名</span>
+                <button class="btn btn-outline-light btn-sm" onclick="logout()">退出</button>
+            </div>
+        </div>
+    </div>
+</nav>
+</html>

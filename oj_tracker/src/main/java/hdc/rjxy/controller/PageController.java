@@ -33,4 +33,12 @@ public class PageController {
         }
         return "teams"; // 对应 WEB-INF/templates/teams.html
     }
+
+    @GetMapping("/settings")
+    public String settingsPage(HttpSession session) {
+        if (session.getAttribute("LOGIN_USER") == null) {
+            return "redirect:/login";
+        }
+        return "settings"; // 对应 templates/settings.html
+    }
 }

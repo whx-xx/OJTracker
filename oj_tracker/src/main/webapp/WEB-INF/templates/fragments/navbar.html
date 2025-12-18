@@ -10,9 +10,15 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav me-auto">
-                <li class="nav-item"><a class="nav-link active" href="/dashboard">个人看板</a></li>
-                <li class="nav-item"><a class="nav-link" href="/teams">团队排名</a></li>
-                <li class="nav-item"><a class="nav-link" href="/settings">个人设置</a></li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/dashboard">个人看板</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/teams">团队排名</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/settings">个人设置</a>
+                </li>
             </ul>
             <div class="d-flex align-items-center text-light">
                 <span class="me-3" th:text="${session.LOGIN_USER.nickname}">用户名</span>

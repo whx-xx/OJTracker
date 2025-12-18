@@ -1,52 +1,47 @@
 document.addEventListener('DOMContentLoaded', function() {
     const platformSelect = document.getElementById('platformSelect');
-
-    // 页面加载时执行一次
-    fetchRankings(platformSelect.value);
-
-    // 切换平台时重新加载
-    platformSelect.addEventListener('change', function() {
-        fetchRankings(this.value);
-    });
+    if (platformSelect) {
+        fetchRankings(platformSelect.value);
+        platformSelect.addEventListener('change', function() {
+            fetchRankings(this.value);
+        });
+    }
 });
 
 async function fetchRankings(platformCode) {
     const tableBody = document.getElementById('rankingTableBody');
-
     try {
-        // 调用后端接口
         const response = await fetch(`/api/team/rankings?platformCode=${platformCode}`);
         const result = await response.json();
 
-        // 记得我们已经统一了 code 200 为成功
         if (result.code === 200) {
             renderTable(result.data);
         } else {
-            tableBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">${result.msg || '获取排名失败'}</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">${result.msg}</td></tr>`;
         }
     } catch (error) {
-        console.error("Fetch error:", error);
-        tableBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">服务器连接异常</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">无法连接到服务器</td></tr>`;
     }
 }
 
 function renderTable(rankings) {
     const tableBody = document.getElementById('rankingTableBody');
-
     if (!rankings || rankings.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">该平台暂无排名数据</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">暂无数据</td></tr>`;
         return;
     }
 
     tableBody.innerHTML = rankings.map((item, index) => {
-        // 简单的奖牌颜色逻辑
-        let badgeClass = 'bg-secondary';
-        if (index === 0) badgeClass = 'bg-warning text-dark'; // 金牌
-        if (index === 1) badgeClass = 'bg-light text-dark border'; // 银牌
-        if (index === 2) badgeClass = 'bg-danger'; // 铜牌
+        let badgeClass = index === 0 ? 'bg-warning text-dark' : (index === 1 ? 'bg-light text-dark border' : (index === 2 ? 'bg-danger' : 'bg-secondary'));
 
-        // 格式化时间 (item.snapshotTime)
-        const date = item.snapshotTime ? new Date(item.snapshotTime).toLocaleString() : '从未同步';
+        // 增强的日期处理：支持 ISO 字符串和数字数组
+        let dateStr = '从未同步';
+        if (item.snapshotTime) {
+            const d = Array.isArray(item.snapshotTime)
+                ? new Date(item.snapshotTime[0], item.snapshotTime[1]-1, item.snapshotTime[2], item.snapshotTime[3], item.snapshotTime[4])
+                : new Date(item.snapshotTime);
+            dateStr = d.toLocaleString();
+        }
 
         return `
             <tr>
@@ -55,16 +50,10 @@ function renderTable(rankings) {
                         ${index + 1}
                     </span>
                 </td>
-                <td>
-                    <div class="fw-bold text-dark">${item.nickname}</div>
-                </td>
+                <td class="fw-bold">${item.nickname}</td>
                 <td><code class="text-muted small">${item.studentNo || 'N/A'}</code></td>
-                <td>
-                    <span class="fw-bold ${item.rating >= 1900 ? 'text-danger' : 'text-primary'}">
-                        ${item.rating || 0}
-                    </span>
-                </td>
-                <td class="text-end pe-4 small text-muted">${date}</td>
+                <td class="fw-bold text-primary">${item.rating || 0}</td>
+                <td class="text-end pe-4 small text-muted">${dateStr}</td>
             </tr>
         `;
     }).join('');

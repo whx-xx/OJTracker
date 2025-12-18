@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: common-head('个人设置 - OJ Tracker')}"></head>
+<body style="background: #f0f2f5; display: block; height: auto;">
+
+<div th:replace="~{fragments/navbar :: common-nav}"></div>
+
+<div class="container main-container">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body p-0">
+                    <div class="nav flex-column nav-pills" id="settings-tabs" role="tablist">
+                        <button class="nav-link active text-start py-3 px-4" id="profile-tab" data-bs-toggle="pill" data-bs-target="#profile" type="button" role="tab" aria-selected="true">
+                            <i class="bi bi-person-fill me-2"></i>基本信息
+                        </button>
+                        <button class="nav-link text-start py-3 px-4" id="accounts-tab" data-bs-toggle="pill" data-bs-target="#accounts" type="button" role="tab" aria-selected="false">
+                            <i class="bi bi-link-45deg me-2"></i>平台绑定
+                        </button>
+                        <button class="nav-link text-start py-3 px-4" id="password-tab" data-bs-toggle="pill" data-bs-target="#password" type="button" role="tab" aria-selected="false">
+                            <i class="bi bi-shield-lock-fill me-2"></i>修改密码
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="profile" role="tabpanel" aria-labelledby="profile-tab">
+                    <div class="card shadow-sm border-0 p-4">
+                        <h5 class="fw-bold mb-4">基本信息</h5>
+                        <div class="mb-3">
+                            <label class="form-label text-muted">学号</label>
+                            <input type="text" class="form-control bg-light" th:value="${session.LOGIN_USER.studentNo}" readonly>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label">昵称</label>
+                            <input type="text" id="nicknameInput" class="form-control" th:value="${session.LOGIN_USER.nickname}">
+                        </div>
+                        <button class="btn btn-primary px-4" onclick="saveNickname()">保存修改</button>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="accounts" role="tabpanel" aria-labelledby="accounts-tab">
+                    <div class="card shadow-sm border-0 p-4">
+                        <h5 class="fw-bold mb-4">账号绑定</h5>
+                        <div id="platformList" class="mb-4">
+                        </div>
+                        <hr>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <select id="newPlatformCode" class="form-select">
+                                    <option value="CF">Codeforces</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <input type="text" id="newPlatformHandle" class="form-control" placeholder="输入 Handle / 用户名">
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-outline-primary w-100" onclick="addPlatform()">添加/更新</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="password" role="tabpanel" aria-labelledby="password-tab">
+                    <div class="card shadow-sm border-0 p-4">
+                        <h5 class="fw-bold mb-4">修改密码</h5>
+                        <div class="mb-3">
+                            <label class="form-label">旧密码</label>
+                            <input type="password" id="oldPwd" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">新密码</label>
+                            <input type="password" id="newPwd" class="form-control">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label">确认新密码</label>
+                            <input type="password" id="confirmPwd" class="form-control">
+                        </div>
+                        <button class="btn btn-danger px-4" onclick="updatePassword()">更新密码</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/static/js/settings.js}"></script>
+</body>
+</html>

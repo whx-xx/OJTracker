@@ -1,12 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. 加载基础统计数据
     fetchStats();
-    // 2. 加载平台列表
     fetchPlatforms();
-    // 3. 渲染 Rating 折线图
     renderRatingChart();
-    // 4. 渲染热力图
-    renderHeatmap();
 });
 
 async function fetchStats() {
@@ -26,19 +21,21 @@ async function fetchPlatforms() {
     if (data.code === 200) {
         document.getElementById('platformCount').textContent = data.data.length;
         list.innerHTML = data.data.map(p => `
-            <li class="list-group-item d-flex justify-content-between align-items-center">
+            <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
                 <div>
                     <span class="fw-bold">${p.platformName}</span><br>
-                    <small class="text-muted">${p.platformHandle}</small>
+                    <small class="text-muted">${p.identifierValue || '未设置'}</small>
                 </div>
-                <span class="badge bg-primary rounded-pill">${p.currentRating || 'N/A'}</span>
+                <span class="badge bg-primary rounded-pill">Rank: ${p.verified ? '已校验' : '同步中'}</span>
             </li>
         `).join('');
     }
 }
 
 async function renderRatingChart() {
-    const chart = echarts.init(document.getElementById('ratingChart'));
+    const chartDom = document.getElementById('ratingChart');
+    if (!chartDom) return;
+    const chart = echarts.init(chartDom);
     const res = await fetch('/api/user-rating/history');
     const result = await res.json();
 
@@ -59,12 +56,6 @@ async function renderRatingChart() {
     }
 }
 
-async function logout() {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    window.location.href = '/login';
-}
-
-// 响应式调整图表
 window.addEventListener('resize', () => {
     echarts.getInstanceByDom(document.getElementById('ratingChart'))?.resize();
 });

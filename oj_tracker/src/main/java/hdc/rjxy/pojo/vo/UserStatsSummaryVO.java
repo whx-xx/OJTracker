@@ -15,6 +15,7 @@ public class UserStatsSummaryVO {
     private int submitTotal;
     private int acceptTotal;
     private int solvedTotal;
+    private int weeklySolved;
     private int activeDays;
     private double avgSubmitPerDay;
 

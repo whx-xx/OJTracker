@@ -52,4 +52,13 @@ public class PageController {
         }
         return "admin-users"; // 对应 WEB-INF/templates/admin-users.html
     }
+
+    @GetMapping("/admin/sync")
+    public String adminSyncPage(HttpSession session) {
+        UserSession user = (UserSession) session.getAttribute(AuthController.LOGIN_USER);
+        if (user == null || !"ADMIN".equals(user.getRole())) {
+            return "redirect:/dashboard";
+        }
+        return "admin-sync"; // 返回 WEB-INF/templates/admin-sync.html
+    }
 }

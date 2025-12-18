@@ -62,54 +62,70 @@ public class UserStatsService {
     }
 
     public UserStatsSummaryVO summary(Long userId, String platformCode, int days) {
+        // 1. 参数校验与默认值处理
         if (userId == null) throw new IllegalArgumentException("userId不能为空");
         if (platformCode == null || platformCode.isBlank()) platformCode = "CF";
         days = Math.max(1, Math.min(days, 3650));
 
+        // 2. 获取平台信息
         Long pid = platformMapper.findIdByCode(platformCode);
         if (pid == null) throw new IllegalArgumentException("平台不存在: " + platformCode);
 
+        // 3. 获取绑定的平台账号 (handle)
         String handle = upaMapper.findIdentifierValue(userId, pid);
         if (handle == null || handle.isBlank()) throw new IllegalArgumentException("未绑定平台账号");
         handle = handle.trim();
 
+        // 4. 时间区间计算 (使用上海时区)
         ZoneId zone = ZoneId.of("Asia/Shanghai");
         LocalDate today = LocalDate.now(zone);
-        LocalDate fromDay = today.minusDays(days - 1L);
+        LocalDate fromDay = today.minusDays(days - 1L); // 总统计开始日期
 
-        // daily_activity：按天汇总
-        DailyActivitySummaryVO da =
-                dailyActivityMapper.sumByRange(userId, pid, handle, fromDay, today);
+        LocalDateTime endTime = today.plusDays(1).atStartOfDay(); // 统计截止时间 [start, end)
 
-        //  solvedTotal：改为 solved_problem 去重统计（按 first_ac_time 落在区间）
+        // 5. 调用 Mapper 执行统计查询
+
+        // 基础活动数据汇总 (提交、通过、活跃天数)
+        DailyActivitySummaryVO da = dailyActivityMapper.sumByRange(userId, pid, handle, fromDay, today);
+
+        // 计算指定天数内的总解题数 (solvedTotal)
         LocalDateTime startTime = fromDay.atStartOfDay();
-        LocalDateTime endTime = today.plusDays(1).atStartOfDay(); // [start, end)
         int solvedTotal = solvedProblemMapper.countSolvedInRange(userId, pid, handle, startTime, endTime);
 
-        // rating：你之前怎么做就怎么做（示例保留）
+        // 核心：计算最近 7 天的本周新增 (weeklySolved)
+        // 逻辑：从今天算起往前推 6 天，共 7 天数据
+        LocalDateTime weeklyStartTime = today.minusDays(6).atStartOfDay();
+        int weeklySolved = solvedProblemMapper.countSolvedInRange(userId, pid, handle, weeklyStartTime, endTime);
+
+        // 获取 Rating 变化范围
         RatingPointVO first = ratingSnapshotMapper.findFirstInRange(userId, pid, handle, startTime, endTime);
         RatingPointVO last = ratingSnapshotMapper.findLastInRange(userId, pid, handle, startTime, endTime);
 
+        // 6. 组装并返回 VO
         UserStatsSummaryVO vo = new UserStatsSummaryVO();
         vo.setPlatformCode(platformCode);
         vo.setDays(days);
         vo.setFrom(fromDay);
         vo.setTo(today);
 
+        // 填充活动统计
         vo.setSubmitTotal(da.getSubmitTotal());
         vo.setAcceptTotal(da.getAcceptTotal());
         vo.setActiveDays(da.getActiveDays());
         vo.setAvgSubmitPerDay(days == 0 ? 0.0 : (double) da.getSubmitTotal() / days);
 
-        vo.setSolvedTotal(solvedTotal); //  新口径
+        // 填充去重解题数
+        vo.setSolvedTotal(solvedTotal);
+        vo.setWeeklySolved(weeklySolved); // 设置周解题数
 
-        // rating部分（你 VO 字段叫什么就按你字段 set）
+        // 填充 Rating 信息
         if (first != null) vo.setRatingStart(first.getRating());
         if (last != null) {
             vo.setRatingEnd(last.getRating());
             vo.setLastContestName(last.getContestName());
             vo.setLastContestTime(last.getTime());
         }
+
         if (first != null && last != null) {
             vo.setRatingDelta(last.getRating() - first.getRating());
         } else {

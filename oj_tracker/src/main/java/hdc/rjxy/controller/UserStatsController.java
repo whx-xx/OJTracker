@@ -31,7 +31,7 @@ public class UserStatsController {
 
     @GetMapping("/summary")
     public R<UserStatsSummaryVO> summary(@RequestParam(value = "platformCode", required = false) String platformCode,
-                                         @RequestParam(value = "days", defaultValue = "30") int days,
+                                         @RequestParam(value = "days", defaultValue = "5000") int days,
                                          HttpSession session) {
         UserSession me = (UserSession) session.getAttribute(LOGIN_USER);
         if (me == null) return R.fail(401, "未登录");

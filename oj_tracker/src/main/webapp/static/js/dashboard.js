@@ -9,10 +9,9 @@ async function fetchStats() {
     const res = await fetch('/api/users/summary?platformCode=CF');
     const data = await res.json();
     if (data.code === 200) {
-        document.getElementById('totalSolved').textContent = data.data.solvedTotal; // 后端是 solvedTotal
-        // 如果后端暂时没提供 weeklySolved，可以先显示 solvedTotal 或 0，防止报错
-        document.getElementById('weeklySolved').textContent = data.data.solvedTotal || 0;
-        document.getElementById('activeDays').textContent = data.data.activeDays;
+        document.getElementById('totalSolved').textContent = data.data.solvedTotal || 0;
+        document.getElementById('weeklySolved').textContent = data.data.weeklySolved || 0;
+        document.getElementById('activeDays').textContent = data.data.activeDays || 0;
     }
 }
 

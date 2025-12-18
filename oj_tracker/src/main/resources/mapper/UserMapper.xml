@@ -122,4 +122,18 @@
         WHERE id = #{id}
     </update>
 
+    <update id="updateUsername">
+        UPDATE user
+        SET username = #{username}
+        WHERE id = #{id}
+    </update>
+
+    <select id="getAdminUserStats" resultType="hdc.rjxy.pojo.vo.AdminUserStatsVO">
+        SELECT
+        COUNT(*) as totalUsers,
+        SUM(CASE WHEN role = 'ADMIN' THEN 1 ELSE 0 END) as adminCount,
+        SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as activeCount,
+        SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) as bannedCount
+        FROM user
+    </select>
 </mapper>

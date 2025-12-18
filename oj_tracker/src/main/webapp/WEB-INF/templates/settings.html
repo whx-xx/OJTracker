@@ -31,14 +31,35 @@
                     <div class="card shadow-sm border-0 p-4">
                         <h5 class="fw-bold mb-4">基本信息</h5>
                         <div class="mb-3">
-                            <label class="form-label text-muted">学号</label>
-                            <input type="text" class="form-control bg-light" th:value="${session.LOGIN_USER.studentNo}" readonly>
+                            <label class="form-label text-muted small">登录用户名 (Username)</label>
+                            <div class="input-group">
+                                <input type="text" id="usernameInput"
+                                       class="form-control"
+                                       th:classappend="${session.LOGIN_USER.role == 'ADMIN'} ? 'bg-light text-muted' : ''"
+                                       th:value="${session.LOGIN_USER.username}"
+                                       th:readonly="${session.LOGIN_USER.role == 'ADMIN'}">
+
+                                <button th:if="${session.LOGIN_USER.role != 'ADMIN'}"
+                                        class="btn btn-outline-primary"
+                                        onclick="saveUsername()">修改用户名</button>
+
+                                <span class="input-group-text bg-light text-muted"
+                                      th:if="${session.LOGIN_USER.role == 'ADMIN'}">
+                                    <i class="bi bi-lock-fill me-1"></i>管理员账号不可更改
+                                </span>
+                            </div>
                         </div>
                         <div class="mb-4">
-                            <label class="form-label">昵称</label>
-                            <input type="text" id="nicknameInput" class="form-control" th:value="${session.LOGIN_USER.nickname}">
+                            <label class="form-label text-muted small">显示昵称 (Nickname)</label>
+                            <div class="input-group">
+                                <input type="text" id="nicknameInput" class="form-control" th:value="${session.LOGIN_USER.nickname}">
+                                <button class="btn btn-outline-primary" onclick="saveNickname()">修改昵称</button>
+                            </div>
                         </div>
-                        <button class="btn btn-primary px-4" onclick="saveNickname()">保存修改</button>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">学号 (Read Only)</label>
+                            <input type="text" class="form-control bg-light text-muted" th:value="${session.LOGIN_USER.studentNo} == null ? '无学号' : '${session.LOGIN_USER.studentNo}'" readonly>
+                        </div>
                     </div>
                 </div>
 

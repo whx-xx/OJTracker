@@ -5,6 +5,7 @@ import hdc.rjxy.common.R;
 import hdc.rjxy.pojo.UserSession;
 import hdc.rjxy.pojo.dto.UpdateNicknameReq;
 import hdc.rjxy.pojo.dto.UpdateStatusReq;
+import hdc.rjxy.pojo.vo.AdminUserStatsVO;
 import hdc.rjxy.pojo.vo.UserAdminVO;
 import hdc.rjxy.service.AdminUserService;
 import hdc.rjxy.service.AuthService;
@@ -57,6 +58,11 @@ public class AdminUserController {
 
         authService.adminResetPassword(admin.getId(), targetUserId, req);
         return R.ok(null);
+    }
+
+    @GetMapping("/stats")
+    public R<AdminUserStatsVO> getStats() {
+        return R.ok(adminUserService.getUserStats());
     }
 
 }

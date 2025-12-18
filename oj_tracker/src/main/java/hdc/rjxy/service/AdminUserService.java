@@ -3,6 +3,7 @@ package hdc.rjxy.service;
 import hdc.rjxy.common.PageResult;
 import hdc.rjxy.mapper.UserMapper;
 import hdc.rjxy.pojo.User;
+import hdc.rjxy.pojo.vo.AdminUserStatsVO;
 import hdc.rjxy.pojo.vo.UserAdminVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -47,5 +48,8 @@ public class AdminUserService {
         userMapper.updateStatus(id, status);
     }
 
+    public AdminUserStatsVO getUserStats() {
+        return userMapper.getAdminUserStats();
+    }
 }
 

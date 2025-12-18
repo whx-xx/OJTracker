@@ -5,6 +5,7 @@ import hdc.rjxy.mapper.UserMapper;
 import hdc.rjxy.pojo.UserSession;
 import hdc.rjxy.pojo.dto.UpdateMyPlatformsReq;
 import hdc.rjxy.pojo.dto.UpdateNicknameReq;
+import hdc.rjxy.pojo.dto.UpdateUsernameReq;
 import hdc.rjxy.pojo.vo.MyPlatformAccountVO;
 import hdc.rjxy.service.MyPlatformService;
 import jakarta.servlet.http.HttpSession;
@@ -68,6 +69,26 @@ public class MeController {
         UserSession me = (UserSession) session.getAttribute(LOGIN_USER);
         if (me == null) return R.fail(401, "未登录");
         myPlatformService.updateMine(me.getId(), req);
+        return R.ok(null);
+    }
+
+    // 5. 更新用户名
+    @PostMapping("/username")
+    public R<Void> updateUsername(@RequestBody UpdateUsernameReq req, HttpSession session) {
+        UserSession me = (UserSession) session.getAttribute(LOGIN_USER);
+        if (me == null) return R.fail(401, "未登录");
+
+        if (req.getUsername() == null || req.getUsername().isBlank()) {
+            return R.fail(400, "用户名不能为空");
+        }
+
+        // 1. 更新数据库
+        userMapper.updateUsername(me.getId(), req.getUsername());
+
+        // 2. 同步更新 Session
+        me.setUsername(req.getUsername());
+        session.setAttribute(LOGIN_USER, me);
+
         return R.ok(null);
     }
 }

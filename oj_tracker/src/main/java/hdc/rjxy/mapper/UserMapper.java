@@ -1,6 +1,7 @@
 package hdc.rjxy.mapper;
 
 import hdc.rjxy.pojo.User;
+import hdc.rjxy.pojo.vo.AdminUserStatsVO;
 import hdc.rjxy.pojo.vo.UserAdminVO;
 import org.apache.ibatis.annotations.Param;
 
@@ -36,5 +37,7 @@ public interface UserMapper {
     Long countAdminList(@Param("keyword") String keyword);
 
     int updateNickname(@Param("id") Long id, @Param("nickname") String nickname);
+    int updateUsername(@Param("id") Long id, @Param("username") String username);
 
+    AdminUserStatsVO getAdminUserStats();
 }

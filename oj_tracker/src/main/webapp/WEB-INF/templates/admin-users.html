@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: common-head('用户管理 - OJ Tracker')}"></head>
+<body style="background: #f0f2f5; display: block; height: auto;">
+
+<div th:replace="~{fragments/navbar :: common-nav}"></div>
+
+<div class="container main-container">
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <div class="text-muted small">注册总人数</div>
+                <div class="h2 fw-bold text-primary" id="statTotalUsers">0</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <div class="text-muted small">管理员人数</div>
+                <div class="h2 fw-bold text-dark" id="statAdmins">0</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <div class="text-muted small">状态正常</div>
+                <div class="h2 fw-bold text-success" id="statActive">0</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <div class="text-muted small">已被禁用</div>
+                <div class="h2 fw-bold text-danger" id="statBanned">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <h5 class="fw-bold mb-0">系统用户列表</h5>
+        </div>
+        <div class="col-auto">
+            <div class="input-group">
+                <input type="text" id="userSearch" class="form-control" placeholder="搜索昵称/学号/账号...">
+                <button class="btn btn-primary" onclick="handleSearch()"><i class="bi bi-search"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-muted small">
+                    <tr>
+                        <th class="ps-4 py-3">UID</th>
+                        <th>成员信息</th>
+                        <th>角色</th>
+                        <th>状态</th>
+                        <th class="text-end pe-4">操作</th>
+                    </tr>
+                    </thead>
+                    <tbody id="userTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4 mb-5">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <div class="text-muted small">
+                共 <span id="totalCount" class="fw-bold text-primary">0</span> 条记录，当前第 <span id="currentPageNum">1</span> 页
+            </div>
+            <nav>
+                <ul class="pagination pagination-sm mb-0 shadow-sm" id="pagination">
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/static/js/admin-users.js}"></script>
+</body>
+</html>

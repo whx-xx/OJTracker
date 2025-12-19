@@ -13,6 +13,7 @@ public interface RatingSnapshotMapper {
                @Param("handle") String handle,
                @Param("rating") int rating,
                @Param("contestName") String contestName,
+               @Param("rank") Integer rank,
                @Param("snapshotTime") LocalDateTime snapshotTime);
 
     RatingPointVO findLast(@Param("userId") Long userId,

@@ -5,15 +5,16 @@
 <mapper namespace="hdc.rjxy.mapper.RatingSnapshotMapper">
 
     <insert id="insert">
-        INSERT IGNORE INTO rating_snapshot(user_id, platform_id, handle, rating, contest_name, snapshot_time)
-        VALUES (#{userId}, #{platformId}, #{handle}, #{rating}, #{contestName}, #{snapshotTime})
+        INSERT IGNORE INTO rating_snapshot(user_id, platform_id, handle, rating, contest_name, contest_rank, snapshot_time)
+        VALUES (#{userId}, #{platformId}, #{handle}, #{rating}, #{contestName}, #{rank}, #{snapshotTime})
     </insert>
 
     <select id="findLast" resultType="hdc.rjxy.pojo.vo.RatingPointVO">
         SELECT
         snapshot_time AS time,
         rating AS rating,
-        contest_name AS contestName
+        contest_name AS contestName,
+        contest_rank AS `rank`
         FROM rating_snapshot
         WHERE user_id = #{userId}
         AND platform_id = #{platformId}
@@ -26,7 +27,8 @@
         SELECT
         snapshot_time AS time,
         rating AS rating,
-        contest_name AS contestName
+        contest_name AS contestName,
+        contest_rank AS `rank`
         FROM rating_snapshot
         WHERE user_id = #{userId}
         AND platform_id = #{platformId}
@@ -40,7 +42,8 @@
         SELECT
         snapshot_time AS time,
         rating AS rating,
-        contest_name AS contestName
+        contest_name AS contestName,
+        contest_rank AS `rank`
         FROM rating_snapshot
         WHERE user_id = #{userId}
         AND platform_id = #{platformId}
@@ -55,7 +58,8 @@
         SELECT
         snapshot_time AS time,
         rating AS rating,
-        contest_name AS contestName
+        contest_name AS contestName,
+        contest_rank AS `rank`
         FROM rating_snapshot
         WHERE user_id = #{userId}
         AND platform_id = #{platformId}

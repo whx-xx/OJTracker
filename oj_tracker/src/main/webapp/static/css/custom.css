@@ -90,3 +90,53 @@
     transform: scaleX(1);
     transform-origin: bottom left;
 }
+
+/* === Codeforces Rating Colors === */
+.text-purple { color: #aa00aa !important; font-weight: 600; }
+.text-warning { color: #ff8c00 !important; font-weight: 600; }
+.text-primary { color: #0000ff !important; font-weight: 600; }
+.text-info { color: #03a89e !important; font-weight: 600; }
+.text-success { color: #008000 !important; font-weight: 600; }
+.text-danger { color: #ff0000 !important; font-weight: 600; }
+.text-secondary { color: #808080 !important; }
+
+/* === Dashboard Timeline (时间线核心样式) === */
+.timeline-box {
+    position: relative;
+    padding-left: 1.5rem; /* 左侧留白给线条 */
+    border-left: 2px solid #e9ecef; /* 灰色竖线 */
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+/* 时间线圆点 */
+.timeline-dot {
+    position: absolute;
+    /* 精确计算：-(padding + border + dot_radius) */
+    left: calc(-1.5rem - 1px - 6px);
+    top: 0.25rem;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #fff;
+    border: 2px solid #adb5bd;
+    z-index: 2; /* 确保盖在直线上 */
+}
+
+/* 圆点状态颜色 */
+.dot-success { border-color: #198754; background-color: #d1e7dd; }
+.dot-danger  { border-color: #dc3545; background-color: #f8d7da; }
+.dot-warning { border-color: #ffc107; background-color: #fff3cd; }
+
+/* 滚动条美化 */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+/* Auth Pages */
+.auth-bg { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh; }
+.auth-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }

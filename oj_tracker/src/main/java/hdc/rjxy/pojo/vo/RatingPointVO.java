@@ -9,4 +9,5 @@ public class RatingPointVO {
     private Integer rating;          // rating
     private String contestName;      // contest_name
     private Integer delta;           // delta
+    private Integer rank;
 }

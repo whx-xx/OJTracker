@@ -1,65 +1,114 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/header :: common-head('个人看板 - OJ Tracker')}"></head>
-<body style="background: #f0f2f5; display: block; height: auto;">
+<body style="background: #f8f9fa; display: block; height: auto;">
 
 <div th:replace="~{fragments/navbar :: common-nav}"></div>
 
-<div class="container main-container">
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0 text-center p-3">
-                <div class="text-muted small">总解题数</div>
-                <div class="h2 fw-bold text-primary" id="totalSolved">0</div>
+<div class="container main-container py-4">
+    <div class="row g-4 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm border-0 h-100 animate__animated animate__fadeIn">
+                <div class="card-body text-center">
+                    <div class="text-muted small text-uppercase fw-bold mb-2">Total Solved</div>
+                    <div class="h2 fw-bold text-primary mb-0" id="totalSolved">0</div>
+                </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0 text-center p-3">
-                <div class="text-muted small">本周新增</div>
-                <div class="h2 fw-bold text-success" id="weeklySolved">0</div>
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm border-0 h-100 animate__animated animate__fadeIn" style="animation-delay: 0.1s">
+                <div class="card-body text-center">
+                    <div class="text-muted small text-uppercase fw-bold mb-2">Weekly Solved</div>
+                    <div class="h2 fw-bold text-success mb-0" id="weeklySolved">0</div>
+                </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0 text-center p-3">
-                <div class="text-muted small">绑定平台</div>
-                <div class="h2 fw-bold text-info" id="platformCount">0</div>
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm border-0 h-100 animate__animated animate__fadeIn" style="animation-delay: 0.2s">
+                <div class="card-body text-center">
+                    <div class="text-muted small text-uppercase fw-bold mb-2">Platforms</div>
+                    <div class="h2 fw-bold text-info mb-0" id="platformCount">0</div>
+                </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0 text-center p-3">
-                <div class="text-muted small">活跃天数</div>
-                <div class="h2 fw-bold text-warning" id="activeDays">0</div>
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm border-0 h-100 animate__animated animate__fadeIn" style="animation-delay: 0.3s">
+                <div class="card-body text-center">
+                    <div class="text-muted small text-uppercase fw-bold mb-2">Active Days</div>
+                    <div class="h2 fw-bold text-warning mb-0" id="activeDays">0</div>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-lg-8 mb-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white fw-bold">Rating 趋势图</div>
-                <div class="card-body">
-                    <div id="ratingChart" style="width: 100%; height: 350px;"></div>
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white border-bottom-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-graph-up-arrow text-primary me-2"></i>Rating History</h5>
+                    <span class="badge bg-light text-secondary">Codeforces</span>
+                </div>
+                <div class="card-body px-2">
+                    <div id="ratingChart" style="width: 100%; height: 320px;"></div>
                 </div>
             </div>
         </div>
-        <div class="col-lg-4 mb-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white fw-bold">绑定的平台</div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white border-bottom-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-link-45deg text-dark me-2"></i>My Platforms</h5>
+                </div>
                 <div class="card-body p-0">
                     <ul class="list-group list-group-flush" id="platformList">
-                        <li class="list-group-item text-center text-muted py-4">加载中...</li>
+                        <li class="list-group-item text-center text-muted py-5 border-0">
+                            <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+                        </li>
                     </ul>
+                </div>
+                <div class="card-footer bg-white border-top-0 text-center pb-3">
+                    <a href="/settings" class="btn btn-sm btn-outline-primary rounded-pill px-4">Manage Accounts</a>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row">
+    <div class="row mb-4">
         <div class="col-12">
             <div class="card shadow-sm border-0">
-                <div class="card-header bg-white fw-bold">提交热力图 (最近一年)</div>
-                <div class="card-body overflow-auto">
-                    <div id="heatmapChart" style="width: 100%; min-width: 800px; height: 250px;"></div>
+                <div class="card-header bg-white border-bottom-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-calendar3 text-success me-2"></i>Activity Heatmap</h5>
+                </div>
+                <div class="card-body">
+                    <div id="heatmapChart" style="width: 100%; min-width: 800px; height: 230px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white border-bottom-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-check2-circle text-success me-2"></i>Problems of the Week</h5>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill" id="weeklyCountBadge">0</span>
+                </div>
+                <div class="card-body p-0" style="max-height: 450px; overflow-y: auto;">
+                    <div class="list-group list-group-flush" id="weeklyProblemList">
+                        <div class="text-center py-4 text-muted small">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white border-bottom-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-clock-history text-secondary me-2"></i>Recent Activity</h5>
+                </div>
+                <div class="card-body px-4 py-3" style="max-height: 450px; overflow-y: auto;">
+                    <div class="timeline-box mt-2" id="submissionTimeline">
+                        <div class="text-center py-4 text-muted small">Loading...</div>
+                    </div>
                 </div>
             </div>
         </div>

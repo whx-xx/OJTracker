@@ -11,4 +11,5 @@ public class RatingHistoryPointVO {
     private Integer rating;       // newRating
     private Integer delta;        // delta 不存库，运行时算
     private String contestName;   // 比赛名
+    private Integer rank;
 }

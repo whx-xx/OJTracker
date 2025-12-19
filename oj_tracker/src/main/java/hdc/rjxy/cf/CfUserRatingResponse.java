@@ -20,5 +20,6 @@ public class CfUserRatingResponse {
         private Integer oldRating;
         private Integer newRating;
         private Long ratingUpdateTimeSeconds;
+        private Integer rank;
     }
 }

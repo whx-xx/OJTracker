@@ -132,7 +132,9 @@ public class SyncService {
                         continue;
                     }
 
-                    ratingSnapshotMapper.insert(userId, platformId, handle.trim(), it.getNewRating(), it.getContestName(), t);
+                    // [修复] 传入 rank 字段
+                    ratingSnapshotMapper.insert(userId, platformId, handle.trim(),
+                            it.getNewRating(), it.getContestName(), it.getRank(), t);
 
                     inserted++;
                 }
@@ -195,14 +197,9 @@ public class SyncService {
     }
 
 
-//    private String cut(String s, int max) {
-//        if (s == null) return null;
-//        return s.length() <= max ? s : s.substring(0, max);
-//    }
-
-
     @Transactional
     public Long runCfDailySync(String triggerSource, int days) {
+        // ... (保持不变) ...
         final String jobType = "DAILY_SYNC";
         final Long platformId = 1L; // CF
         final String teamCode = "DEFAULT";
@@ -421,7 +418,6 @@ public class SyncService {
     }
 
 
-    // 建议放在 SyncService 类里作为私有方法
     private void sleepRandom() {
         try {
             long sleepMs = 300 + new java.util.Random().nextInt(501); // 300~800
@@ -444,6 +440,7 @@ public class SyncService {
 
     @Transactional
     public Long rerunFailedUsers(Long oldJobId, String triggerSource) {
+        // ... (保持不变) ...
         if (oldJobId == null) throw new IllegalArgumentException("jobId不能为空");
 
         SyncJobLogVO oldJob = syncLogMapper.findJob(oldJobId);
@@ -460,7 +457,6 @@ public class SyncService {
 
         List<SyncUserFailVO> fails = syncLogMapper.listFailUsers(oldJobId);
         if (fails == null || fails.isEmpty()) {
-            // 没有失败用户也要把job收尾
             LocalDateTime end = LocalDateTime.now();
             long durationMs = java.time.Duration.between(start, end).toMillis();
             syncLogMapper.updateJobFinish(newJobId, "SUCCESS", end, durationMs,
@@ -473,7 +469,6 @@ public class SyncService {
         int fail = 0;
         int skip = 0;
 
-        // 你现在只有 CF
         final Long platformId = 1L;
 
         for (SyncUserFailVO u : fails) {
@@ -483,7 +478,7 @@ public class SyncService {
                     rerunRatingForUser(newJobId, userId, platformId);
                     success++;
                 } else if ("DAILY_SYNC".equalsIgnoreCase(jobType)) {
-                    rerunDailyForUser(newJobId, userId, platformId, 2); // 只补最近2天
+                    rerunDailyForUser(newJobId, userId, platformId, 2);
                     success++;
                 } else {
                     syncLogMapper.insertUserLog(newJobId, userId, platformId,
@@ -543,7 +538,9 @@ public class SyncService {
 
             if (lastTime != null && !t.isAfter(lastTime)) continue;
 
-            ratingSnapshotMapper.insert(userId, platformId, handle, it.getNewRating(), it.getContestName(), t);
+            // [修复] 传入 rank
+            ratingSnapshotMapper.insert(userId, platformId, handle,
+                    it.getNewRating(), it.getContestName(), it.getRank(), t);
             inserted++;
         }
 

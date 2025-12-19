@@ -5,7 +5,6 @@ import hdc.rjxy.mapper.RatingSnapshotMapper;
 import hdc.rjxy.mapper.UserPlatformAccountMapper;
 import hdc.rjxy.pojo.vo.RatingHistoryPointVO;
 import hdc.rjxy.pojo.vo.RatingPointVO;
-import hdc.rjxy.pojo.vo.RatingSnapshotPointVO;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -40,6 +39,10 @@ public class UserRatingService {
         LocalDateTime start = end.minusDays(days - 1);
 
         String handle = upaMapper.findIdentifierValue(userId, platformId);
+        if (handle == null) {
+            return new ArrayList<>();
+        }
+
         List<RatingPointVO> list =
                 ratingSnapshotMapper.listByTimeRange(
                         userId, platformId, handle.trim(), start, end);
@@ -52,11 +55,13 @@ public class UserRatingService {
             vo.setTime(p.getTime());
             vo.setRating(p.getRating());
             vo.setContestName(p.getContestName());
+
+            vo.setRank(p.getRank());
+
             vo.setDelta(prev == null ? 0 : p.getRating() - prev);
             prev = p.getRating();
             res.add(vo);
         }
         return res;
     }
-
 }

@@ -1,0 +1,110 @@
+:root {
+    --sidebar-width: 260px;
+    --header-height: 60px;
+    --bs-primary: #4e73df; /* 现代蓝 */
+    --bs-body-bg: #f8f9fc;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: var(--bs-body-bg);
+    overflow-x: hidden;
+}
+
+/* === Layout Wrapper === */
+#wrapper {
+    display: flex;
+    width: 100%;
+    align-items: stretch;
+}
+
+/* === Sidebar === */
+#sidebar-wrapper {
+    min-height: 100vh;
+    min-width: var(--sidebar-width);
+    max-width: var(--sidebar-width);
+    background: #ffffff;
+    border-right: 1px solid #e3e6f0;
+    transition: margin 0.25s ease-out;
+    z-index: 1000;
+}
+
+#sidebar-wrapper .sidebar-heading {
+    padding: 1.5rem 1.25rem;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--bs-primary);
+    display: flex;
+    align-items: center;
+}
+
+#sidebar-wrapper .list-group-item {
+    border: none;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.95rem;
+    color: #5a5c69;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+#sidebar-wrapper .list-group-item:hover {
+    background-color: #f8f9fa;
+    color: var(--bs-primary);
+}
+
+#sidebar-wrapper .list-group-item.active {
+    background-color: var(--bs-primary);
+    color: #fff;
+}
+
+#sidebar-wrapper .list-group-item i {
+    margin-right: 0.5rem;
+    width: 20px;
+    text-align: center;
+}
+
+/* 侧边栏子菜单标题 */
+.sidebar-divider {
+    margin: 1rem 1.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #b7b9cc;
+}
+
+/* === Main Content === */
+#page-content-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* === Common Components === */
+.card {
+    border: none;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    background-color: #fff;
+    border-bottom: 1px solid #e3e6f0;
+    font-weight: bold;
+    color: #4e73df;
+}
+
+/* 自定义 Badge */
+.badge-soft-success { background-color: rgba(28, 200, 138, 0.1); color: #1cc88a; }
+.badge-soft-warning { background-color: rgba(246, 194, 62, 0.1); color: #f6c23e; }
+.badge-soft-danger { background-color: rgba(231, 74, 59, 0.1); color: #e74a3b; }
+.badge-soft-primary { background-color: rgba(78, 115, 223, 0.1); color: #4e73df; }
+
+/* 移动端响应式: 隐藏侧边栏 */
+@media (max-width: 768px) {
+    #sidebar-wrapper {
+        margin-left: calc(-1 * var(--sidebar-width));
+    }
+    #wrapper.toggled #sidebar-wrapper {
+        margin-left: 0;
+    }
+}

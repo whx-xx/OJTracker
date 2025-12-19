@@ -71,4 +71,9 @@ public class PageController {
         }
         return "admin-op-logs"; // 对应 templates/admin-op-logs.html
     }
+
+    @GetMapping("/register")
+    public String registerPage() {
+        return "register"; // 对应 WEB-INF/templates/register.html
+    }
 }

@@ -39,6 +39,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                         "/",
                         "/login",
+                        "/register",
                         "/api/auth/**",
                         "/static/**",
                         "/favicon.ico"

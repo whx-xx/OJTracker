@@ -40,3 +40,53 @@
 .text-secondary {
     color: #808080 !important;
 }
+
+
+/* 背景渐变 */
+.auth-bg {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: 100vh;
+}
+
+/* 垂直居中容器 */
+.min-vh-100 {
+    min-height: 100vh;
+}
+
+/* 登录/注册卡片样式 */
+.auth-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px); /* 毛玻璃效果 */
+    transition: transform 0.3s ease;
+}
+
+.auth-card:hover {
+    transform: translateY(-5px);
+}
+
+/* 输入框聚焦效果优化 */
+.form-floating > .form-control:focus {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+    border-color: #86b7fe;
+}
+
+/* 链接悬停下划线动画 */
+.hover-underline {
+    position: relative;
+}
+.hover-underline::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    transform: scaleX(0);
+    height: 1px;
+    bottom: 0;
+    left: 0;
+    background-color: currentColor;
+    transform-origin: bottom right;
+    transition: transform 0.25s ease-out;
+}
+.hover-underline:hover::after {
+    transform: scaleX(1);
+    transform-origin: bottom left;
+}

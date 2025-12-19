@@ -9,10 +9,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const studentNo = document.getElementById('studentNo').value.trim();
         const username = document.getElementById('username').value.trim();
         const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
 
         // 1. 简单校验
-        if (!studentNo || !username || !password) {
+        if (!studentNo || !username || !password || !confirmPassword) {
             showError("请填写完整信息");
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            showError("两次输入的密码不一致");
             return;
         }
 

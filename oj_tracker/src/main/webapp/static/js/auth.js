@@ -31,9 +31,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (result.code === 200) {
                 // 登录成功，加入一个平滑跳转效果
                 btnText.textContent = "验证成功，跳转中...";
+                console.log("登录成功")
+                const response = await fetch('/api/me')
+                .then(res => res.json())
+                .then(data => console.log(data));
                 setTimeout(() => {
                     window.location.href = '/dashboard';
                 }, 800);
+
             } else {
                 showError(result.msg || "账号或密码错误");
                 setLoading(false);

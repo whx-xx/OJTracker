@@ -58,7 +58,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-muted small">学号 (Read Only)</label>
-                            <input type="text" class="form-control bg-light text-muted" th:value="${session.LOGIN_USER.studentNo} == null ? '无学号' : '${session.LOGIN_USER.studentNo}'" readonly>
+                            <input type="text" class="form-control bg-light text-muted" th:value="${session.LOGIN_USER.studentNo ?: '无学号'}" readonly>
                         </div>
                     </div>
                 </div>

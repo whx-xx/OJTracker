@@ -279,7 +279,6 @@
         <form id="registerForm">
             <h1>创建账户</h1>
             <p>请输入学号与个人信息进行注册</p>
-            <!-- 学号输入框 -->
             <input type="text" id="reg-studentNo" placeholder="学号 (如: 202310)" required />
             <input type="text" id="reg-username" placeholder="用户名" required />
             <input type="password" id="reg-password" placeholder="密码" required />
@@ -322,19 +321,20 @@
 <script th:inline="javascript">
     /*<![CDATA[*/
 
+    // API 基础路径
     const API_BASE_URL = /*[[@{/api/auth}]]*/ '/api/auth';
-    const HOME_URL = /*[[@{/}]]*/ '/';
+
+    // 仪表盘路径：后端 PageController 映射的 URL
+    const DASHBOARD_URL = /*[[@{/}]]*/ '/';
 
     // UI 切换逻辑
     const signUpButton = document.getElementById('signUp');
     const signInButton = document.getElementById('signIn');
     const container = document.getElementById('container');
 
-    // 绑定左右滑块点击事件
     signUpButton.addEventListener('click', () => container.classList.add("right-panel-active"));
     signInButton.addEventListener('click', () => container.classList.remove("right-panel-active"));
 
-    // 移动端切换视图
     function toggleMobileView(view) {
         if (view === 'register') container.classList.add("mobile-active");
         else container.classList.remove("mobile-active");
@@ -359,13 +359,14 @@
                 contentType: 'application/json',
                 data: JSON.stringify(data),
                 success: function(response) {
-                    // 判断成功条件：code=0 或 code=200 或 返回包含用户名的对象
                     const isSuccess = (response.code === 0) || (response.code === 200) || (response.username !== undefined);
 
                     if (isSuccess) {
                         const user = response.data || response;
                         showToast('success', `登录成功，欢迎回来 ${user.username}！`);
-                        setTimeout(() => window.location.href = HOME_URL, 1000);
+
+                        // 登录成功，跳转到仪表盘
+                        setTimeout(() => window.location.href = DASHBOARD_URL, 1000);
                     } else {
                         showToast('error', response.msg || '登录失败，请检查用户名或密码');
                         setLoading(btn, false);
@@ -406,7 +407,6 @@
                 contentType: 'application/json',
                 data: JSON.stringify(data),
                 success: function(response) {
-                    // 判断成功条件
                     const isSuccess = (response.code === 0) || (response.code === 200) || (response.studentNo !== undefined);
 
                     if (isSuccess) {
@@ -414,25 +414,20 @@
                         const studentNoMsg = result.studentNo ? `您的学号是：${result.studentNo}` : '';
 
                         showToast('success', `注册成功！${studentNoMsg} 正在跳转登录...`);
-
-                        // 清空注册表单
                         $('#registerForm')[0].reset();
 
-                        // 1.5秒后自动切换回登录页面
                         setTimeout(() => {
-                            // 移除激活状态，触发CSS动画滑回登录面
                             container.classList.remove("right-panel-active");
                             container.classList.remove("mobile-active");
 
-                            // 自动填充用户名，方便用户直接输入密码
+                            // 预填充用户名
                             if(result.username) {
                                 $('#login-username').val(result.username);
-                                $('#login-password').focus(); // 聚焦到密码框
+                                $('#login-password').focus();
                             } else if (data.username) {
                                 $('#login-username').val(data.username);
                                 $('#login-password').focus();
                             }
-
                             setLoading(btn, false);
                         }, 1500);
                     } else {
@@ -449,7 +444,7 @@
         });
     });
 
-    // --- 工具函数：显示提示 ---
+    // --- 工具函数 ---
     function showToast(type, message) {
         const toast = $('#toast');
         toast.text(message)
@@ -460,7 +455,6 @@
              .fadeOut();
     }
 
-    // --- 工具函数：按钮加载状态 ---
     function setLoading(btn, isLoading) {
         if (isLoading) {
             btn.data('original-text', btn.text());

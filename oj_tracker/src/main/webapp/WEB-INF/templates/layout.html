@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OJTracker Admin</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script th:src="@{/static/js/jquery.min.js}"></script>
+
+    <style>
+        :root {
+            --sidebar-width: 260px;
+            --header-height: 64px;
+            --primary-color: #2563eb;
+            --bg-body: #f3f4f6; /* 与 Dashboard 背景一致 */
+            --text-main: #1f2937;
+            --sidebar-bg: #111827; /* 深色侧边栏，提升专业感 */
+            --sidebar-text: #9ca3af;
+            --sidebar-active: #ffffff;
+            --border-color: #e5e7eb;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* --- Sidebar (Dark Theme) --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s;
+            flex-shrink: 0;
+        }
+
+        .brand {
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .brand i { margin-right: 12px; color: var(--primary-color); }
+
+        .menu { flex: 1; padding: 20px 10px; overflow-y: auto; }
+
+        .menu-category {
+            padding: 15px 15px 5px;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #4b5563;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            border-radius: 6px;
+            margin-bottom: 2px;
+            font-size: 14px;
+        }
+
+        .menu-item:hover {
+            background-color: rgba(255,255,255,0.05);
+            color: #fff;
+        }
+
+        .menu-item.active {
+            background-color: var(--primary-color);
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .menu-item i { width: 20px; margin-right: 10px; text-align: center; }
+
+        /* --- Main Content --- */
+        .main-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background-color: var(--bg-body);
+        }
+
+        .top-header {
+            height: var(--header-height);
+            background: #fff;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px; /* 增加 Header 内边距 */
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+        }
+
+        .page-title { font-size: 18px; font-weight: 600; color: #111827; }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+        .avatar {
+            width: 36px;
+            height: 36px;
+            background: #eff6ff;
+            color: var(--primary-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 1px #e5e7eb;
+        }
+        .username { font-size: 14px; font-weight: 500; color: #374151; }
+
+        /* Content Area */
+        .content-area {
+            flex: 1;
+            position: relative;
+            /* 关键：取消内边距，让 dashboard 能够铺满 */
+            padding: 0;
+            overflow: hidden;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        #loading-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            backdrop-filter: blur(2px);
+        }
+        .spinner { font-size: 28px; color: var(--primary-color); animation: spin 0.8s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .admin-only { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="brand">
+        <i class="fas fa-cube"></i> OJTracker
+    </div>
+
+    <div class="menu">
+        <div class="menu-category">General</div>
+        <a class="menu-item active" data-url="/dashboard" data-title="仪表盘">
+            <i class="fas fa-columns"></i> 仪表盘
+        </a>
+        <a class="menu-item" data-url="/views/profile" data-title="个人设置">
+            <i class="fas fa-user-cog"></i> 个人设置
+        </a>
+        <a class="menu-item" data-url="/views/rankings" data-title="排行榜">
+            <i class="fas fa-trophy"></i> 团队排行
+        </a>
+
+        <div class="menu-category admin-only">System</div>
+        <a class="menu-item admin-only" data-url="/views/users" data-title="用户管理">
+            <i class="fas fa-users-cog"></i> 用户管理
+        </a>
+        <a class="menu-item admin-only" data-url="/views/sync" data-title="同步调度">
+            <i class="fas fa-network-wired"></i> 同步调度
+        </a>
+        <a class="menu-item admin-only" data-url="/api/admin/op-logs" data-title="操作日志">
+            <i class="fas fa-clipboard-list"></i> 操作日志
+        </a>
+    </div>
+</div>
+
+<div class="main-wrapper">
+    <div class="top-header">
+        <div class="page-title" id="pageTitle">仪表盘</div>
+        <div class="user-profile" id="userMenu">
+            <span class="username" id="userName">Loading...</span>
+            <div class="avatar" id="userAvatar">U</div>
+        </div>
+    </div>
+
+    <div class="content-area">
+        <div id="loading-overlay"><i class="fas fa-circle-notch spinner"></i></div>
+        <iframe id="contentFrame" th:src="@{/dashboard}" name="contentFrame"></iframe>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+
+        const API_BASE = /*[[@{/api}]]*/ '/api';
+        const LOGIN_URL = /*[[@{/login}]]*/ '/login';
+
+        $(document).ready(function() {
+            checkAuth();
+            bindEvents();
+        });
+
+        function checkAuth() {
+            $.get(API_BASE + '/me', function(res) {
+                if (res.code === 200 || res.code === 0) {
+                    const u = res.data;
+                    $('#userName').text(u.nickname || u.username);
+                    $('#userAvatar').text((u.username||'U').charAt(0).toUpperCase());
+
+                    // Admin Check
+                    if (u.role === 'ADMIN' || u.isAdmin === true || u.type === 1) {
+                        $('.admin-only').show();
+                    }
+                } else {
+                    window.location.href = LOGIN_URL;
+                }
+            }).fail(() => window.location.href = LOGIN_URL);
+        }
+
+        function bindEvents() {
+            $('.menu-item').click(function() {
+                $('.menu-item').removeClass('active');
+                $(this).addClass('active');
+
+                const url = $(this).data('url');
+                const title = $(this).data('title');
+                $('#pageTitle').text(title);
+
+                loadPage(url);
+            });
+
+            $('#userMenu').click(function() {
+                if(confirm('Logout?')) {
+                    $.post(API_BASE + '/auth/logout', () => window.location.href = LOGIN_URL);
+                }
+            });
+        }
+
+        function loadPage(url) {
+            let fullUrl = url;
+            const ctx = /*[[@{/}]]*/ '';
+            // 简易处理路径
+            if(url.startsWith('/') && ctx !== '/' && !url.startsWith(ctx)) {
+                 fullUrl = ctx + url.substring(1);
+            }
+
+            $('#loading-overlay').fadeIn(100);
+            $('#contentFrame').attr('src', fullUrl);
+            $('#contentFrame').on('load', () => $('#loading-overlay').fadeOut(200));
+        }
+
+    /*]]>*/
+</script>
+</body>
+</html>

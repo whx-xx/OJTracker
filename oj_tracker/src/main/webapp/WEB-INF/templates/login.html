@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OJTracker - 登录与注册</title>
+
+    <!-- 引入 FontAwesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- 引入 jQuery -->
+    <script th:src="@{/static/js/jquery.min.js}"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;800&display=swap');
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f6f5f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            font-family: 'Montserrat', sans-serif;
+            height: 100vh;
+            margin: -20px 0 50px;
+        }
+
+        h1 {
+            font-weight: bold;
+            margin: 0 0 10px 0;
+        }
+
+        p {
+            font-size: 14px;
+            font-weight: 100;
+            line-height: 20px;
+            letter-spacing: 0.5px;
+            margin: 20px 0 30px;
+        }
+
+        span {
+            font-size: 12px;
+        }
+
+        a {
+            color: #333;
+            font-size: 14px;
+            text-decoration: none;
+            margin: 15px 0;
+        }
+
+        button {
+            border-radius: 20px;
+            border: 1px solid #FF4B2B;
+            background-color: #FF4B2B;
+            color: #FFFFFF;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 12px 45px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: transform 80ms ease-in;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        button:focus {
+            outline: none;
+        }
+
+        button.ghost {
+            background-color: transparent;
+            border-color: #FFFFFF;
+        }
+
+        /* 表单样式 */
+        form {
+            background-color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 0 50px;
+            height: 100%;
+            text-align: center;
+        }
+
+        input {
+            background-color: #eee;
+            border: none;
+            padding: 12px 15px;
+            margin: 8px 0;
+            width: 100%;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        /* 容器主样式 */
+        .container {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 14px 28px rgba(0,0,0,0.25),
+                        0 10px 10px rgba(0,0,0,0.22);
+            position: relative;
+            overflow: hidden;
+            width: 768px;
+            max-width: 100%;
+            min-height: 520px;
+        }
+
+        .form-container {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            transition: all 0.6s ease-in-out;
+        }
+
+        /* 登录容器 (默认显示) */
+        .sign-in-container {
+            left: 0;
+            width: 50%;
+            z-index: 2;
+        }
+
+        /* 注册容器 (默认隐藏) */
+        .sign-up-container {
+            left: 0;
+            width: 50%;
+            opacity: 0;
+            z-index: 1;
+        }
+
+        /* 动画状态：激活右侧面板（注册模式） */
+        .container.right-panel-active .sign-in-container {
+            transform: translateX(100%);
+        }
+
+        .container.right-panel-active .sign-up-container {
+            transform: translateX(100%);
+            opacity: 1;
+            z-index: 5;
+            animation: show 0.6s;
+        }
+
+        @keyframes show {
+            0%, 49.99% {
+                opacity: 0;
+                z-index: 1;
+            }
+            50%, 100% {
+                opacity: 1;
+                z-index: 5;
+            }
+        }
+
+        /* 覆盖层 (Overlay) */
+        .overlay-container {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 50%;
+            height: 100%;
+            overflow: hidden;
+            transition: transform 0.6s ease-in-out;
+            z-index: 100;
+        }
+
+        .container.right-panel-active .overlay-container {
+            transform: translateX(-100%);
+        }
+
+        .overlay {
+            background: #FF416C;
+            background: -webkit-linear-gradient(to right, #FF4B2B, #FF416C);
+            background: linear-gradient(to right, #FF4B2B, #FF416C);
+            background-repeat: no-repeat;
+            background-size: cover;
+            background-position: 0 0;
+            color: #FFFFFF;
+            position: relative;
+            left: -100%;
+            height: 100%;
+            width: 200%;
+            transform: translateX(0);
+            transition: transform 0.6s ease-in-out;
+        }
+
+        .container.right-panel-active .overlay {
+            transform: translateX(50%);
+        }
+
+        .overlay-panel {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 0 40px;
+            text-align: center;
+            top: 0;
+            height: 100%;
+            width: 50%;
+            transform: translateX(0);
+            transition: transform 0.6s ease-in-out;
+        }
+
+        .overlay-left {
+            transform: translateX(-20%);
+        }
+
+        .container.right-panel-active .overlay-left {
+            transform: translateX(0);
+        }
+
+        .overlay-right {
+            right: 0;
+            transform: translateX(0);
+        }
+
+        .container.right-panel-active .overlay-right {
+            transform: translateX(20%);
+        }
+
+        /* 错误提示条 */
+        .toast-msg {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 25px;
+            border-radius: 50px;
+            color: white;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            font-size: 14px;
+        }
+        .toast-success { background-color: #2ecc71; }
+        .toast-error { background-color: #e74c3c; }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .container {
+                width: 100%;
+                min-height: 580px;
+                border-radius: 0;
+                box-shadow: none;
+            }
+            .overlay-container { display: none; }
+            .sign-in-container, .sign-up-container { width: 100%; position: absolute; left: 0; transition: opacity 0.3s; }
+            .sign-up-container { opacity: 0; pointer-events: none; z-index: 1; }
+            .sign-in-container { z-index: 2; }
+
+            .container.mobile-active .sign-up-container { opacity: 1; pointer-events: all; z-index: 5; }
+            .container.mobile-active .sign-in-container { opacity: 0; pointer-events: none; }
+
+            .mobile-toggle { display: block; margin-top: 20px; color: #FF4B2B; cursor: pointer; font-weight: bold; }
+        }
+        .mobile-toggle { display: none; }
+    </style>
+</head>
+<body>
+
+<!-- 消息提示 -->
+<div id="toast" class="toast-msg"></div>
+
+<div class="container" id="container">
+
+    <!-- 注册表单 -->
+    <div class="form-container sign-up-container">
+        <form id="registerForm">
+            <h1>创建账户</h1>
+            <p>请输入学号与个人信息进行注册</p>
+            <!-- 学号输入框 -->
+            <input type="text" id="reg-studentNo" placeholder="学号 (如: 202310)" required />
+            <input type="text" id="reg-username" placeholder="用户名" required />
+            <input type="password" id="reg-password" placeholder="密码" required />
+            <input type="password" id="reg-confirm-password" placeholder="确认密码" required />
+            <button type="submit" id="btnRegister">立即注册</button>
+            <span class="mobile-toggle" onclick="toggleMobileView('login')">已有账号？去登录</span>
+        </form>
+    </div>
+
+    <!-- 登录表单 -->
+    <div class="form-container sign-in-container">
+        <form id="loginForm">
+            <h1>登录 OJTracker</h1>
+            <p>欢迎回来，请登录您的账号</p>
+            <input type="text" id="login-username" placeholder="用户名" required />
+            <input type="password" id="login-password" placeholder="密码" required />
+            <a href="#">忘记密码？</a>
+            <button type="submit" id="btnLogin">登录</button>
+            <span class="mobile-toggle" onclick="toggleMobileView('register')">没有账号？去注册</span>
+        </form>
+    </div>
+
+    <!-- 遮罩层 -->
+    <div class="overlay-container">
+        <div class="overlay">
+            <div class="overlay-panel overlay-left">
+                <h1>欢迎回来！</h1>
+                <p>请使用您的个人信息登录，继续您的算法之旅</p>
+                <button class="ghost" id="signIn">去登录</button>
+            </div>
+            <div class="overlay-panel overlay-right">
+                <h1>你好，朋友！</h1>
+                <p>加入我们，记录您的每一次进步</p>
+                <button class="ghost" id="signUp">去注册</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+
+    const API_BASE_URL = /*[[@{/api/auth}]]*/ '/api/auth';
+    const HOME_URL = /*[[@{/}]]*/ '/';
+
+    // UI 切换逻辑
+    const signUpButton = document.getElementById('signUp');
+    const signInButton = document.getElementById('signIn');
+    const container = document.getElementById('container');
+
+    // 绑定左右滑块点击事件
+    signUpButton.addEventListener('click', () => container.classList.add("right-panel-active"));
+    signInButton.addEventListener('click', () => container.classList.remove("right-panel-active"));
+
+    // 移动端切换视图
+    function toggleMobileView(view) {
+        if (view === 'register') container.classList.add("mobile-active");
+        else container.classList.remove("mobile-active");
+    }
+
+    $(document).ready(function() {
+
+        // --- 1. 登录逻辑 ---
+        $('#loginForm').on('submit', function(e) {
+            e.preventDefault();
+            const btn = $('#btnLogin');
+            setLoading(btn, true);
+
+            const data = {
+                username: $('#login-username').val(),
+                password: $('#login-password').val()
+            };
+
+            $.ajax({
+                url: API_BASE_URL + '/login',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    // 判断成功条件：code=0 或 code=200 或 返回包含用户名的对象
+                    const isSuccess = (response.code === 0) || (response.code === 200) || (response.username !== undefined);
+
+                    if (isSuccess) {
+                        const user = response.data || response;
+                        showToast('success', `登录成功，欢迎回来 ${user.username}！`);
+                        setTimeout(() => window.location.href = HOME_URL, 1000);
+                    } else {
+                        showToast('error', response.msg || '登录失败，请检查用户名或密码');
+                        setLoading(btn, false);
+                    }
+                },
+                error: function(xhr) {
+                    const msg = xhr.responseJSON ? xhr.responseJSON.msg : '服务器连接失败';
+                    showToast('error', msg);
+                    setLoading(btn, false);
+                }
+            });
+        });
+
+        // --- 2. 注册逻辑 ---
+        $('#registerForm').on('submit', function(e) {
+            e.preventDefault();
+            const btn = $('#btnRegister');
+
+            const pwd = $('#reg-password').val();
+            const confirmPwd = $('#reg-confirm-password').val();
+
+            if (pwd !== confirmPwd) {
+                showToast('error', '两次输入的密码不一致');
+                return;
+            }
+
+            setLoading(btn, true);
+
+            const data = {
+                studentNo: $('#reg-studentNo').val(),
+                username: $('#reg-username').val(),
+                password: pwd
+            };
+
+            $.ajax({
+                url: API_BASE_URL + '/register',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    // 判断成功条件
+                    const isSuccess = (response.code === 0) || (response.code === 200) || (response.studentNo !== undefined);
+
+                    if (isSuccess) {
+                        const result = response.data || response;
+                        const studentNoMsg = result.studentNo ? `您的学号是：${result.studentNo}` : '';
+
+                        showToast('success', `注册成功！${studentNoMsg} 正在跳转登录...`);
+
+                        // 清空注册表单
+                        $('#registerForm')[0].reset();
+
+                        // 1.5秒后自动切换回登录页面
+                        setTimeout(() => {
+                            // 移除激活状态，触发CSS动画滑回登录面
+                            container.classList.remove("right-panel-active");
+                            container.classList.remove("mobile-active");
+
+                            // 自动填充用户名，方便用户直接输入密码
+                            if(result.username) {
+                                $('#login-username').val(result.username);
+                                $('#login-password').focus(); // 聚焦到密码框
+                            } else if (data.username) {
+                                $('#login-username').val(data.username);
+                                $('#login-password').focus();
+                            }
+
+                            setLoading(btn, false);
+                        }, 1500);
+                    } else {
+                        showToast('error', response.msg || '注册失败');
+                        setLoading(btn, false);
+                    }
+                },
+                error: function(xhr) {
+                    const msg = xhr.responseJSON ? xhr.responseJSON.msg : '注册请求失败';
+                    showToast('error', msg);
+                    setLoading(btn, false);
+                }
+            });
+        });
+    });
+
+    // --- 工具函数：显示提示 ---
+    function showToast(type, message) {
+        const toast = $('#toast');
+        toast.text(message)
+             .removeClass('toast-success toast-error')
+             .addClass(type === 'success' ? 'toast-success' : 'toast-error')
+             .fadeIn()
+             .delay(3000)
+             .fadeOut();
+    }
+
+    // --- 工具函数：按钮加载状态 ---
+    function setLoading(btn, isLoading) {
+        if (isLoading) {
+            btn.data('original-text', btn.text());
+            btn.text('处理中...').prop('disabled', true).css('opacity', '0.7');
+        } else {
+            btn.text(btn.data('original-text')).prop('disabled', false).css('opacity', '1');
+        }
+    }
+
+    /*]]>*/
+</script>
+
+</body>
+</html>

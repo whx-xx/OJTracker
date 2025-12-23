@@ -271,9 +271,16 @@
             checkAuth();
             bindEvents();
 
-            // 暴露全局刷新方法，供 iframe (如 profile.html) 调用
+         // 暴露全局刷新方法，供 iframe (如 profile.html) 调用
             window.checkAuth = checkAuth;
             window.initPlatforms = function() {}; // 占位，防止报错
+
+            // 暴露菜单切换方法，供子页面调用
+            window.activateMenu = function(url) {
+                // 找到对应 data-url 的菜单项并触发点击
+                // 这样会复用 bindEvents 里的逻辑：移除旧 active -> 添加新 active -> loadPage
+                $('.menu-item[data-url="' + url + '"]').click();
+            };
         });
 
         function checkAuth() {

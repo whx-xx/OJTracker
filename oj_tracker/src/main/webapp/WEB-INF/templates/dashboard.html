@@ -274,7 +274,7 @@
             <div class="handle-info" id="handleInfo" style="display:none;">
                 <span>Handle:</span>
                 <span id="currentHandle" class="handle-val">-</span>
-                <a th:href="@{/login}" target="_top" class="manage-link" title="管理账号"><i class="fas fa-cog"></i></a>
+                <a href="javascript:void(0)" onclick="parent.activateMenu('/views/profile'); return false;" class="manage-link" title="管理账号"><i class="fas fa-cog"></i></a>
             </div>
 
             <button class="sync-btn" id="btnSync">

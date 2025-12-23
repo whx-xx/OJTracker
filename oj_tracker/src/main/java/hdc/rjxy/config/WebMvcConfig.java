@@ -102,7 +102,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
     // 4. 静态资源映射（存放 Bootstrap, JS, CSS）
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/static/**").addResourceLocations("/static/");
+        registry.addResourceHandler("/static/**")
+                .addResourceLocations("/static/");
+        registry.addResourceHandler("/favicon.ico")
+                .addResourceLocations("/static/images/favicon.ico");
     }
 
     @Bean

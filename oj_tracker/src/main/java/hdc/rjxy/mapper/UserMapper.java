@@ -40,4 +40,6 @@ public interface UserMapper {
     int updateUsername(@Param("id") Long id, @Param("username") String username);
 
     AdminUserStatsVO getAdminUserStats();
+
+    void updateUserAvatar(User user);
 }

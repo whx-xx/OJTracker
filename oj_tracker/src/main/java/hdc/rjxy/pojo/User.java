@@ -6,6 +6,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class User {
     private Long id;
 
@@ -17,6 +18,9 @@ public class User {
 
     /** 昵称（管理员可改为班级姓名） */
     private String nickname;
+
+    /** 用户头像 URL */
+    private String avatar;
 
     /** 角色：ADMIN / USER */
     private String role;

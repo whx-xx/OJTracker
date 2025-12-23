@@ -11,6 +11,7 @@
         nickname,
         role,
         status,
+        avatar,
         password_hash,
         must_change_password,
         created_at,
@@ -125,6 +126,13 @@
     <update id="updateUsername">
         UPDATE user
         SET username = #{username}
+        WHERE id = #{id}
+    </update>
+    <update id="updateUserAvatar">
+        UPDATE user
+        SET
+            avatar = #{avatar},
+            updated_at = #{updatedAt}
         WHERE id = #{id}
     </update>
 

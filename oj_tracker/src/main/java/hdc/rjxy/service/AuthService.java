@@ -53,6 +53,7 @@ public class AuthService {
         s.setRole(user.getRole());
         s.setStatus(user.getStatus());
         s.setMustChangePassword(user.getMustChangePassword());
+        s.setAvatar(user.getAvatar());
         return s;
     }
 

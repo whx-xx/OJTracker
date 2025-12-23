@@ -2,14 +2,18 @@ package hdc.rjxy.controller;
 
 import hdc.rjxy.common.R;
 import hdc.rjxy.mapper.UserMapper;
+import hdc.rjxy.pojo.User;
 import hdc.rjxy.pojo.UserSession;
 import hdc.rjxy.pojo.dto.UpdateMyPlatformsReq;
 import hdc.rjxy.pojo.dto.UpdateNicknameReq;
 import hdc.rjxy.pojo.dto.UpdateUsernameReq;
 import hdc.rjxy.pojo.vo.MyPlatformAccountVO;
 import hdc.rjxy.service.MyPlatformService;
+import hdc.rjxy.service.OssService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -21,10 +25,12 @@ public class MeController {
 
     private final MyPlatformService myPlatformService;
     private final UserMapper userMapper;
+    private final OssService ossService;
 
-    public MeController(MyPlatformService myPlatformService, UserMapper userMapper) {
+    public MeController(MyPlatformService myPlatformService, UserMapper userMapper, OssService ossService) {
         this.myPlatformService = myPlatformService;
         this.userMapper = userMapper;
+        this.ossService = ossService;
     }
 
     // 1. 获取当前登录用户信息
@@ -90,5 +96,38 @@ public class MeController {
         session.setAttribute(LOGIN_USER, me);
 
         return R.ok(null);
+    }
+    /**
+     * 头像上传接口
+     */
+    @PostMapping("/avatar")
+    public R<String> uploadAvatar(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute(LOGIN_USER) == null) {
+            return R.fail(401,"未登录");
+        }
+        UserSession userSession = (UserSession) session.getAttribute(LOGIN_USER);
+
+        if (file.isEmpty()) {
+            return R.fail(400,"文件不能为空");
+        }
+
+        // 1. 上传到 OSS
+        String avatarUrl = ossService.uploadFile(file);
+        if (avatarUrl == null) {
+            return R.fail(500,"图片上传失败");
+        }
+
+        // 2. 更新数据库
+        User user = new User();
+        user.setId(userSession.getId());
+        user.setAvatar(avatarUrl);
+        user.setUpdatedAt(java.time.LocalDateTime.now());
+        userMapper.updateUserAvatar(user);
+
+        // 3. 同步更新 Session
+        userSession.setAvatar(avatarUrl);
+        session.setAttribute(LOGIN_USER, userSession);
+        return R.ok(avatarUrl); // 返回 URL 给前端显示
     }
 }

@@ -11,4 +11,5 @@ public class TeamRankingVO {
     private Integer rating;
     private LocalDateTime snapshotTime;
     private String handle;
+    private String avatar;
 }

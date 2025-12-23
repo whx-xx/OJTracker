@@ -1,0 +1,5 @@
+# oss.properties.example
+aliyun.oss.endpoint=your-endpoint
+aliyun.oss.accessKeyId=your-access-key-id
+aliyun.oss.accessKeySecret=your-access-key-secret
+aliyun.oss.bucketName=your-bucket-name

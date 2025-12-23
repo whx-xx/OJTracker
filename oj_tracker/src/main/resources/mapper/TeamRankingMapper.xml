@@ -6,6 +6,7 @@
         SELECT
         u.id AS userId,
         u.nickname,
+        u.avatar,
         u.student_no AS studentNo,
         pa.identifier_value AS handle,
         COALESCE(rs.rating, 0) AS rating,

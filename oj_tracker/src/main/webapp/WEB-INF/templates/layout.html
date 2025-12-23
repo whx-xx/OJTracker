@@ -126,11 +126,13 @@
             align-items: center;
             gap: 12px;
         }
+
+        /* Avatar Styling (Supports Image & Text) */
         .avatar {
             width: 36px;
             height: 36px;
-            background: #eff6ff;
-            color: var(--primary-color);
+            background: #eff6ff; /* 默认文字头像背景 */
+            color: var(--primary-color); /* 默认文字颜色 */
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -139,7 +141,17 @@
             font-size: 14px;
             border: 2px solid #fff;
             box-shadow: 0 0 0 1px #e5e7eb;
+            overflow: hidden; /* 关键：裁剪图片超出部分 */
+            flex-shrink: 0;
         }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 关键：保持比例填充 */
+            display: block;
+        }
+
         .username { font-size: 14px; font-weight: 500; color: #374151; }
 
         /* Logout Button Styles */
@@ -232,11 +244,11 @@
 
         <div class="header-right">
             <div class="user-profile">
-                <div class="avatar" id="userAvatar">U</div>
+                <!-- 头像容器 -->
+                <div class="avatar" id="userAvatar"></div>
                 <span class="username" id="userName">Loading...</span>
             </div>
 
-            <!-- 明显的退出按钮 -->
             <button class="logout-btn" id="btnLogout">
                 <i class="fas fa-sign-out-alt"></i> 退出登录
             </button>
@@ -258,6 +270,10 @@
         $(document).ready(function() {
             checkAuth();
             bindEvents();
+
+            // 暴露全局刷新方法，供 iframe (如 profile.html) 调用
+            window.checkAuth = checkAuth;
+            window.initPlatforms = function() {}; // 占位，防止报错
         });
 
         function checkAuth() {
@@ -265,9 +281,20 @@
                 if (res.code === 200 || res.code === 0) {
                     const u = res.data;
                     $('#userName').text(u.nickname || u.username);
-                    $('#userAvatar').text((u.username||'U').charAt(0).toUpperCase());
 
-                    // Admin Check
+                    // --- 头像逻辑修复 ---
+                    const $avatarBox = $('#userAvatar');
+                    $avatarBox.empty();
+
+                    if (u.avatar && u.avatar.trim() !== '') {
+                        // 有图片：显示图片
+                        $avatarBox.html(`<img src="${u.avatar}" alt="Avatar">`);
+                    } else {
+                        // 无图片：显示首字母文字
+                        const initial = (u.nickname || u.username || 'U').charAt(0).toUpperCase();
+                        $avatarBox.text(initial);
+                    }
+
                     if (u.role === 'ADMIN' || u.isAdmin === true || u.type === 1) {
                         $('.admin-only').show();
                     }
@@ -289,7 +316,6 @@
                 loadPage(url);
             });
 
-            // 绑定到新的退出按钮
             $('#btnLogout').click(function() {
                 if(confirm('确定要退出当前账号吗？')) {
                     $.post(API_BASE + '/auth/logout', () => window.location.href = LOGIN_URL);
@@ -300,7 +326,6 @@
         function loadPage(url) {
             let fullUrl = url;
             const ctx = /*[[@{/}]]*/ '';
-            // 简易处理路径
             if(url.startsWith('/') && ctx !== '/' && !url.startsWith(ctx)) {
                  fullUrl = ctx + url.substring(1);
             }

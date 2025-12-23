@@ -51,6 +51,7 @@
             font-size: 14px;
             text-decoration: none;
             margin: 15px 0;
+            cursor: pointer; /* 确保鼠标变为手型 */
         }
 
         button {
@@ -245,6 +246,7 @@
         }
         .toast-success { background-color: #2ecc71; }
         .toast-error { background-color: #e74c3c; }
+        .toast-info { background-color: #3b82f6; } /* 蓝色提示信息 */
 
         /* 移动端适配 */
         @media (max-width: 768px) {
@@ -279,7 +281,7 @@
         <form id="registerForm">
             <h1>创建账户</h1>
             <p>请输入学号与个人信息进行注册</p>
-            <input type="text" id="reg-studentNo" placeholder="学号 (如: 202310)" required />
+            <input type="text" id="reg-studentNo" placeholder="学号" required />
             <input type="text" id="reg-username" placeholder="用户名" required />
             <input type="password" id="reg-password" placeholder="密码" required />
             <input type="password" id="reg-confirm-password" placeholder="确认密码" required />
@@ -295,7 +297,8 @@
             <p>欢迎回来，请登录您的账号</p>
             <input type="text" id="login-username" placeholder="用户名" required />
             <input type="password" id="login-password" placeholder="密码" required />
-            <a href="#">忘记密码？</a>
+            <!-- 这里的 ID 用于绑定点击事件 -->
+            <a id="forgotPasswordLink">忘记密码？</a>
             <button type="submit" id="btnLogin">登录</button>
             <span class="mobile-toggle" onclick="toggleMobileView('register')">没有账号？去注册</span>
         </form>
@@ -342,6 +345,12 @@
 
     $(document).ready(function() {
 
+        // --- 忘记密码点击事件 ---
+        $('#forgotPasswordLink').on('click', function(e) {
+            e.preventDefault(); // 阻止默认跳转行为（如果有的话）
+            showToast('info', '请联系系统管理员为您重置密码');
+        });
+
         // --- 1. 登录逻辑 ---
         $('#loginForm').on('submit', function(e) {
             e.preventDefault();
@@ -368,7 +377,8 @@
                         // 登录成功，跳转到仪表盘
                         setTimeout(() => window.location.href = DASHBOARD_URL, 1000);
                     } else {
-                        showToast('error', response.msg || '登录失败，请检查用户名或密码');
+                        // 错误提示中也可以加上重置密码的指引
+                        showToast('error', '登录失败，请检查用户名或密码');
                         setLoading(btn, false);
                     }
                 },
@@ -447,9 +457,19 @@
     // --- 工具函数 ---
     function showToast(type, message) {
         const toast = $('#toast');
+
+        // 移除所有可能的类，根据 type 添加新类
+        toast.removeClass('toast-success toast-error toast-info');
+
+        if (type === 'success') {
+            toast.addClass('toast-success');
+        } else if (type === 'error') {
+            toast.addClass('toast-error');
+        } else {
+            toast.addClass('toast-info'); // 默认为蓝色 info
+        }
+
         toast.text(message)
-             .removeClass('toast-success toast-error')
-             .addClass(type === 'success' ? 'toast-success' : 'toast-error')
              .fadeIn()
              .delay(3000)
              .fadeOut();

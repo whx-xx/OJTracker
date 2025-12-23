@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Settings - OJTracker</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script th:src="@{/static/js/jquery.min.js}"></script>
+
+    <style>
+        :root {
+            /* 与 Layout/Dashboard 保持一致 */
+            --bg-body: #f3f4f6;
+            --bg-card: #ffffff;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --accent-color: #2563eb;
+            --accent-hover: #1d4ed8;
+            --danger-color: #ef4444;
+            --border-color: #e5e7eb;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 24px 32px; /* 与 Dashboard 保持一致的内边距 */
+        }
+
+        .container { max-width: 100%; margin: 0 auto; }
+
+        /* --- Layout Grid --- */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 380px 1fr; /* 左侧固定，右侧自适应 */
+            gap: 24px;
+            align-items: start;
+        }
+
+        /* --- Card Styles --- */
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border-color);
+            background: #fff;
+            display: flex; align-items: center;
+        }
+        .card-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; color: #111827; }
+        .card-title i {
+            color: var(--accent-color); background: #eff6ff;
+            width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+            border-radius: 8px; font-size: 14px;
+        }
+
+        .card-body { padding: 24px; }
+
+        /* --- Forms --- */
+        .form-group { margin-bottom: 20px; }
+        .form-group:last-child { margin-bottom: 0; }
+
+        .form-label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+            outline: none;
+            color: var(--text-primary);
+            background: #fff;
+        }
+        .form-control:focus { border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        .form-control:disabled { background: #f9fafb; color: #9ca3af; cursor: not-allowed; border-color: #f3f4f6; }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600;
+            border: none; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-primary { background: var(--accent-color); color: white; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-primary:disabled { opacity: 0.7; cursor: wait; }
+
+        .btn-danger { background: #fee2e2; color: var(--danger-color); }
+        .btn-danger:hover { background: #fecaca; }
+
+        .btn-outline { background: white; border: 1px solid var(--border-color); color: var(--text-primary); }
+        .btn-outline:hover { background: #f3f4f6; border-color: #d1d5db; }
+
+        .btn-block { width: 100%; }
+
+        /* --- CF Binding Box --- */
+        .cf-binding-container {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .current-bind-box {
+            display: flex;
+            align-items: center;
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .cf-logo-area {
+            width: 64px; height: 64px;
+            background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; font-weight: 800; color: #1e293b;
+            margin-right: 20px; flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .bind-info h4 { margin: 0 0 6px 0; font-size: 13px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+        .bind-handle { font-size: 22px; font-weight: 800; color: #0f172a; font-family: monospace; letter-spacing: -0.02em; }
+        .bind-empty { color: #94a3b8; font-style: italic; font-weight: 400; font-size: 16px; font-family: sans-serif; }
+
+        .update-form-area {
+            border-top: 1px solid #f1f5f9;
+            padding-top: 24px;
+        }
+        .input-group { display: flex; gap: 12px; }
+        .input-group .form-control { flex: 1; }
+
+        .hint-text {
+            font-size: 13px; color: #6b7280; margin-top: 12px; line-height: 1.6;
+            background: #fffbeb; padding: 10px 14px; border-radius: 8px; border: 1px solid #fef3c7; color: #92400e;
+        }
+        .hint-text i { margin-right: 6px; }
+
+        /* --- Toast --- */
+        #toast {
+            position: fixed; top: 20px; right: 20px; z-index: 10000;
+            padding: 12px 24px; border-radius: 8px; color: white; font-weight: 500;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            display: none; transform: translateY(-20px); transition: transform 0.3s;
+        }
+        .toast-success { background: #10b981; }
+        .toast-error { background: #ef4444; }
+
+        /* --- Custom Modal --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5); z-index: 9999;
+            display: none; align-items: center; justify-content: center;
+            backdrop-filter: blur(2px);
+        }
+        .modal-box {
+            background: white; width: 400px; max-width: 90%;
+            border-radius: 16px; padding: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes modalPop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .modal-icon {
+            width: 48px; height: 48px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px; font-size: 24px;
+        }
+        .modal-icon.warning { background: #fef3c7; color: #d97706; }
+
+        .modal-title { font-size: 18px; font-weight: 700; color: #111827; text-align: center; margin-bottom: 8px; }
+        .modal-text { font-size: 14px; color: #6b7280; text-align: center; margin-bottom: 24px; line-height: 1.5; }
+        .modal-text b { color: #1f2937; }
+
+        .modal-actions { display: flex; gap: 12px; justify-content: center; }
+        .modal-actions .btn { flex: 1; }
+
+        @media (max-width: 900px) {
+            .settings-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Toast Notification -->
+<div id="toast"></div>
+
+<!-- Custom Confirmation Modal -->
+<div id="confirmModal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-icon warning"><i class="fas fa-exclamation-triangle"></i></div>
+        <h3 class="modal-title">确认更换账号？</h3>
+        <p class="modal-text" id="modalMessage">...</p>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeModal()">取消</button>
+            <button class="btn btn-danger" id="btnConfirmAction">确定覆盖</button>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+
+    <div class="settings-grid">
+
+        <!-- Left Column: Profile & Security -->
+        <div class="left-col">
+            <!-- 1. 基本资料 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title"><i class="fas fa-user-edit"></i> 基本资料</div>
+                </div>
+                <div class="card-body">
+                    <form id="profileForm">
+                        <div class="form-group" id="studentNoGroup" style="display:none;">
+                            <label class="form-label">学号 (不可修改)</label>
+                            <input type="text" class="form-control" id="studentNo" disabled value="-">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">用户名 (登录账号))</label>
+                            <input type="text" class="form-control" id="username" disabled value="Loading...">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">昵称</label>
+                            <input type="text" class="form-control" id="nickname" placeholder="设置昵称">
+                        </div>
+                        <div style="margin-top:24px;">
+                            <button type="submit" class="btn btn-primary btn-block" id="btnSaveProfile">
+                                保存修改
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 2. 账号安全 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title"><i class="fas fa-lock"></i> 修改密码</div>
+                </div>
+                <div class="card-body">
+                    <form id="passwordForm">
+                        <div class="form-group">
+                            <label class="form-label">当前密码</label>
+                            <input type="password" class="form-control" id="oldPass" placeholder="验证当前密码" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">新密码</label>
+                            <input type="password" class="form-control" id="newPass" placeholder="输入新密码" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">确认新密码</label>
+                            <input type="password" class="form-control" id="confirmPass" placeholder="再次输入" required>
+                        </div>
+                        <div style="margin-top:24px;">
+                            <button type="submit" class="btn btn-danger btn-block" id="btnChangePass">
+                                确认修改
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Codeforces Binding -->
+        <div class="right-col">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title"><i class="fas fa-code"></i> 平台账号绑定</div>
+                </div>
+                <div class="card-body">
+
+                    <div class="cf-binding-container">
+                        <!-- 当前状态展示 -->
+                        <div class="current-bind-box">
+                            <div class="cf-logo-area">CF</div>
+                            <div class="bind-info">
+                                <h4>当前绑定的 Codeforces 账号</h4>
+                                <div id="cfHandleDisplay" class="bind-handle bind-empty">未绑定</div>
+                            </div>
+                        </div>
+
+                        <!-- 绑定/覆盖表单 -->
+                        <div class="update-form-area">
+                            <label class="form-label">绑定 / 更换账号</label>
+                            <form id="cfBindForm">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="newCfHandle" placeholder="输入 Codeforces Handle (例如: tourist)">
+                                    <button type="submit" class="btn btn-primary" id="btnBindCF">
+                                        <i class="fas fa-sync-alt"></i> 更新绑定
+                                    </button>
+                                </div>
+                                <p class="hint-text">
+                                    <i class="fas fa-info-circle"></i>
+                                    <strong>注意：</strong> 每个账号只能绑定一个 Codeforces Handle。输入新 Handle 并提交将直接<strong>覆盖</strong>原有绑定。
+                                </p>
+                            </form>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+
+        const API_BASE = /*[[@{/api}]]*/ '/api';
+        let currentPlatforms = [];
+        let pendingBindHandle = null; // 用于存储 Modal 确认前的 handle
+
+        $(document).ready(function() {
+            loadProfile();
+            loadPlatforms();
+        });
+
+        // --- 1. Load Profile ---
+        function loadProfile() {
+            $.get(API_BASE + '/me', function(res) {
+                if (res.code === 200 || res.code === 0) {
+                    const u = res.data;
+                    $('#username').val(u.username || '-');
+                    $('#nickname').val(u.nickname || '');
+                    const isAdmin = (u.role === 'ADMIN' || u.type === 1 || u.isAdmin === true);
+                    if (isAdmin) {
+                        $('#studentNoGroup').hide();
+                    } else {
+                        $('#studentNo').val(u.studentNo || '无');
+                        $('#studentNoGroup').show();
+                    }
+                }
+            });
+        }
+
+        // --- 2. Update Nickname ---
+        $('#profileForm').on('submit', function(e) {
+            e.preventDefault();
+            const nickname = $('#nickname').val().trim();
+            if (!nickname) {
+                showToast('error', '昵称不能为空');
+                $('#nickname').focus();
+                return;
+            }
+            const btn = $('#btnSaveProfile');
+            setLoading(btn, true);
+            $.ajax({
+                url: API_BASE + '/me/nickname',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ nickname: nickname }),
+                success: function(res) {
+                    if (res.code === 200 || res.code === 0) {
+                        showToast('success', '基本资料已保存');
+                        if(window.parent && window.parent.checkAuth) window.parent.checkAuth();
+                    } else {
+                        showToast('error', res.msg || '保存失败');
+                    }
+                },
+                complete: () => setLoading(btn, false)
+            });
+        });
+
+        // --- 3. Load Platforms ---
+        function loadPlatforms() {
+            $.get(API_BASE + '/me/platforms', function(res) {
+                if (res.code === 200 || res.code === 0) {
+                    currentPlatforms = res.data || [];
+                    const cf = currentPlatforms.find(p => p.platformId === 1 || p.platformCode === 'CF');
+                    const $display = $('#cfHandleDisplay');
+                    if (cf) {
+                        $display.text(cf.identifierValue).removeClass('bind-empty');
+                        $('#newCfHandle').val('');
+                    } else {
+                        $display.text('未绑定').addClass('bind-empty');
+                    }
+                }
+            });
+        }
+
+        // --- 4. Bind/Overwrite CF (With Custom Modal) ---
+        $('#cfBindForm').on('submit', function(e) {
+            e.preventDefault();
+            const handle = $('#newCfHandle').val().trim();
+
+            if(!handle) {
+                showToast('error', '请输入有效的 Codeforces Handle');
+                $('#newCfHandle').focus();
+                return;
+            }
+
+            const existingCF = currentPlatforms.find(p => p.platformId === 1 || p.platformCode === 'CF');
+            if (existingCF) {
+                if(existingCF.identifierValue === handle) {
+                    showToast('error', '当前已绑定此账号，无需更新');
+                    return;
+                }
+                // 弹出自定义 Modal
+                pendingBindHandle = handle;
+                openModal(`即将把账号从 "<b>${existingCF.identifierValue}</b>" 更改为 "<b>${handle}</b>"。<br>原有的数据关联将被重置，确定覆盖吗？`);
+                return;
+            }
+
+            // 无旧账号，直接执行
+            executeBind(handle);
+        });
+
+        // Modal Events
+        function openModal(msg) {
+            $('#modalMessage').html(msg);
+            $('#confirmModal').css('display', 'flex');
+        }
+        function closeModal() {
+            $('#confirmModal').fadeOut(200);
+            pendingBindHandle = null;
+        }
+        $('#btnConfirmAction').click(function() {
+            if(pendingBindHandle) {
+                executeBind(pendingBindHandle);
+                closeModal();
+            }
+        });
+
+        // 执行绑定 AJAX
+        function executeBind(handle) {
+            const btn = $('#btnBindCF');
+            setLoading(btn, true);
+
+            const newCFItem = {
+                platformId: 1,
+                identifierType: "handle",
+                identifierValue: handle
+            };
+
+            const itemsToSend = currentPlatforms
+                .filter(p => p.platformId !== 1 && p.platformCode !== 'CF')
+                .map(p => ({
+                    platformId: p.platformId,
+                    identifierType: p.identifierType || "handle",
+                    identifierValue: p.identifierValue
+                }));
+
+            itemsToSend.push(newCFItem);
+
+            $.ajax({
+                url: API_BASE + '/me/platforms',
+                type: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify({ items: itemsToSend }),
+                success: function(res) {
+                    if(res.code === 200 || res.code === 0) {
+                        showToast('success', 'Codeforces 账号绑定成功');
+                        loadPlatforms();
+                        if(window.parent && window.parent.initPlatforms) window.parent.initPlatforms();
+                    } else {
+                        showToast('error', res.msg || '绑定失败');
+                    }
+                },
+                complete: () => setLoading(btn, false)
+            });
+        }
+
+        // --- 5. Change Password ---
+        $('#passwordForm').on('submit', function(e) {
+            e.preventDefault();
+            const oldPass = $('#oldPass').val();
+            const newPass = $('#newPass').val();
+            const confirmPass = $('#confirmPass').val();
+
+            if (!oldPass || !newPass || !confirmPass) {
+                showToast('error', '请填写所有必填项');
+                return;
+            }
+            if (newPass !== confirmPass) {
+                showToast('error', '两次输入的密码不一致');
+                $('#newPass').focus();
+                return;
+            }
+
+            const btn = $('#btnChangePass');
+            setLoading(btn, true);
+
+            $.ajax({
+                url: API_BASE + '/auth/change-password',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ oldPassword: oldPass, newPassword: newPass }),
+                success: function(res) {
+                    if(res.code === 200 || res.code === 0) {
+                        showToast('success', '密码修改成功，请重新登录');
+                        $('#passwordForm')[0].reset();
+                        setTimeout(() => {
+                            if(window.parent) window.parent.location.href = /*[[@{/login}]]*/ '/login';
+                        }, 1500);
+                    } else {
+                        showToast('error', res.msg || '密码修改失败');
+                    }
+                },
+                complete: () => setLoading(btn, false)
+            });
+        });
+
+        // --- Helpers ---
+        let toastTimeout;
+        function showToast(type, msg) {
+            const t = $('#toast');
+            if (toastTimeout) clearTimeout(toastTimeout);
+            t.hide().text(msg).removeClass('toast-success toast-error')
+             .addClass(type==='success'?'toast-success':'toast-error')
+             .css('transform','translateY(0)').fadeIn();
+            toastTimeout = setTimeout(() => {
+                t.css('transform', 'translateY(-20px)').fadeOut();
+            }, 3000);
+        }
+
+        function setLoading(btn, loading) {
+            if(loading) {
+                btn.data('t', btn.html()).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+            } else {
+                btn.prop('disabled', false).html(btn.data('t'));
+            }
+        }
+
+    /*]]>*/
+</script>
+
+</body>
+</html>

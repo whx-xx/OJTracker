@@ -13,9 +13,9 @@
             --sidebar-width: 260px;
             --header-height: 64px;
             --primary-color: #2563eb;
-            --bg-body: #f3f4f6; /* 与 Dashboard 背景一致 */
+            --bg-body: #f3f4f6;
             --text-main: #1f2937;
-            --sidebar-bg: #111827; /* 深色侧边栏，提升专业感 */
+            --sidebar-bg: #111827;
             --sidebar-text: #9ca3af;
             --sidebar-active: #ffffff;
             --border-color: #e5e7eb;
@@ -108,17 +108,23 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0 30px; /* 增加 Header 内边距 */
+            padding: 0 30px;
             box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
         }
 
         .page-title { font-size: 18px; font-weight: 600; color: #111827; }
 
+        /* Header Right Section */
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
         .user-profile {
             display: flex;
             align-items: center;
             gap: 12px;
-            cursor: pointer;
         }
         .avatar {
             width: 36px;
@@ -136,11 +142,31 @@
         }
         .username { font-size: 14px; font-weight: 500; color: #374151; }
 
+        /* Logout Button Styles */
+        .logout-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background-color: #fee2e2; /* Light Red */
+            color: #dc2626; /* Red Text */
+            border: 1px solid #fecaca;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .logout-btn:hover {
+            background-color: #fecaca;
+            color: #b91c1c;
+        }
+        .logout-btn i { font-size: 12px; }
+
         /* Content Area */
         .content-area {
             flex: 1;
             position: relative;
-            /* 关键：取消内边距，让 dashboard 能够铺满 */
             padding: 0;
             overflow: hidden;
         }
@@ -203,9 +229,17 @@
 <div class="main-wrapper">
     <div class="top-header">
         <div class="page-title" id="pageTitle">仪表盘</div>
-        <div class="user-profile" id="userMenu">
-            <span class="username" id="userName">Loading...</span>
-            <div class="avatar" id="userAvatar">U</div>
+
+        <div class="header-right">
+            <div class="user-profile">
+                <div class="avatar" id="userAvatar">U</div>
+                <span class="username" id="userName">Loading...</span>
+            </div>
+
+            <!-- 明显的退出按钮 -->
+            <button class="logout-btn" id="btnLogout">
+                <i class="fas fa-sign-out-alt"></i> 退出登录
+            </button>
         </div>
     </div>
 
@@ -255,8 +289,9 @@
                 loadPage(url);
             });
 
-            $('#userMenu').click(function() {
-                if(confirm('Logout?')) {
+            // 绑定到新的退出按钮
+            $('#btnLogout').click(function() {
+                if(confirm('确定要退出当前账号吗？')) {
                     $.post(API_BASE + '/auth/logout', () => window.location.href = LOGIN_URL);
                 }
             });

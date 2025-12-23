@@ -13,22 +13,24 @@
     <style>
         /* --- 全局变量 --- */
         :root {
-            --bg-body: #f7f9fa;
+            --bg-body: #f3f4f6; /* 与 Layout 背景融合 */
             --bg-card: #ffffff;
-            --text-primary: #1f2937;
+            --text-primary: #111827;
             --text-secondary: #6b7280;
-            --text-tertiary: #9ca3af;
             --accent-color: #2563eb;
             --border-color: #e5e7eb;
             --radius: 12px;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 
             /* Verdict Colors */
             --v-ac: #10b981; --v-wa: #ef4444; --v-tle: #3b82f6; --v-mle: #f59e0b; --v-re: #8b5cf6; --v-ce: #6b7280;
 
-            /* Heatmap Colors */
-            --h-0: #ebedf0; --h-1: #9be9a8; --h-2: #40c463; --h-3: #30a14e; --h-4: #216e39;
+            /* Heatmap Colors (更鲜艳的 GitHub 风格) */
+            --h-0: #ebedf0;
+            --h-1: #9be9a8;
+            --h-2: #40c463;
+            --h-3: #30a14e;
+            --h-4: #216e39;
         }
 
         * { box-sizing: border-box; }
@@ -38,146 +40,219 @@
             background-color: var(--bg-body);
             color: var(--text-primary);
             margin: 0;
-            padding: 24px 32px;
-            line-height: 1.5;
+            padding: 24px;
+            overflow-x: hidden;
         }
 
-        .container { width: 100%; margin: 0 auto; }
+        .container { width: 100%; max-width: 1600px; margin: 0 auto; }
 
         /* --- Header --- */
         .header-bar {
             display: flex; justify-content: space-between; align-items: center;
             background: var(--bg-card); padding: 16px 24px;
-            border-radius: var(--radius); box-shadow: var(--shadow-md);
+            border-radius: var(--radius); box-shadow: var(--shadow);
             margin-bottom: 24px; border: 1px solid var(--border-color);
         }
 
-        .platform-tabs { display: flex; gap: 8px; background: #f3f4f6; padding: 4px; border-radius: 8px; }
+        .platform-tabs { display: flex; gap: 8px; background: #f9fafb; padding: 4px; border-radius: 8px; border: 1px solid #f3f4f6; }
         .platform-tab {
-            padding: 6px 16px; border-radius: 6px; cursor: pointer;
-            font-weight: 600; font-size: 13px; color: var(--text-secondary); transition: all 0.2s;
+            padding: 6px 20px; border-radius: 6px; cursor: pointer;
+            font-weight: 600; font-size: 14px; color: var(--text-secondary); transition: all 0.2s ease;
         }
-        .platform-tab:hover { color: var(--text-primary); }
-        .platform-tab.active { background-color: #ffffff; color: var(--accent-color); box-shadow: var(--shadow-sm); }
+        .platform-tab:hover { color: var(--text-primary); background: rgba(0,0,0,0.03); }
+        .platform-tab.active { background-color: #ffffff; color: var(--accent-color); box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
 
-        .handle-info { display: flex; align-items: center; font-size: 13px; color: var(--text-secondary); margin-right: 20px; }
-        .handle-val { font-weight: 700; color: var(--text-primary); margin: 0 6px; }
-        .manage-link { color: var(--text-tertiary); text-decoration: none; transition: color 0.2s; }
-        .manage-link:hover { color: var(--accent-color); }
+        .handle-info { display: flex; align-items: center; font-size: 14px; color: var(--text-secondary); margin-right: 24px; }
+        .handle-val { font-weight: 700; color: var(--text-primary); margin: 0 8px; font-family: monospace; font-size: 15px; }
+        .manage-link { color: var(--text-secondary); font-size: 14px; transition: 0.2s; display: flex; align-items: center; }
+        .manage-link:hover { color: var(--accent-color); transform: rotate(90deg); }
 
         .sync-btn {
-            background-color: #111827; color: white; border: none; padding: 8px 18px;
-            border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer;
-            display: flex; align-items: center; gap: 8px; transition: opacity 0.2s;
+            background-color: #1f2937; color: white; border: none; padding: 10px 20px;
+            border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .sync-btn:hover { opacity: 0.9; }
-        .sync-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .sync-btn:hover { background-color: #111827; transform: translateY(-1px); }
+        .sync-btn:active { transform: translateY(0); }
+        .sync-btn:disabled { opacity: 0.7; cursor: wait; transform: none; }
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* --- Grid --- */
+        /* --- Dashboard Grid --- */
         .dashboard-grid {
             display: grid;
-            grid-template-columns: 360px 1fr; /* 左侧加宽以容纳比赛列表 */
+            grid-template-columns: 380px minmax(0, 1fr);
             gap: 24px;
             align-items: start;
         }
 
         .card {
             background: var(--bg-card); border-radius: var(--radius);
-            box-shadow: var(--shadow-md); padding: 24px; margin-bottom: 24px;
+            box-shadow: var(--shadow); padding: 24px; margin-bottom: 24px;
             border: 1px solid var(--border-color); display: flex; flex-direction: column;
+            width: 100%;
         }
 
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .card-title {
-            font-size: 16px; font-weight: 700; color: #111827;
-            display: flex; align-items: center; gap: 10px;
+            font-size: 16px; font-weight: 800; color: #111827;
+            display: flex; align-items: center; gap: 10px; letter-spacing: -0.02em;
         }
-        .card-icon { color: var(--accent-color); opacity: 0.9; background: #eff6ff; padding: 6px; border-radius: 6px; font-size: 14px; }
+        .card-icon {
+            color: var(--accent-color); background: #eff6ff;
+            width: 32px; height: 32px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center; font-size: 14px;
+        }
 
-        /* --- Stats --- */
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .stat-item { display: flex; flex-direction: column; padding: 4px; }
-        .stat-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px; }
-        .stat-value { font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; }
-        .rating-gold { color: #d97706; }
+        /* --- Stats Grid (Block Style) --- */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
 
-        /* --- Modern List (用于比赛、提交记录) --- */
-        .modern-list { max-height: 480px; overflow-y: auto; scrollbar-width: thin; padding-right: 4px; }
+        .stat-card {
+            background: #fff;
+            border: 1px solid #f1f5f9;
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            min-height: 110px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
 
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Background Watermark Icons */
+        .stat-card::after {
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            right: -10px;
+            bottom: -15px;
+            font-size: 72px;
+            opacity: 0.08;
+            transform: rotate(-15deg);
+            pointer-events: none;
+            color: currentColor;
+        }
+
+        /* Card Themes */
+        .stat-card.c-rating { color: #d97706; background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%); border-color: #fef3c7; }
+        .stat-card.c-rating::after { content: "\f091"; } /* Trophy */
+
+        .stat-card.c-solved { color: #059669; background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%); border-color: #d1fae5; }
+        .stat-card.c-solved::after { content: "\f00c"; /* Check */ }
+
+        .stat-card.c-subs { color: #2563eb; background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); border-color: #dbeafe; }
+        .stat-card.c-subs::after { content: "\f121"; /* Code */ }
+
+        .stat-card.c-active { color: #7c3aed; background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%); border-color: #ede9fe; }
+        .stat-card.c-active::after { content: "\f06d"; /* Fire */ }
+
+        .stat-label {
+            font-size: 13px; font-weight: 600; color: #64748b;
+            margin-bottom: 8px; z-index: 2; display: block;
+        }
+
+        /* Number with Background */
+        .stat-value-bg {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 20px;
+            font-weight: 900;
+            line-height: 1;
+            z-index: 2;
+            letter-spacing: -0.02em;
+        }
+
+        /* Specific Number Backgrounds */
+        .c-rating .stat-value-bg { background: rgba(245, 158, 11, 0.15); color: #b45309; }
+        .c-solved .stat-value-bg { background: rgba(16, 185, 129, 0.15); color: #047857; }
+        .c-subs .stat-value-bg { background: rgba(59, 130, 246, 0.15); color: #1d4ed8; }
+        .c-active .stat-value-bg { background: rgba(139, 92, 246, 0.15); color: #6d28d9; }
+
+        /* --- Lists --- */
+        .modern-list { max-height: 400px; overflow-y: auto; scrollbar-width: thin; padding-right: 4px; }
         .list-entry {
             display: flex; align-items: center; padding: 12px;
-            border-radius: 8px; border: 1px solid transparent;
-            margin-bottom: 8px; background: #f9fafb; transition: all 0.2s;
+            border-radius: 10px; margin-bottom: 8px; background: #fff; border: 1px solid #f3f4f6;
+            transition: all 0.2s;
         }
-        .list-entry:hover { background: #fff; border-color: var(--border-color); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
-        .list-entry:last-child { margin-bottom: 0; }
+        .list-entry:hover { border-color: #dbeafe; background: #f8fafc; transform: translateX(2px); }
 
-        /* Contest Specific */
         .contest-rank-box {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            width: 48px; height: 48px; background: #fff; border-radius: 8px;
-            border: 1px solid var(--border-color); margin-right: 12px; flex-shrink: 0;
+            width: 50px; height: 50px; background: #f1f5f9; border-radius: 10px;
+            margin-right: 14px; flex-shrink: 0;
         }
-        .delta-val { font-size: 13px; font-weight: 700; }
-        .delta-pos { color: var(--v-ac); }
-        .delta-neg { color: var(--text-secondary); } /* 负分用灰色或红色，通常红色更警示，这里用灰色柔和点，或者用红色 */
-        .delta-neg-red { color: var(--v-wa); }
-        .rank-lbl { font-size: 10px; color: var(--text-tertiary); margin-top: -2px; }
+        .delta-val { font-size: 14px; font-weight: 800; }
+        .delta-pos { color: #16a34a; }
+        .delta-neg { color: #dc2626; }
+        .delta-neutral { color: #64748b; }
+        .rank-lbl { font-size: 10px; color: #94a3b8; font-weight: 600; margin-top: -2px; }
 
         .contest-info { flex: 1; min-width: 0; }
         .contest-name {
-            font-size: 14px; font-weight: 600; color: var(--text-primary); display: block;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none;
+            font-size: 14px; font-weight: 700; color: #334155; display: block;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px;
+            text-decoration: none;
         }
         .contest-name:hover { color: var(--accent-color); text-decoration: underline; }
-        .contest-meta { font-size: 12px; color: var(--text-secondary); display: flex; gap: 8px; margin-top: 2px; }
+        .contest-meta { font-size: 12px; color: #64748b; display: flex; gap: 10px; }
 
-        /* Problem/Submission Specific */
-        .status-dot {
-            width: 10px; height: 10px; border-radius: 50%; margin-right: 12px; flex-shrink: 0;
-        }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 14px; flex-shrink: 0; }
         .dot-ac { background-color: var(--v-ac); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15); }
         .dot-wa { background-color: var(--v-wa); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15); }
-        .dot-tle { background-color: var(--v-tle); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
+        .dot-tle { background-color: var(--v-tle); }
 
         .entry-main { flex: 1; min-width: 0; }
-        .entry-title {
-            font-size: 14px; font-weight: 600; color: var(--text-primary);
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; text-decoration: none;
-        }
+        .entry-title { font-size: 14px; font-weight: 700; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; text-decoration: none; }
         .entry-title:hover { color: var(--accent-color); }
-        .entry-sub { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; margin-top: 2px; }
-
-        .tag { font-size: 10px; padding: 1px 5px; border-radius: 4px; font-weight: 600; background: #e5e7eb; color: #374151; }
+        .entry-sub { font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 8px; margin-top: 3px; }
+        .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; text-transform: uppercase; }
         .tag-ac { background: #dcfce7; color: #166534; }
         .tag-wa { background: #fee2e2; color: #991b1b; }
+        .tag-tle { background: #dbeafe; color: #1e40af; }
 
         /* --- Heatmap --- */
-        .heatmap-container { overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; }
+        .heatmap-container { overflow-x: auto; padding: 10px 0; scrollbar-width: thin; width: 100%; }
         .heatmap-grid {
-            display: grid; grid-template-rows: repeat(7, 15px); /* 15px size */
-            grid-auto-flow: column; gap: 4px; width: max-content;
+            display: grid; grid-template-rows: repeat(7, 18px); grid-auto-flow: column; gap: 5px; width: max-content;
         }
-        .day-cell { width: 15px; height: 15px; border-radius: 3px; background-color: var(--h-0); }
+        .day-cell { width: 18px; height: 18px; border-radius: 4px; background-color: var(--h-0); transition: transform 0.1s; }
+        .day-cell:hover { transform: scale(1.15); border: 1px solid rgba(0,0,0,0.1); z-index: 10; }
+
+        /* --- Chart --- */
+        .chart-wrapper { position: relative; height: 340px; width: 100%; }
+        .pill-btn { padding: 4px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; color: var(--text-secondary); font-weight: 600; transition: all 0.2s; }
+        .pill-btn:hover { background: #e5e7eb; }
+        .pill-btn.active { background: #1f2937; color: #fff; }
 
         /* --- Global Tooltip --- */
         #global-tooltip {
-            position: fixed; background: rgba(17, 24, 39, 0.95); color: #fff;
-            padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 500;
+            position: fixed; background: rgba(15, 23, 42, 0.95); color: #fff;
+            padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 500;
             pointer-events: none; z-index: 10000; display: none;
-            transform: translate(-50%, -130%); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            line-height: 1.4; border: 1px solid rgba(255,255,255,0.1);
+            transform: translate(-50%, -140%); backdrop-filter: blur(4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2); border: 1px solid rgba(255,255,255,0.1);
+            white-space: pre-line; line-height: 1.5;
         }
 
-        /* Chart */
-        .chart-wrapper { position: relative; height: 320px; width: 100%; }
-        .pill-btn { padding: 4px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; color: var(--text-secondary); }
-        .pill-btn.active { background: #f3f4f6; color: var(--text-primary); font-weight: 700; }
-
-        @media (max-width: 1024px) {
+        @media (max-width: 1200px) {
             .dashboard-grid { grid-template-columns: 1fr; }
+            .container { padding: 10px; }
         }
     </style>
 </head>
@@ -187,19 +262,19 @@
 
 <div class="container">
 
-    <!-- Header -->
+    <!-- Top Header -->
     <div class="header-bar">
-        <div class="header-left" style="display:flex;align-items:center;gap:20px;">
+        <div style="display:flex;align-items:center;gap:20px;">
             <div class="platform-tabs" id="platformTabs">
                 <div class="platform-tab active" data-code="CF">Codeforces</div>
             </div>
         </div>
 
-        <div class="header-right" style="display:flex;align-items:center;">
+        <div style="display:flex;align-items:center;">
             <div class="handle-info" id="handleInfo" style="display:none;">
-                <span style="color:#9ca3af">Handle:</span>
+                <span>Handle:</span>
                 <span id="currentHandle" class="handle-val">-</span>
-                <a th:href="@{/login}" target="_top" class="manage-link" title="切换账号"><i class="fas fa-cog"></i></a>
+                <a th:href="@{/login}" target="_top" class="manage-link" title="管理账号"><i class="fas fa-cog"></i></a>
             </div>
 
             <button class="sync-btn" id="btnSync">
@@ -211,61 +286,60 @@
 
     <div class="dashboard-grid">
 
-        <!-- 左侧栏：统计 + 最近比赛 + 本周练习 -->
+        <!-- Left Column -->
         <div class="left-column">
 
-            <!-- 1. 数据概览 -->
+            <!-- 1. Stats (Refined Block Style) -->
             <div class="card">
                 <div class="card-header">
                     <span class="card-title"><i class="fas fa-chart-pie card-icon"></i> 数据概览</span>
                 </div>
                 <div class="stat-grid">
-                    <div class="stat-item">
-                        <span class="stat-label">Current Rating</span>
-                        <span class="stat-value rating-gold" id="stat-rating">-</span>
+                    <div class="stat-card c-rating">
+                        <span class="stat-label">当前积分</span>
+                        <span class="stat-value-bg" id="stat-rating">-</span>
                     </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Total Solved</span>
-                        <span class="stat-value" id="stat-solved">-</span>
+                    <div class="stat-card c-solved">
+                        <span class="stat-label">累计解题</span>
+                        <span class="stat-value-bg" id="stat-solved">-</span>
                     </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Total Submissions</span>
-                        <span class="stat-value" id="stat-subs">-</span>
+                    <div class="stat-card c-subs">
+                        <span class="stat-label">提交总数</span>
+                        <span class="stat-value-bg" id="stat-subs">-</span>
                     </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Active Days</span>
-                        <span class="stat-value" id="stat-active">-</span>
+                    <div class="stat-card c-active">
+                        <span class="stat-label">活跃天数</span>
+                        <span class="stat-value-bg" id="stat-active">-</span>
                     </div>
                 </div>
             </div>
 
-            <!-- 2. 最近参赛 (New Module) -->
+            <!-- 2. Recent Contests -->
             <div class="card">
                 <div class="card-header">
                     <span class="card-title"><i class="fas fa-trophy card-icon"></i> 最近参赛</span>
                 </div>
                 <div class="modern-list" id="recentContestsList">
-                    <!-- JS 填充 -->
                     <div style="padding:20px;text-align:center;color:#999;font-size:13px;">加载中...</div>
                 </div>
             </div>
 
-            <!-- 3. 本周练习 -->
+            <!-- 3. Weekly -->
             <div class="card">
                 <div class="card-header">
-                    <span class="card-title"><i class="fas fa-check-square card-icon"></i> 本周练习</span>
+                    <span class="card-title"><i class="fas fa-calendar-check card-icon"></i> 本周练习</span>
                 </div>
                 <div class="modern-list" id="weeklyList">
-                    <!-- JS 填充 -->
+                    <div style="padding:20px;text-align:center;color:#999;">加载中...</div>
                 </div>
             </div>
 
         </div>
 
-        <!-- 右侧栏：热力图 + 曲线 + 提交记录 -->
+        <!-- Right Column -->
         <div class="right-column">
 
-            <!-- 4. 热力图 -->
+            <!-- 4. Heatmap -->
             <div class="card">
                 <div class="card-header">
                     <span class="card-title"><i class="fas fa-th card-icon"></i> 提交活跃度 (365天)</span>
@@ -273,22 +347,22 @@
                 <div class="heatmap-container">
                     <div class="heatmap-grid" id="heatmapGrid"></div>
                 </div>
-                <div style="display:flex;justify-content:flex-end;align-items:center;gap:4px;font-size:11px;color:#9ca3af;margin-top:10px;">
+                <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;font-size:12px;color:#64748b;margin-top:12px;">
                     <span>Less</span>
-                    <div style="width:12px;height:12px;background:var(--h-0);border-radius:2px;"></div>
-                    <div style="width:12px;height:12px;background:var(--h-1);border-radius:2px;"></div>
-                    <div style="width:12px;height:12px;background:var(--h-2);border-radius:2px;"></div>
-                    <div style="width:12px;height:12px;background:var(--h-3);border-radius:2px;"></div>
-                    <div style="width:12px;height:12px;background:var(--h-4);border-radius:2px;"></div>
+                    <div style="width:14px;height:14px;background:var(--h-0);border-radius:3px;"></div>
+                    <div style="width:14px;height:14px;background:var(--h-1);border-radius:3px;"></div>
+                    <div style="width:14px;height:14px;background:var(--h-2);border-radius:3px;"></div>
+                    <div style="width:14px;height:14px;background:var(--h-3);border-radius:3px;"></div>
+                    <div style="width:14px;height:14px;background:var(--h-4);border-radius:3px;"></div>
                     <span>More</span>
                 </div>
             </div>
 
-            <!-- 5. Rating 曲线 -->
+            <!-- 5. Rating Chart -->
             <div class="card">
                 <div class="card-header">
                     <span class="card-title"><i class="fas fa-line-chart card-icon"></i> Rating 趋势</span>
-                    <div style="display:flex; gap:4px;" id="ratingControls">
+                    <div style="display:flex; gap:4px; background:#f3f4f6; padding:3px; border-radius:8px;" id="ratingControls">
                         <div class="pill-btn" data-days="90">90天</div>
                         <div class="pill-btn active" data-days="365">1年</div>
                         <div class="pill-btn" data-days="9999">全部</div>
@@ -299,17 +373,17 @@
                 </div>
             </div>
 
-            <!-- 6. 提交记录 -->
+            <!-- 6. Timeline -->
             <div class="card">
                 <div class="card-header">
-                    <span class="card-title"><i class="fas fa-history card-icon"></i> 提交时间线</span>
-                    <div style="display:flex; gap:4px;" id="timelineControls">
+                    <span class="card-title"><i class="fas fa-history card-icon"></i> 提交记录</span>
+                    <div style="display:flex; gap:4px; background:#f3f4f6; padding:3px; border-radius:8px;" id="timelineControls">
                         <div class="pill-btn active" data-range="TODAY">今天</div>
                         <div class="pill-btn" data-range="WEEK">本周</div>
                     </div>
                 </div>
                 <div class="modern-list" id="timelineList" style="max-height:360px;">
-                    <!-- JS 填充 -->
+                    <!-- JS Fill -->
                 </div>
             </div>
 
@@ -371,7 +445,7 @@
             }).on('mouseleave', '.day-cell', function() {
                 $tooltip.hide();
             }).on('mousemove', function(e) {
-                $tooltip.css({ top: e.clientY - 10 + 'px', left: e.clientX + 'px' });
+                $tooltip.css({ top: e.clientY - 12 + 'px', left: e.clientX + 'px' });
             });
         }
 
@@ -416,20 +490,21 @@
             loadTimeline('TODAY');
         }
 
-        // --- 1. Summary ---
+        // --- 1. Summary (Updated Class) ---
         function loadSummary() {
-            $.get(`${API_BASE}/users/summary?platformCode=${currentPlatform}&days=200`, function(res) {
+            $.get(`${API_BASE}/users/summary?platformCode=${currentPlatform}&days=999999`, function(res) {
                 if (isSuccess(res)) {
                     const d = res.data;
+                    // 注意这里使用的是新的 class .stat-value-bg
                     $('#stat-rating').text(d.ratingEnd || '-');
                     $('#stat-solved').text(d.solvedTotal || 0);
                     $('#stat-subs').text(d.submitTotal || 0);
-                    $('#stat-active').text((d.activeDays || 0) + ' 天');
+                    $('#stat-active').text(d.activeDays || 0);
                 }
             });
         }
 
-        // --- 2. Heatmap (365 Days) ---
+        // --- 2. Heatmap ---
         function loadHeatmap() {
             const days = 365;
             const $grid = $('#heatmapGrid');
@@ -439,7 +514,6 @@
                 if(isSuccess(res) && res.data) res.data.forEach(x => {if(x.day) map[x.day] = x.submitCnt||0;});
 
                 const today = new Date();
-                // Start date = 365 days ago (so the last cell is today)
                 const start = new Date(today);
                 start.setDate(today.getDate() - days + 1);
 
@@ -453,27 +527,29 @@
 
                     $grid.append($('<div>').addClass('day-cell').css('background-color',c).attr('data-tip', `${dateStr}\n${count} submissions`));
                 }
+
+                // Scroll to end (Right)
+                setTimeout(() => {
+                    const container = $('.heatmap-container');
+                    if(container.length > 0) {
+                        container.scrollLeft(container[0].scrollWidth);
+                    }
+                }, 0);
             });
         }
 
-        // --- 3. Rating Chart + Recent Contests ---
+        // --- 3. Rating Chart ---
         function loadRating(days) {
             $.get(`${API_BASE}/user/rating/history?platformCode=${currentPlatform}&days=${days}`, function(res) {
                 if(isSuccess(res) && res.data) {
-                    const raw = res.data; // [{time, rating, delta, contestName}...]
-
-                    // 3a. Render Chart
+                    const raw = res.data;
                     renderChart(raw);
-
-                    // 3b. Render Recent Contests List (Take last 5)
-                    // Need to reverse to show newest first
                     const recent = [...raw].reverse().slice(0, 5);
                     renderRecentContests(recent);
                 }
             });
         }
 
-        // New: Render Recent Contests List
         function renderRecentContests(data) {
             const $el = $('#recentContestsList');
             $el.empty();
@@ -486,8 +562,9 @@
                 const date = item.time ? item.time.substring(0, 10) : '';
                 const delta = item.delta !== undefined ? item.delta : 0;
                 const deltaStr = delta > 0 ? `+${delta}` : `${delta}`;
-                const deltaClass = delta > 0 ? 'delta-pos' : 'delta-neg-red'; // 正绿负红
-                const rankStr = item.rank ? `Rank: ${item.rank}` : '';
+                let deltaClass = 'delta-neutral';
+                if(delta > 0) deltaClass = 'delta-pos';
+                if(delta < 0) deltaClass = 'delta-neg';
 
                 $el.append(`
                     <div class="list-entry">
@@ -496,10 +573,10 @@
                             <span class="rank-lbl">Delta</span>
                         </div>
                         <div class="contest-info">
-                            <a class="contest-name" title="${item.contestName}">${item.contestName}</a>
+                            <a href="#" class="contest-name" title="${item.contestName}">${item.contestName}</a>
                             <div class="contest-meta">
                                 <span><i class="far fa-calendar-alt"></i> ${date}</span>
-                                <span>${rankStr}</span>
+                                <span>${item.rank? 'Rank:'+item.rank : '-'}</span>
                                 <span>Rating: ${item.rating}</span>
                             </div>
                         </div>
@@ -523,9 +600,9 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Rating', data: data, borderColor: '#555', borderWidth: 1.5,
+                        label: 'Rating', data: data, borderColor: '#666', borderWidth: 1.5,
                         pointBackgroundColor: pointColors, pointBorderColor: '#333',
-                        pointBorderWidth: 1, pointRadius: 4, pointHoverRadius: 6, fill: false, tension: 0
+                        pointBorderWidth: 1, pointRadius: 4, pointHoverRadius: 7, fill: false, tension: 0
                     }]
                 },
                 options: {
@@ -534,8 +611,8 @@
                     plugins: {
                         legend: { display: false },
                         tooltip: {
-                            backgroundColor: 'rgba(0,0,0,0.85)', padding: 10, cornerRadius: 6,
-                            titleFont: { size: 13 }, bodyFont: { size: 13 },
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)', padding: 12, cornerRadius: 8,
+                            titleFont: { size: 13, weight: 'bold' }, bodyFont: { size: 13 },
                             callbacks: {
                                 title: (items) => contests[items[0].dataIndex],
                                 label: (ctx) => {
@@ -547,8 +624,8 @@
                                 },
                                 labelTextColor: (ctx) => {
                                     const d = deltas[ctx.dataIndex];
-                                    if(d > 0) return '#4ade80'; // Green
-                                    if(d < 0) return '#f87171'; // Red
+                                    if(d > 0) return '#4ade80';
+                                    if(d < 0) return '#f87171';
                                     return '#fff';
                                 }
                             }
@@ -560,7 +637,7 @@
             });
         }
 
-        // --- 4. Weekly & Timeline Lists (Modern) ---
+        // --- 4. Lists ---
         function loadWeeklyProblems() {
             $.get(`${API_BASE}/user/problems/week?platformCode=${currentPlatform}`, function(res) {
                 renderProblemList('#weeklyList', res, '本周暂无 AC');
@@ -583,7 +660,6 @@
                     const name = `${item.problemIndex ? item.problemIndex + '. ' : ''}${item.problemName||'Unknown'}`;
                     const link = item.problemUrl || '#';
 
-                    // Dot status class
                     let dotClass = 'dot-wa';
                     let tagClass = 'tag-wa';
                     let tagText = v;
@@ -608,7 +684,6 @@
             }
         }
 
-        // --- Helpers ---
         function normalizeVerdict(v) {
             if(!v) return 'N/A'; v=v.toUpperCase();
             if(v.includes('OK')||v.includes('AC')) return 'AC';

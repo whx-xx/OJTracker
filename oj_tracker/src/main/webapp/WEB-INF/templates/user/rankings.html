@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Rankings - OJTracker</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script th:src="@{/static/js/jquery.min.js}"></script>
+
+    <style>
+        :root {
+            --bg-body: #f3f4f6;
+            --bg-card: #ffffff;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --accent-color: #2563eb;
+            --border-color: #e5e7eb;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+
+            /* Rank Colors */
+            --gold: #f59e0b;
+            --silver: #94a3b8;
+            --bronze: #b45309;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 24px 32px;
+        }
+
+        .container { max-width: 100%; margin: 0 auto; }
+
+        /* --- Header --- */
+        .page-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 24px;
+        }
+        .page-title { font-size: 24px; font-weight: 800; color: #111827; display: flex; align-items: center; gap: 10px; }
+        .page-title i { color: var(--gold); }
+        .last-update { font-size: 13px; color: var(--text-secondary); background: #fff; padding: 6px 12px; border-radius: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+
+        /* --- Podium (Top 3) --- */
+        .podium-container {
+            display: flex; justify-content: center; align-items: flex-end;
+            margin-bottom: 40px; gap: 20px; padding-top: 20px;
+        }
+
+        .podium-item {
+            display: flex; flex-direction: column; align-items: center;
+            position: relative; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .podium-item:hover { transform: translateY(-5px); }
+
+        .podium-avatar {
+            width: 64px; height: 64px; border-radius: 50%; border: 4px solid #fff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); background: #eee;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; font-weight: 700; color: #666;
+            margin-bottom: -10px; z-index: 2; position: relative;
+        }
+
+        .podium-block {
+            width: 120px; border-radius: 12px 12px 0 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #fff; text-align: center; position: relative;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .podium-rank { font-size: 32px; font-weight: 900; opacity: 0.3; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); line-height: 0.8; }
+        .podium-name { font-size: 14px; font-weight: 700; margin-top: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90%; }
+        .podium-score { font-size: 18px; font-weight: 800; margin-bottom: 10px; }
+
+        /* 1st Place */
+        .p-1 { z-index: 3; }
+        .p-1 .podium-block { height: 140px; background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); }
+        .p-1 .podium-avatar { border-color: #fbbf24; width: 80px; height: 80px; font-size: 32px; }
+        .p-1 .crown { position: absolute; top: -28px; left: 50%; transform: translateX(-50%); font-size: 28px; color: #fbbf24; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
+
+        /* 2nd Place */
+        .p-2 { z-index: 2; }
+        .p-2 .podium-block { height: 110px; background: linear-gradient(135deg, #cbd5e1 0%, #64748b 100%); }
+        .p-2 .podium-avatar { border-color: #cbd5e1; }
+
+        /* 3rd Place */
+        .p-3 { z-index: 2; }
+        .p-3 .podium-block { height: 90px; background: linear-gradient(135deg, #fdba74 0%, #b45309 100%); }
+        .p-3 .podium-avatar { border-color: #fdba74; }
+
+        /* --- Ranking Table --- */
+        .rank-card {
+            background: var(--bg-card); border-radius: var(--radius);
+            box-shadow: var(--shadow); overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .table-responsive { width: 100%; overflow-x: auto; }
+
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+
+        th {
+            text-align: left; padding: 16px 24px;
+            font-size: 12px; font-weight: 600; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border-color); background: #f9fafb;
+        }
+
+        td {
+            padding: 14px 24px; border-bottom: 1px solid #f3f4f6;
+            font-size: 14px; color: var(--text-primary); vertical-align: middle;
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background-color: #f8fafc; }
+
+        /* Column Specifics */
+        .td-rank { width: 80px; font-weight: 700; color: var(--text-secondary); text-align: center; }
+        .rank-icon { font-size: 18px; }
+        .rank-1 { color: var(--gold); }
+        .rank-2 { color: var(--silver); }
+        .rank-3 { color: var(--bronze); }
+
+        .td-user { display: flex; align-items: center; gap: 12px; }
+        .user-avatar {
+            width: 36px; height: 36px; border-radius: 50%; background: #e0e7ff;
+            color: var(--accent-color); font-weight: 700; display: flex; align-items: center; justify-content: center;
+            font-size: 14px; flex-shrink: 0;
+        }
+        .user-info { display: flex; flex-direction: column; }
+        .user-nick { font-weight: 600; color: #1f2937; }
+        .user-sub { font-size: 12px; color: #6b7280; display: flex; gap: 8px; }
+        .user-handle { font-family: monospace; color: #4b5563; background: #f3f4f6; padding: 0 4px; border-radius: 4px; }
+
+        .td-rating { font-weight: 700; font-size: 15px; }
+
+        /* CF Rating Colors */
+        .rate-gray { color: #808080; }
+        .rate-green { color: #008000; }
+        .rate-cyan { color: #03a89e; }
+        .rate-blue { color: #0000ff; }
+        .rate-violet { color: #aa00aa; }
+        .rate-orange { color: #ff8c00; }
+        .rate-red { color: #ff0000; }
+
+        @media (max-width: 768px) {
+            .podium-container { display: none; } /* Hide podium on mobile */
+            .page-title { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="page-header">
+        <div class="page-title"><i class="fas fa-trophy"></i> 团队排行榜 (Codeforces)</div>
+        <div class="last-update" id="lastUpdate">Updating...</div>
+    </div>
+
+    <!-- Podium (Top 3) -->
+    <div class="podium-container" id="podiumBox" style="display:none;">
+        <!-- 2nd -->
+        <div class="podium-item p-2">
+            <div class="podium-avatar" id="p2-avatar"></div>
+            <div class="podium-block">
+                <div class="podium-name" id="p2-name">-</div>
+                <div class="podium-score" id="p2-score">-</div>
+                <div class="podium-rank">2</div>
+            </div>
+        </div>
+        <!-- 1st -->
+        <div class="podium-item p-1">
+            <i class="fas fa-crown crown"></i>
+            <div class="podium-avatar" id="p1-avatar"></div>
+            <div class="podium-block">
+                <div class="podium-name" id="p1-name">-</div>
+                <div class="podium-score" id="p1-score">-</div>
+                <div class="podium-rank">1</div>
+            </div>
+        </div>
+        <!-- 3rd -->
+        <div class="podium-item p-3">
+            <div class="podium-avatar" id="p3-avatar"></div>
+            <div class="podium-block">
+                <div class="podium-name" id="p3-name">-</div>
+                <div class="podium-score" id="p3-score">-</div>
+                <div class="podium-rank">3</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Full Table -->
+    <div class="rank-card">
+        <div class="table-responsive">
+            <table>
+                <thead>
+                <tr>
+                    <th style="text-align:center;width:80px;">排名</th>
+                    <th>选手信息</th>
+                    <th>Codeforces Handle</th>
+                    <th>Rating</th>
+                    <th>更新时间</th>
+                </tr>
+                </thead>
+                <tbody id="rankList">
+                <tr><td colspan="5" style="text-align:center;padding:30px;color:#999;">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+
+        const API_BASE = /*[[@{/api}]]*/ '/api';
+
+        $(document).ready(function() {
+            loadRankings();
+        });
+
+        function loadRankings() {
+            $.get(API_BASE + '/team/rankings?platformCode=CF', function(res) {
+                if (res.code === 200 || res.code === 0) {
+                    const data = res.data || [];
+                    renderPodium(data);
+                    renderTable(data);
+                } else {
+                    $('#rankList').html('<tr><td colspan="5" style="text-align:center;color:red;">加载失败</td></tr>');
+                }
+            });
+        }
+
+        function renderPodium(data) {
+            if (data.length < 3) return; // 数据不足暂不显示 podium
+
+            // 1st
+            const p1 = data[0];
+            $('#p1-name').text(p1.nickname);
+            $('#p1-score').text(p1.rating);
+            $('#p1-avatar').text(getAvatarText(p1.nickname));
+
+            // 2nd
+            const p2 = data[1];
+            $('#p2-name').text(p2.nickname);
+            $('#p2-score').text(p2.rating);
+            $('#p2-avatar').text(getAvatarText(p2.nickname));
+
+            // 3rd
+            const p3 = data[2];
+            $('#p3-name').text(p3.nickname);
+            $('#p3-score').text(p3.rating);
+            $('#p3-avatar').text(getAvatarText(p3.nickname));
+
+            $('#podiumBox').css('display', 'flex');
+        }
+
+        function renderTable(data) {
+            const tbody = $('#rankList');
+            tbody.empty();
+
+            if (data.length === 0) {
+                tbody.html('<tr><td colspan="5" style="text-align:center;padding:20px;">暂无数据</td></tr>');
+                return;
+            }
+
+            // Update timestamp from first record
+            if(data[0].snapshotTime) {
+                const dateStr = data[0].snapshotTime.replace('T', ' ');
+                $('#lastUpdate').text('Data Updated: ' + dateStr);
+            }
+
+            data.forEach((item, index) => {
+                const rank = index + 1;
+                let rankHtml = `<span style="font-size:16px;color:#9ca3af;">${rank}</span>`;
+
+                // Icons for top 3
+                if(rank === 1) rankHtml = `<i class="fas fa-medal rank-icon rank-1"></i>`;
+                if(rank === 2) rankHtml = `<i class="fas fa-medal rank-icon rank-2"></i>`;
+                if(rank === 3) rankHtml = `<i class="fas fa-medal rank-icon rank-3"></i>`;
+
+                const avatarChar = getAvatarText(item.nickname);
+                const studentNo = item.studentNo ? `ID: ${item.studentNo}` : '';
+                const ratingColorClass = getRatingColorClass(item.rating);
+                const time = item.snapshotTime ? item.snapshotTime.substring(0, 10) : '-';
+
+                const tr = `
+                    <tr>
+                        <td class="td-rank">${rankHtml}</td>
+                        <td>
+                            <div class="td-user">
+                                <div class="user-avatar">${avatarChar}</div>
+                                <div class="user-info">
+                                    <div class="user-nick">${item.nickname}</div>
+                                    <div class="user-sub">
+                                        <span>${studentNo}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="user-handle">${item.handle || '-'}</span></td>
+                        <td class="td-rating ${ratingColorClass}">${item.rating}</td>
+                        <td style="color:#9ca3af;font-size:12px;">${time}</td>
+                    </tr>
+                `;
+                tbody.append(tr);
+            });
+        }
+
+        // --- Helpers ---
+        function getAvatarText(name) {
+            return (name || '?').charAt(0).toUpperCase();
+        }
+
+        function getRatingColorClass(r) {
+            if (r < 1200) return 'rate-gray';
+            if (r < 1400) return 'rate-green';
+            if (r < 1600) return 'rate-cyan';
+            if (r < 1900) return 'rate-blue';
+            if (r < 2100) return 'rate-violet';
+            if (r < 2400) return 'rate-orange';
+            return 'rate-red';
+        }
+
+    /*]]>*/
+</script>
+
+</body>
+</html>

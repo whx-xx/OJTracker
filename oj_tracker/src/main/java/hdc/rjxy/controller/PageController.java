@@ -39,4 +39,5 @@ public class PageController {
 
     @GetMapping("/views/rankings")
     public String rankings() { return "user/rankings"; } // 需要后续创建
+    //todo 个人信息传头像，在header和排行里显示
 }

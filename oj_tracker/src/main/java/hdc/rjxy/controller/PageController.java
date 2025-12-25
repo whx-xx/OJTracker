@@ -10,9 +10,7 @@ public class PageController {
     public String login() {
         return "login";
     }
-
-    //todo 轻量同步后数据没有获取到好像是，或者是获取到了没有显示到页面。
-
+    //todo 轻量同步后summary为空，heatmap填充了一堆空数据，history为空，每日/周题目和时间线有数据了。
     /**
      * 这里的 /dashboard 是纯粹的内容页，用于被 iframe 加载
      */
@@ -39,5 +37,4 @@ public class PageController {
 
     @GetMapping("/views/rankings")
     public String rankings() { return "user/rankings"; } // 需要后续创建
-    //todo 个人信息传头像，在header和排行里显示
 }

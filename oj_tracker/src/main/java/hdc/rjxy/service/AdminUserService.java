@@ -20,7 +20,7 @@ public class AdminUserService {
         this.userMapper = userMapper;
     }
 
-    public PageResult<UserAdminVO> pageUsers(int page, int pageSize, String keyword) {
+    public PageResult<UserAdminVO> pageUsers(int page, int pageSize, String keyword, Integer status) {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
@@ -28,7 +28,7 @@ public class AdminUserService {
         int offset = (page - 1) * pageSize;
 
         Long total = userMapper.countAdminList(keyword);
-        List<UserAdminVO> list = userMapper.pageAdminList(keyword, offset, pageSize);
+        List<UserAdminVO> list = userMapper.pageAdminList(keyword, offset, pageSize, status);
         return PageResult.of(total == null ? 0 : total, list);
     }
 

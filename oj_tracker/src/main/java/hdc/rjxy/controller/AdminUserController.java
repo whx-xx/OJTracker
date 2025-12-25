@@ -30,8 +30,9 @@ public class AdminUserController {
     @GetMapping
     public R<PageResult<UserAdminVO>> page(@RequestParam(value = "page", required = false, defaultValue = "1") int page,
                                            @RequestParam(value = "pageSize", required = false, defaultValue = "20") int pageSize,
-                                           @RequestParam(value = "keyword", required = false) String keyword) {
-        return R.ok(adminUserService.pageUsers(page, pageSize, keyword));
+                                           @RequestParam(value = "keyword", required = false) String keyword,
+                                           @RequestParam(value = "status", required = false) Integer status ){
+        return R.ok(adminUserService.pageUsers(page, pageSize, keyword, status));
     }
 
     @PutMapping("/{id}/nickname")

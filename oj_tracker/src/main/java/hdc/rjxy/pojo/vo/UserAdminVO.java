@@ -15,4 +15,5 @@ public class UserAdminVO {
     private Integer mustChangePassword;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String avatar;
 }

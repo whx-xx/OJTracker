@@ -88,7 +88,7 @@
 
     <select id="pageAdminList" resultType="hdc.rjxy.pojo.vo.UserAdminVO">
         SELECT
-        id, student_no, username, nickname, role, status, must_change_password, created_at, updated_at
+        id, student_no, username, nickname, role, status, must_change_password, created_at, updated_at, avatar
         FROM user
         <where>
             <if test="keyword != null and keyword != ''">
@@ -97,6 +97,9 @@
                 OR nickname LIKE CONCAT('%', #{keyword}, '%')
                 OR student_no LIKE CONCAT('%', #{keyword}, '%')
                 )
+            </if>
+            <if test="status != null">
+                AND status = #{status}
             </if>
         </where>
         ORDER BY id DESC

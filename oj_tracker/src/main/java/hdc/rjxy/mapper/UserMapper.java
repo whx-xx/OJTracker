@@ -32,7 +32,8 @@ public interface UserMapper {
 
     List<UserAdminVO> pageAdminList(@Param("keyword") String keyword,
                                     @Param("offset") int offset,
-                                    @Param("limit") int limit);
+                                    @Param("limit") int limit,
+                                    @Param("status") Integer status);
 
     Long countAdminList(@Param("keyword") String keyword);
 

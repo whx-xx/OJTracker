@@ -359,7 +359,7 @@
                 .map(p => ({ platformId: p.platformId, identifierType: p.identifierType||"handle", identifierValue: p.identifierValue }));
             itemsToSend.push(newCFItem);
             $.ajax({
-                url: API_BASE + '/me/platforms', type: 'PUT', contentType: 'application/json',
+                url: API_BASE + '/me/platforms', type: 'POST', contentType: 'application/json',
                 data: JSON.stringify({ items: itemsToSend }),
                 success: function(res) {
                     if(res.code === 200 || res.code === 0) {

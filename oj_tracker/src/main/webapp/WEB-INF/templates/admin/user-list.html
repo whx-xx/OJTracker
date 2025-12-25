@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script th:src="@{/static/js/jquery.min.js}"></script>
+
+    <style>
+        :root {
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-light: #64748b;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --border: #e2e8f0;
+            --radius: 10px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        * { box-sizing: border-box; outline: none; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: transparent; /* 透出 layout 背景 */
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px 40px;
+        }
+
+        .container { max-width: 100%; margin: 0 auto; }
+
+        /* --- Toolbar --- */
+        .toolbar {
+            display: flex; justify-content: flex-end; align-items: center;
+            margin-bottom: 20px; gap: 12px;
+        }
+
+        .filter-group {
+            display: flex; gap: 10px; align-items: center;
+            background: #fff; padding: 4px; border-radius: 8px;
+            border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+        }
+
+        .search-box { position: relative; width: 260px; }
+        .search-box i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+        .search-input {
+            width: 100%; padding: 8px 12px 8px 36px;
+            border: none; background: transparent; font-size: 13px; color: var(--text-main);
+        }
+        .search-input::placeholder { color: #94a3b8; }
+
+        .select-filter {
+            border: none; background: #f8fafc; font-size: 13px; color: var(--text-main);
+            padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 500;
+            border-right: 1px solid transparent;
+        }
+        .select-filter:hover { background: #f1f5f9; }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+            border: 1px solid transparent; cursor: pointer; transition: all 0.2s;
+            box-shadow: var(--shadow-sm);
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        .btn-white { background: white; border-color: var(--border); color: var(--text-main); }
+        .btn-white:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+        /* --- Table --- */
+        .table-container {
+            background: var(--bg-card); border-radius: var(--radius);
+            box-shadow: var(--shadow-sm); border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+
+        thead { background: #f8fafc; border-bottom: 1px solid var(--border); }
+        th {
+            padding: 14px 24px; font-size: 12px; font-weight: 600; color: #475569;
+            text-transform: uppercase; letter-spacing: 0.05em;
+        }
+
+        tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.15s; }
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:hover { background: #f8fafc; }
+
+        td { padding: 16px 24px; font-size: 14px; color: #334155; vertical-align: middle; }
+
+        /* User Info */
+        .user-cell { display: flex; align-items: center; gap: 12px; }
+        .avatar-box {
+            width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+            overflow: hidden; display: flex; align-items: center; justify-content: center;
+            font-size: 14px; font-weight: 700; color: #fff;
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+        }
+        .avatar-box img { width: 100%; height: 100%; object-fit: cover; }
+        .u-info { display: flex; flex-direction: column; }
+        .u-name { font-weight: 600; color: var(--text-main); font-size: 14px; }
+        .u-nick { font-size: 12px; color: var(--text-light); }
+
+        /* Badges */
+        .badge {
+            display: inline-flex; align-items: center; padding: 2px 8px;
+            border-radius: 99px; font-size: 11px; font-weight: 600; border: 1px solid transparent;
+        }
+        .role-admin { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+        .role-user { background: #e0f2fe; color: #075985; border-color: #bae6fd; }
+
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 13px; font-weight: 500;
+        }
+        .dot { width: 6px; height: 6px; border-radius: 50%; }
+        .st-active { color: #059669; }
+        .st-active .dot { background: #10b981; box-shadow: 0 0 0 2px #d1fae5; }
+        .st-disabled { color: #64748b; }
+        .st-disabled .dot { background: #94a3b8; }
+
+        /* Actions */
+        .actions { display: flex; gap: 6px; justify-content: flex-end; opacity: 0.7; transition: opacity 0.2s; }
+        tr:hover .actions { opacity: 1; }
+
+        .icon-btn {
+            width: 30px; height: 30px; border-radius: 6px; border: 1px solid transparent;
+            background: transparent; color: #64748b; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        .icon-btn:hover { background: #fff; border-color: var(--border); shadow: var(--shadow-sm); color: var(--primary); }
+        .btn-delete:hover { color: #ef4444; border-color: #fecaca; background: #fef2f2; }
+
+        /* --- Pagination (Modern) --- */
+        .pagination-footer {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 24px; border-top: 1px solid var(--border);
+            background: #fcfcfd;
+        }
+        .page-desc { font-size: 13px; color: #64748b; }
+        .pg-container { display: flex; gap: 4px; background: #fff; padding: 2px; border-radius: 6px; border: 1px solid var(--border); }
+
+        .pg-btn {
+            min-width: 28px; height: 28px; padding: 0 8px; border-radius: 4px;
+            border: none; background: transparent;
+            color: #475569; font-size: 13px; font-weight: 500;
+            cursor: pointer; transition: all 0.15s;
+        }
+        .pg-btn:hover:not(:disabled) { background: #f1f5f9; color: #0f172a; }
+        .pg-btn.active { background: #eff6ff; color: var(--primary); font-weight: 600; }
+        .pg-btn:disabled { color: #cbd5e1; cursor: default; }
+
+        /* --- Modal --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.4); z-index: 999;
+            display: none; align-items: center; justify-content: center;
+            backdrop-filter: blur(2px);
+        }
+        .modal {
+            background: #fff; width: 400px; border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+            padding: 24px; transform: scale(0.95); opacity: 0; transition: all 0.2s;
+        }
+        .modal-overlay.active .modal { transform: scale(1); opacity: 1; }
+
+        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--text-main); }
+        .form-label { display: block; font-size: 13px; font-weight: 500; color: #475569; margin-bottom: 6px; }
+        .form-control {
+            width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;
+            font-size: 14px; margin-bottom: 16px; transition: border 0.2s;
+        }
+        .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px #eff6ff; }
+        .form-control:disabled { background: #f8fafc; color: #94a3b8; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+        /* Toast */
+        #toast {
+            position: fixed; top: 20px; right: 20px; z-index: 2000;
+            padding: 10px 20px; border-radius: 8px; color: #fff; font-weight: 500;
+            box-shadow: var(--shadow-md); display: none;
+        }
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hide-sm { display: none; }
+            .toolbar { flex-direction: column; align-items: stretch; }
+            .search-box { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- 编辑昵称 Modal -->
+<div id="editModal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-title">修改用户昵称</div>
+        <input type="hidden" id="editUserId">
+        <label class="form-label">用户名</label>
+        <input type="text" id="editUsername" class="form-control" disabled>
+        <label class="form-label">新昵称</label>
+        <input type="text" id="editNickname" class="form-control" placeholder="请输入...">
+        <div class="modal-actions">
+            <button class="btn btn-white" onclick="closeModal('editModal')">取消</button>
+            <button class="btn btn-primary" onclick="submitEdit()">保存</button>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+
+    <!-- 工具栏 -->
+    <div class="toolbar">
+        <div class="filter-group">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" class="search-input" placeholder="搜索 学号/用户名/昵称...">
+            </div>
+            <div style="width:1px;height:20px;background:#e2e8f0;"></div>
+            <select id="statusFilter" class="select-filter">
+                <option value="">全部状态</option>
+                <option value="1">正常</option>
+                <option value="0">禁用</option>
+            </select>
+        </div>
+
+        <button class="btn btn-white" onclick="loadUsers(1)">
+            <i class="fas fa-sync-alt" id="refreshIcon"></i>
+        </button>
+    </div>
+
+    <!-- 表格区域 -->
+    <div class="table-container">
+        <div class="table-responsive">
+            <table>
+                <thead>
+                <tr>
+                    <th style="width:60px;">ID</th>
+                    <th style="width:280px;">用户信息</th>
+                    <th>学号</th>
+                    <th>角色</th>
+                    <th>状态</th>
+                    <th class="hide-sm">注册时间</th>
+                    <th style="text-align:right;">操作</th>
+                </tr>
+                </thead>
+                <tbody id="userTableBody">
+                <tr><td colspan="7" style="text-align:center;padding:40px;color:#94a3b8;">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分页 -->
+        <div class="pagination-footer">
+            <div class="page-desc">
+                第 <span id="currPage" style="font-weight:600;color:#0f172a">1</span> 页 / 共 <span id="totalPage">1</span> 页，总计 <span id="totalCount">0</span> 条
+            </div>
+            <div class="pg-container" id="pagination">
+                <!-- JS Rendered -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+
+        const API_BASE = /*[[@{/api}]]*/ '/api';
+        let currentPage = 1;
+        const PAGE_SIZE = 10; // 每页10条
+
+        $(document).ready(function() {
+            loadUsers(1);
+            $('#searchInput').on('keypress', function(e) { if(e.which===13) loadUsers(1); });
+            $('#statusFilter').change(function() { loadUsers(1); });
+        });
+
+        // --- 加载数据 ---
+        function loadUsers(page) {
+            const keyword = $('#searchInput').val();
+            const status = $('#statusFilter').val();
+            const $icon = $('#refreshIcon');
+            $icon.addClass('spin');
+
+            const params = { page: page, pageSize: PAGE_SIZE, keyword: keyword };
+            if(status !== "") params.status = status;
+
+            $.get(`${API_BASE}/admin/users`, params, function(res) {
+                $icon.removeClass('spin');
+                if (res.code === 200 || res.code === 0) {
+                    renderTable(res.data.list);
+                    renderPagination(res.data.total, page);
+                    currentPage = page;
+                    $('#totalCount').text(res.data.total);
+                    $('#currPage').text(page);
+                    $('#totalPage').text(Math.ceil(res.data.total/PAGE_SIZE)||1);
+                } else {
+                    showToast('error', res.msg || '加载失败');
+                }
+            }).fail(() => { $icon.removeClass('spin'); showToast('error', '请求失败'); });
+        }
+
+        function renderTable(list) {
+            const tbody = $('#userTableBody');
+            tbody.empty();
+            if (!list || list.length === 0) {
+                tbody.html('<tr><td colspan="7" style="text-align:center;padding:40px;color:#94a3b8;">暂无数据</td></tr>');
+                return;
+            }
+
+            list.forEach(u => {
+                const roleBadge = u.role === 'ADMIN' ?
+                    `<span class="badge role-admin">管理员</span>` : `<span class="badge role-user">用户</span>`;
+
+                const isActive = u.status === 1;
+                const statusHtml = isActive
+                    ? `<span class="status-badge st-active"><div class="dot"></div>正常</span>`
+                    : `<span class="status-badge st-disabled"><div class="dot"></div>禁用</span>`;
+
+                // 头像逻辑
+                let avatarHtml;
+                if(u.avatar && u.avatar.trim()!==''){
+                    avatarHtml = `<img src="${u.avatar}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`;
+                }
+                // 随机背景色
+                const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'];
+                const bg = colors[u.id % colors.length];
+                const char = (u.nickname||u.username||'?').charAt(0).toUpperCase();
+                avatarHtml = (avatarHtml || '') + `<div style="display:${avatarHtml?'none':'flex'};width:100%;height:100%;align-items:center;justify-content:center;background:${bg};color:#fff;">${char}</div>`;
+
+                const tr = `
+                    <tr>
+                        <td style="color:#94a3b8;font-family:monospace;">${u.id}</td>
+                        <td>
+                            <div class="user-cell">
+                                <div class="avatar-box">${avatarHtml}</div>
+                                <div class="u-info">
+                                    <div class="u-name">${u.username}</div>
+                                    <div class="u-nick">${u.nickname || '-'}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="font-family:monospace;color:#64748b;">${u.studentNo || '-'}</td>
+                        <td>${roleBadge}</td>
+                        <td>${statusHtml}</td>
+                        <td class="hide-sm" style="color:#64748b;font-size:12px;">${u.createdAt ? u.createdAt.replace('T',' ').substring(0,16) : '-'}</td>
+                        <td style="text-align:right;">
+                            <div class="actions">
+                                <button class="icon-btn" onclick="openEditModal(${u.id}, '${u.username}', '${u.nickname||''}')" title="编辑"><i class="fas fa-pen"></i></button>
+                                <button class="icon-btn" onclick="resetPassword(${u.id}, '${u.username}')" title="重置密码"><i class="fas fa-key"></i></button>
+                                <button class="icon-btn ${isActive?'btn-delete':''}" onclick="toggleStatus(${u.id}, ${u.status})" title="${isActive?'禁用':'启用'}">
+                                    <i class="fas ${isActive?'fa-ban':'fa-check-circle'}"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                tbody.append(tr);
+            });
+        }
+
+        function renderPagination(total, curr) {
+            const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
+            const $pg = $('#pagination');
+            $pg.empty();
+
+            const btn = (p, icon, dis) => `<button class="pg-btn ${p===curr?'active':''}" onclick="loadUsers(${p})" ${dis?'disabled':''}>${icon}</button>`;
+
+            $pg.append(btn(curr-1, '<i class="fas fa-chevron-left"></i>', curr<=1));
+
+            if (totalPages <= 7) {
+                for(let i=1; i<=totalPages; i++) $pg.append(btn(i, i, false));
+            } else {
+                // 省略号逻辑
+                if(curr <= 4) {
+                    for(let i=1; i<=5; i++) $pg.append(btn(i, i, false));
+                    $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
+                    $pg.append(btn(totalPages, totalPages, false));
+                } else if (curr >= totalPages - 3) {
+                    $pg.append(btn(1, 1, false));
+                    $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
+                    for(let i=totalPages-4; i<=totalPages; i++) $pg.append(btn(i, i, false));
+                } else {
+                    $pg.append(btn(1, 1, false));
+                    $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
+                    for(let i=curr-1; i<=curr+1; i++) $pg.append(btn(i, i, false));
+                    $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
+                    $pg.append(btn(totalPages, totalPages, false));
+                }
+            }
+
+            $pg.append(btn(curr+1, '<i class="fas fa-chevron-right"></i>', curr>=totalPages));
+        }
+
+        // --- Actions ---
+        function openEditModal(id, username, nickname) {
+            $('#editUserId').val(id);
+            $('#editUsername').val(username);
+            $('#editNickname').val(nickname);
+            $('#editModal').css('display', 'flex').hide().fadeIn(150).addClass('active');
+        }
+
+        function closeModal(id) { $(`#${id}`).removeClass('active').fadeOut(150); }
+
+        function submitEdit() {
+            const id = $('#editUserId').val();
+            const nick = $('#editNickname').val();
+            $.ajax({
+                url: `${API_BASE}/admin/users/${id}/nickname`, type: 'PUT',
+                contentType: 'application/json', data: JSON.stringify({nickname: nick}),
+                success: function(res) {
+                    if(res.code===200||res.code===0){ showToast('success', '修改成功'); closeModal('editModal'); loadUsers(currentPage); }
+                    else showToast('error', res.msg);
+                }
+            });
+        }
+
+        function resetPassword(id, u) {
+            if(!confirm(`确定重置用户 [${u}] 的密码为 123456 吗？`)) return;
+            $.post(`${API_BASE}/admin/users/${id}/reset-password`, function(res) {
+                if(res.code===200||res.code===0) showToast('success', '密码已重置');
+                else showToast('error', res.msg);
+            });
+        }
+
+        function toggleStatus(id, s) {
+            const ns = s===1?0:1;
+            const txt = ns===1?'启用':'禁用';
+            if(!confirm(`确定要${txt}该账号吗？`)) return;
+            $.ajax({
+                url: `${API_BASE}/admin/users/${id}/status`, type: 'PUT',
+                contentType: 'application/json', data: JSON.stringify({status: ns}),
+                success: function(res) {
+                    if(res.code===200||res.code===0){ showToast('success', '已'+txt); loadUsers(currentPage); }
+                    else showToast('error', res.msg);
+                }
+            });
+        }
+
+        function showToast(type, msg) {
+            const t = $('#toast');
+            t.text(msg).css('background', type==='success'?'#10b981':'#ef4444').fadeIn().delay(2000).fadeOut();
+        }
+
+    /*]]>*/
+</script>
+
+</body>
+</html>

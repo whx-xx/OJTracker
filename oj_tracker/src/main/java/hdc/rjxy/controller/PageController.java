@@ -5,12 +5,19 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
 public class PageController {
+    //todo 统一分页样式
+    //todo 统一弹窗样式
+    //todo 统一默认头像样式
+
+    //todo 轻量同步后summary为空，heatmap填充了一堆空数据，history为空，每日/周题目和时间线有数据了。
+    //todo 调度任务的返回结果不正确
+    //todo 操作日志扩展
+    //todo 添加jwt认证
 
     @GetMapping("/login")
     public String login() {
         return "login";
     }
-    //todo 轻量同步后summary为空，heatmap填充了一堆空数据，history为空，每日/周题目和时间线有数据了。
     /**
      * 这里的 /dashboard 是纯粹的内容页，用于被 iframe 加载
      */

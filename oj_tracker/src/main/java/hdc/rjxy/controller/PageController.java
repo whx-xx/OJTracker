@@ -24,17 +24,18 @@ public class PageController {
         return "layout";
     }
 
-    // --- 以下是后续模块的占位符，你可以先创建简单的html文件或暂不创建 ---
-
     @GetMapping("/views/users")
-    public String userList() { return "admin/user-list"; } // 需要后续创建
+    public String userList() { return "admin/user-list"; }
 
     @GetMapping("/views/sync")
-    public String syncManage() { return "admin/sync-manage"; } // 需要后续创建
+    public String syncManage() { return "admin/sync-manage"; }
+
+    @GetMapping("/views/logs")
+    public String opLogs() { return "admin/op-logs"; }
 
     @GetMapping("/views/profile")
-    public String profile() { return "user/profile"; } // 需要后续创建
+    public String profile() { return "user/profile"; }
 
     @GetMapping("/views/rankings")
-    public String rankings() { return "user/rankings"; } // 需要后续创建
+    public String rankings() { return "user/rankings"; }
 }

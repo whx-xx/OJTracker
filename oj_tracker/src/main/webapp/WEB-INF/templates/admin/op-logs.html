@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operation Logs</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script th:src="@{/static/js/jquery.min.js}"></script>
+
+    <style>
+        :root {
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-light: #64748b;
+            --primary: #3b82f6;
+            --border: #e2e8f0;
+            --radius: 10px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: transparent;
+            margin: 0; padding: 20px 40px;
+            color: var(--text-main);
+        }
+
+        .container {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
+            display: flex; flex-direction: column;
+            height: calc(100vh - 40px); /* Fill available height */
+        }
+
+        .header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .title i { color: var(--text-light); }
+
+        .table-container { flex: 1; overflow: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+
+        thead { position: sticky; top: 0; background: #f8fafc; z-index: 10; }
+        th { padding: 12px 24px; font-size: 12px; font-weight: 600; color: #64748b; border-bottom: 1px solid var(--border); }
+
+        td { padding: 16px 24px; font-size: 13px; color: #334155; border-bottom: 1px solid #f1f5f9; }
+        tbody tr:hover { background: #f8fafc; }
+
+        .badge-op {
+            padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;
+            background: #f1f5f9; color: #475569; font-family: monospace;
+        }
+
+        /* Specific Op Colors */
+        .op-RESET_PWD { background: #fee2e2; color: #991b1b; }
+        .op-UPDATE_STATUS { background: #fff7ed; color: #9a3412; }
+
+        .user-info { display: flex; flex-direction: column; }
+        .user-sub { font-size: 11px; color: #94a3b8; }
+
+        .pagination { padding: 12px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+        .page-btn {
+            border: 1px solid var(--border); background: white; padding: 6px 12px; border-radius: 6px;
+            font-size: 12px; color: #475569; cursor: pointer; transition: all 0.2s;
+        }
+        .page-btn:hover:not(:disabled) { background: #f1f5f9; color: #0f172a; }
+        .page-btn:disabled { color: #cbd5e1; cursor: default; }
+
+        .mono { font-family: 'SF Mono', 'Roboto Mono', monospace; font-size: 12px; color: #64748b; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div class="title"><i class="fas fa-shield-alt"></i> 管理员审计日志</div>
+        <button class="page-btn" onclick="loadLogs(1)"><i class="fas fa-sync-alt"></i> 刷新</button>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+            <tr>
+                <th style="width:60px">ID</th>
+                <th>操作人 (Admin)</th>
+                <th>操作类型</th>
+                <th>目标用户</th>
+                <th>IP 地址</th>
+                <th>详情 (Remark)</th>
+                <th style="text-align:right">操作时间</th>
+            </tr>
+            </thead>
+            <tbody id="logBody">
+            <!-- Content -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="pagination">
+        <span style="font-size:12px; color:#94a3b8; margin-right:10px;">第 <span id="currPage">1</span> 页</span>
+        <button class="page-btn" id="prevBtn" onclick="changePage(-1)">上一页</button>
+        <button class="page-btn" id="nextBtn" onclick="changePage(1)">下一页</button>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+        const API_URL = /*[[@{/api/admin/op-logs}]]*/ '/api/admin/op-logs';
+        let currentPage = 1;
+        const PAGE_SIZE = 20;
+
+        $(document).ready(function() {
+            loadLogs(1);
+        });
+
+        function changePage(delta) {
+            loadLogs(currentPage + delta);
+        }
+
+        function loadLogs(page) {
+            if(page < 1) return;
+
+            const $btn = $('.title i');
+            $btn.addClass('fa-spin'); // 简单loading效果
+
+            $.get(API_URL, {page: page, pageSize: PAGE_SIZE}, function(res) {
+                $btn.removeClass('fa-spin');
+                if(res.code === 200) {
+                    renderTable(res.data.list);
+                    currentPage = page;
+                    $('#currPage').text(page);
+
+                    // 简单的分页按钮状态控制
+                    $('#prevBtn').prop('disabled', page === 1);
+                    // 假设如果返回数量小于 pageSize 则没有下一页
+                    $('#nextBtn').prop('disabled', res.data.list.length < PAGE_SIZE);
+                }
+            }).fail(() => $btn.removeClass('fa-spin'));
+        }
+
+        function renderTable(list) {
+            const tbody = $('#logBody');
+            tbody.empty();
+
+            if(!list || list.length === 0) {
+                tbody.html('<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">暂无日志</td></tr>');
+                return;
+            }
+
+            list.forEach(log => {
+                // 操作类型美化
+                let opClass = 'badge-op';
+                if(log.opType === 'RESET_PWD') opClass += ' op-RESET_PWD';
+                if(log.opType.includes('STATUS')) opClass += ' op-UPDATE_STATUS';
+
+                const time = log.opTime.replace('T', ' ');
+
+                const tr = `
+                    <tr>
+                        <td class="mono">${log.id}</td>
+                        <td>
+                            <div class="user-info">
+                                <span style="font-weight:600">${log.adminName}</span>
+                                <span class="user-sub">ID: ${log.adminId}</span>
+                            </div>
+                        </td>
+                        <td><span class="${opClass}">${log.opType}</span></td>
+                        <td>
+                            <div class="user-info">
+                                <span>${log.targetName}</span>
+                                <span class="user-sub">ID: ${log.targetUserId}</span>
+                            </div>
+                        </td>
+                        <td class="mono">${log.ip}</td>
+                        <td style="color:#475569;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${log.remark}">
+                            ${log.remark || '-'}
+                        </td>
+                        <td style="text-align:right; font-size:12px; color:#64748b;">${time}</td>
+                    </tr>
+                `;
+                tbody.append(tr);
+            });
+        }
+    /*]]>*/
+</script>
+</body>
+</html>

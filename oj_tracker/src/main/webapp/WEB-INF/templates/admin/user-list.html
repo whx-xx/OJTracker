@@ -71,6 +71,8 @@
         .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
         .btn-white { background: white; border-color: var(--border); color: var(--text-main); }
         .btn-white:hover { background: #f8fafc; border-color: #cbd5e1; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; transform: translateY(-1px); }
 
         /* --- Table --- */
         .table-container {
@@ -200,7 +202,6 @@
 
 <div id="toast"></div>
 
-<!-- 编辑昵称 Modal -->
 <div id="editModal" class="modal-overlay">
     <div class="modal">
         <div class="modal-title">修改用户昵称</div>
@@ -216,9 +217,21 @@
     </div>
 </div>
 
+<div id="confirmModal" class="modal-overlay">
+    <div class="modal" style="width: 380px;">
+        <div class="modal-title" id="confirmTitle">提示</div>
+        <div style="margin-bottom: 24px; color: #475569; font-size: 14px; line-height: 1.6;" id="confirmMessage">
+            确认执行此操作吗？
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-white" onclick="closeModal('confirmModal')">取消</button>
+            <button class="btn btn-primary" id="confirmBtn">确定</button>
+        </div>
+    </div>
+</div>
+
 <div class="container">
 
-    <!-- 工具栏 -->
     <div class="toolbar">
         <div class="filter-group">
             <div class="search-box">
@@ -238,7 +251,6 @@
         </button>
     </div>
 
-    <!-- 表格区域 -->
     <div class="table-container">
         <div class="table-responsive">
             <table>
@@ -259,13 +271,11 @@
             </table>
         </div>
 
-        <!-- 分页 -->
         <div class="pagination-footer">
             <div class="page-desc">
                 第 <span id="currPage" style="font-weight:600;color:#0f172a">1</span> 页 / 共 <span id="totalPage">1</span> 页，总计 <span id="totalCount">0</span> 条
             </div>
             <div class="pg-container" id="pagination">
-                <!-- JS Rendered -->
             </div>
         </div>
     </div>
@@ -274,70 +284,77 @@
 <script th:inline="javascript">
     /*<![CDATA[*/
 
-        const API_BASE = /*[[@{/api}]]*/ '/api';
-        let currentPage = 1;
-        const PAGE_SIZE = 10; // 每页10条
+    const API_BASE = /*[[@{/api}]]*/ '/api';
+    let currentPage = 1;
+    const PAGE_SIZE = 8;
+    let confirmCallback = null; // 用于存储确认回调
 
-        $(document).ready(function() {
-            loadUsers(1);
-            $('#searchInput').on('keypress', function(e) { if(e.which===13) loadUsers(1); });
-            $('#statusFilter').change(function() { loadUsers(1); });
+    $(document).ready(function() {
+        loadUsers(1);
+        $('#searchInput').on('keypress', function(e) { if(e.which===13) loadUsers(1); });
+        $('#statusFilter').change(function() { loadUsers(1); });
+
+        // 绑定确认按钮点击事件
+        $('#confirmBtn').click(function() {
+            if (confirmCallback) confirmCallback();
+            closeModal('confirmModal');
         });
+    });
 
-        // --- 加载数据 ---
-        function loadUsers(page) {
-            const keyword = $('#searchInput').val();
-            const status = $('#statusFilter').val();
-            const $icon = $('#refreshIcon');
-            $icon.addClass('spin');
+    // --- 加载数据 ---
+    function loadUsers(page) {
+        const keyword = $('#searchInput').val();
+        const status = $('#statusFilter').val();
+        const $icon = $('#refreshIcon');
+        $icon.addClass('spin');
 
-            const params = { page: page, pageSize: PAGE_SIZE, keyword: keyword };
-            if(status !== "") params.status = status;
+        const params = { page: page, pageSize: PAGE_SIZE, keyword: keyword };
+        if(status !== "") params.status = status;
 
-            $.get(`${API_BASE}/admin/users`, params, function(res) {
-                $icon.removeClass('spin');
-                if (res.code === 200 || res.code === 0) {
-                    renderTable(res.data.list);
-                    renderPagination(res.data.total, page);
-                    currentPage = page;
-                    $('#totalCount').text(res.data.total);
-                    $('#currPage').text(page);
-                    $('#totalPage').text(Math.ceil(res.data.total/PAGE_SIZE)||1);
-                } else {
-                    showToast('error', res.msg || '加载失败');
-                }
-            }).fail(() => { $icon.removeClass('spin'); showToast('error', '请求失败'); });
+        $.get(`${API_BASE}/admin/users`, params, function(res) {
+            $icon.removeClass('spin');
+            if (res.code === 200 || res.code === 0) {
+                renderTable(res.data.list);
+                renderPagination(res.data.total, page);
+                currentPage = page;
+                $('#totalCount').text(res.data.total);
+                $('#currPage').text(page);
+                $('#totalPage').text(Math.ceil(res.data.total/PAGE_SIZE)||1);
+            } else {
+                showToast('error', res.msg || '加载失败');
+            }
+        }).fail(() => { $icon.removeClass('spin'); showToast('error', '请求失败'); });
+    }
+
+    function renderTable(list) {
+        const tbody = $('#userTableBody');
+        tbody.empty();
+        if (!list || list.length === 0) {
+            tbody.html('<tr><td colspan="7" style="text-align:center;padding:40px;color:#94a3b8;">暂无数据</td></tr>');
+            return;
         }
 
-        function renderTable(list) {
-            const tbody = $('#userTableBody');
-            tbody.empty();
-            if (!list || list.length === 0) {
-                tbody.html('<tr><td colspan="7" style="text-align:center;padding:40px;color:#94a3b8;">暂无数据</td></tr>');
-                return;
+        list.forEach(u => {
+            const roleBadge = u.role === 'ADMIN' ?
+                `<span class="badge role-admin">管理员</span>` : `<span class="badge role-user">用户</span>`;
+
+            const isActive = u.status === 1;
+            const statusHtml = isActive
+                ? `<span class="status-badge st-active"><div class="dot"></div>正常</span>`
+                : `<span class="status-badge st-disabled"><div class="dot"></div>禁用</span>`;
+
+            // 头像逻辑
+            let avatarHtml;
+            if(u.avatar && u.avatar.trim()!==''){
+                avatarHtml = `<img src="${u.avatar}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`;
             }
+            // 随机背景色
+            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'];
+            const bg = colors[u.id % colors.length];
+            const char = (u.nickname||u.username||'?').charAt(0).toUpperCase();
+            avatarHtml = (avatarHtml || '') + `<div style="display:${avatarHtml?'none':'flex'};width:100%;height:100%;align-items:center;justify-content:center;background:${bg};color:#fff;">${char}</div>`;
 
-            list.forEach(u => {
-                const roleBadge = u.role === 'ADMIN' ?
-                    `<span class="badge role-admin">管理员</span>` : `<span class="badge role-user">用户</span>`;
-
-                const isActive = u.status === 1;
-                const statusHtml = isActive
-                    ? `<span class="status-badge st-active"><div class="dot"></div>正常</span>`
-                    : `<span class="status-badge st-disabled"><div class="dot"></div>禁用</span>`;
-
-                // 头像逻辑
-                let avatarHtml;
-                if(u.avatar && u.avatar.trim()!==''){
-                    avatarHtml = `<img src="${u.avatar}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`;
-                }
-                // 随机背景色
-                const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'];
-                const bg = colors[u.id % colors.length];
-                const char = (u.nickname||u.username||'?').charAt(0).toUpperCase();
-                avatarHtml = (avatarHtml || '') + `<div style="display:${avatarHtml?'none':'flex'};width:100%;height:100%;align-items:center;justify-content:center;background:${bg};color:#fff;">${char}</div>`;
-
-                const tr = `
+            const tr = `
                     <tr>
                         <td style="color:#94a3b8;font-family:monospace;">${u.id}</td>
                         <td>
@@ -364,92 +381,124 @@
                         </td>
                     </tr>
                 `;
-                tbody.append(tr);
-            });
-        }
+            tbody.append(tr);
+        });
+    }
 
-        function renderPagination(total, curr) {
-            const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
-            const $pg = $('#pagination');
-            $pg.empty();
+    function renderPagination(total, curr) {
+        const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
+        const $pg = $('#pagination');
+        $pg.empty();
 
-            const btn = (p, icon, dis) => `<button class="pg-btn ${p===curr?'active':''}" onclick="loadUsers(${p})" ${dis?'disabled':''}>${icon}</button>`;
+        const btn = (p, icon, dis) => `<button class="pg-btn ${p===curr?'active':''}" onclick="loadUsers(${p})" ${dis?'disabled':''}>${icon}</button>`;
 
-            $pg.append(btn(curr-1, '<i class="fas fa-chevron-left"></i>', curr<=1));
+        $pg.append(btn(curr-1, '<i class="fas fa-chevron-left"></i>', curr<=1));
 
-            if (totalPages <= 7) {
-                for(let i=1; i<=totalPages; i++) $pg.append(btn(i, i, false));
+        if (totalPages <= 7) {
+            for(let i=1; i<=totalPages; i++) $pg.append(btn(i, i, false));
+        } else {
+            if(curr <= 4) {
+                for(let i=1; i<=5; i++) $pg.append(btn(i, i, false));
+                $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
+                $pg.append(btn(totalPages, totalPages, false));
+            } else if (curr >= totalPages - 3) {
+                $pg.append(btn(1, 1, false));
+                $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
+                for(let i=totalPages-4; i<=totalPages; i++) $pg.append(btn(i, i, false));
             } else {
-                // 省略号逻辑
-                if(curr <= 4) {
-                    for(let i=1; i<=5; i++) $pg.append(btn(i, i, false));
-                    $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
-                    $pg.append(btn(totalPages, totalPages, false));
-                } else if (curr >= totalPages - 3) {
-                    $pg.append(btn(1, 1, false));
-                    $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
-                    for(let i=totalPages-4; i<=totalPages; i++) $pg.append(btn(i, i, false));
-                } else {
-                    $pg.append(btn(1, 1, false));
-                    $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
-                    for(let i=curr-1; i<=curr+1; i++) $pg.append(btn(i, i, false));
-                    $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
-                    $pg.append(btn(totalPages, totalPages, false));
-                }
+                $pg.append(btn(1, 1, false));
+                $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
+                for(let i=curr-1; i<=curr+1; i++) $pg.append(btn(i, i, false));
+                $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
+                $pg.append(btn(totalPages, totalPages, false));
             }
-
-            $pg.append(btn(curr+1, '<i class="fas fa-chevron-right"></i>', curr>=totalPages));
         }
 
-        // --- Actions ---
-        function openEditModal(id, username, nickname) {
-            $('#editUserId').val(id);
-            $('#editUsername').val(username);
-            $('#editNickname').val(nickname);
-            $('#editModal').css('display', 'flex').hide().fadeIn(150).addClass('active');
+        $pg.append(btn(curr+1, '<i class="fas fa-chevron-right"></i>', curr>=totalPages));
+    }
+
+    // --- Actions ---
+
+    // 显示确认弹窗的通用函数
+    function showConfirm(title, msg, callback, danger = false) {
+        $('#confirmTitle').text(title);
+        $('#confirmMessage').html(msg);
+        confirmCallback = callback;
+
+        const $btn = $('#confirmBtn');
+        if(danger) {
+            $btn.removeClass('btn-primary').addClass('btn-danger');
+        } else {
+            $btn.removeClass('btn-danger').addClass('btn-primary');
         }
 
-        function closeModal(id) { $(`#${id}`).removeClass('active').fadeOut(150); }
+        $('#confirmModal').css('display', 'flex').hide().fadeIn(150).addClass('active');
+    }
 
-        function submitEdit() {
-            const id = $('#editUserId').val();
-            const nick = $('#editNickname').val();
-            $.ajax({
-                url: `${API_BASE}/admin/users/${id}/nickname`, type: 'PUT',
-                contentType: 'application/json', data: JSON.stringify({nickname: nick}),
-                success: function(res) {
-                    if(res.code===200||res.code===0){ showToast('success', '修改成功'); closeModal('editModal'); loadUsers(currentPage); }
-                    else showToast('error', res.msg);
-                }
-            });
-        }
+    function openEditModal(id, username, nickname) {
+        $('#editUserId').val(id);
+        $('#editUsername').val(username);
+        $('#editNickname').val(nickname);
+        $('#editModal').css('display', 'flex').hide().fadeIn(150).addClass('active');
+    }
 
-        function resetPassword(id, u) {
-            if(!confirm(`确定重置用户 [${u}] 的密码为 123456 吗？`)) return;
-            $.post(`${API_BASE}/admin/users/${id}/reset-password`, function(res) {
-                if(res.code===200||res.code===0) showToast('success', '密码已重置');
+    function closeModal(id) { $(`#${id}`).removeClass('active').fadeOut(150); }
+
+    function submitEdit() {
+        const id = $('#editUserId').val();
+        const nick = $('#editNickname').val();
+        $.ajax({
+            url: `${API_BASE}/admin/users/${id}/nickname`, type: 'PUT',
+            contentType: 'application/json', data: JSON.stringify({nickname: nick}),
+            success: function(res) {
+                if(res.code===200||res.code===0){ showToast('success', '修改成功'); closeModal('editModal'); loadUsers(currentPage); }
                 else showToast('error', res.msg);
-            });
-        }
+            }
+        });
+    }
 
-        function toggleStatus(id, s) {
-            const ns = s===1?0:1;
-            const txt = ns===1?'启用':'禁用';
-            if(!confirm(`确定要${txt}该账号吗？`)) return;
-            $.ajax({
-                url: `${API_BASE}/admin/users/${id}/status`, type: 'PUT',
-                contentType: 'application/json', data: JSON.stringify({status: ns}),
-                success: function(res) {
-                    if(res.code===200||res.code===0){ showToast('success', '已'+txt); loadUsers(currentPage); }
+    function resetPassword(id, u) {
+        // 使用自定义弹窗替换 confirm
+        showConfirm(
+            '重置密码',
+            `确定将用户 <b style="color:#0f172a">${u}</b> 的密码重置为 <span style="font-family:monospace;background:#f1f5f9;padding:2px 6px;border-radius:4px;">123456</span> 吗？`,
+            function() {
+                $.post(`${API_BASE}/admin/users/${id}/reset-password`, function(res) {
+                    if(res.code===200||res.code===0) showToast('success', '密码已重置');
                     else showToast('error', res.msg);
-                }
-            });
-        }
+                });
+            }
+        );
+    }
 
-        function showToast(type, msg) {
-            const t = $('#toast');
-            t.text(msg).css('background', type==='success'?'#10b981':'#ef4444').fadeIn().delay(2000).fadeOut();
-        }
+    function toggleStatus(id, s) {
+        const ns = s===1?0:1;
+        const txt = ns===1?'启用':'禁用';
+        const color = ns===1 ? '#10b981' : '#ef4444'; // 启用绿色，禁用红色
+        const isDanger = (ns === 0); // 禁用操作视为危险操作
+
+        // 使用自定义弹窗替换 confirm
+        showConfirm(
+            `${txt}账号`,
+            `确定要 <span style="color:${color};font-weight:bold">${txt}</span> 该账号吗？<br>该操作将立即生效。`,
+            function() {
+                $.ajax({
+                    url: `${API_BASE}/admin/users/${id}/status`, type: 'PUT',
+                    contentType: 'application/json', data: JSON.stringify({status: ns}),
+                    success: function(res) {
+                        if(res.code===200||res.code===0){ showToast('success', '已'+txt); loadUsers(currentPage); }
+                        else showToast('error', res.msg);
+                    }
+                });
+            },
+            isDanger
+        );
+    }
+
+    function showToast(type, msg) {
+        const t = $('#toast');
+        t.text(msg).css('background', type==='success'?'#10b981':'#ef4444').fadeIn().delay(2000).fadeOut();
+    }
 
     /*]]>*/
 </script>

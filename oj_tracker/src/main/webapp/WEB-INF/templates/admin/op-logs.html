@@ -63,15 +63,26 @@
         .user-info { display: flex; flex-direction: column; }
         .user-sub { font-size: 11px; color: #94a3b8; }
 
-        .pagination { padding: 12px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
-        .page-btn {
-            border: 1px solid var(--border); background: white; padding: 6px 12px; border-radius: 6px;
-            font-size: 12px; color: #475569; cursor: pointer; transition: all 0.2s;
-        }
-        .page-btn:hover:not(:disabled) { background: #f1f5f9; color: #0f172a; }
-        .page-btn:disabled { color: #cbd5e1; cursor: default; }
-
         .mono { font-family: 'SF Mono', 'Roboto Mono', monospace; font-size: 12px; color: #64748b; }
+
+        /* --- Pagination (Modern) --- */
+        .pagination-footer {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 24px; border-top: 1px solid var(--border);
+            background: #fcfcfd;
+        }
+        .page-desc { font-size: 13px; color: #64748b; }
+        .pg-container { display: flex; gap: 4px; background: #fff; padding: 2px; border-radius: 6px; border: 1px solid var(--border); }
+
+        .pg-btn {
+            min-width: 28px; height: 28px; padding: 0 8px; border-radius: 4px;
+            border: none; background: transparent;
+            color: #475569; font-size: 13px; font-weight: 500;
+            cursor: pointer; transition: all 0.15s;
+        }
+        .pg-btn:hover:not(:disabled) { background: #f1f5f9; color: #0f172a; }
+        .pg-btn.active { background: #eff6ff; color: var(--primary); font-weight: 600; }
+        .pg-btn:disabled { color: #cbd5e1; cursor: default; }
     </style>
 </head>
 <body>
@@ -79,7 +90,7 @@
 <div class="container">
     <div class="header">
         <div class="title"><i class="fas fa-shield-alt"></i> 管理员审计日志</div>
-        <button class="page-btn" onclick="loadLogs(1)"><i class="fas fa-sync-alt"></i> 刷新</button>
+        <button class="pg-btn" style="border: 1px solid var(--border);" onclick="loadLogs(1)"><i class="fas fa-sync-alt"></i></button>
     </div>
 
     <div class="table-container">
@@ -96,71 +107,67 @@
             </tr>
             </thead>
             <tbody id="logBody">
-            <!-- Content -->
             </tbody>
         </table>
     </div>
 
-    <div class="pagination">
-        <span style="font-size:12px; color:#94a3b8; margin-right:10px;">第 <span id="currPage">1</span> 页</span>
-        <button class="page-btn" id="prevBtn" onclick="changePage(-1)">上一页</button>
-        <button class="page-btn" id="nextBtn" onclick="changePage(1)">下一页</button>
+    <div class="pagination-footer">
+        <div class="page-desc">
+            第 <span id="currPage" style="font-weight:600;color:#0f172a">1</span> 页 / 共 <span id="totalPage">1</span> 页，总计 <span id="totalCount">0</span> 条
+        </div>
+        <div class="pg-container" id="pagination">
+        </div>
     </div>
 </div>
 
 <script th:inline="javascript">
     /*<![CDATA[*/
-        const API_URL = /*[[@{/api/admin/op-logs}]]*/ '/api/admin/op-logs';
-        let currentPage = 1;
-        const PAGE_SIZE = 20;
+    const API_URL = /*[[@{/api/admin/op-logs}]]*/ '/api/admin/op-logs';
+    let currentPage = 1;
+    const PAGE_SIZE = 6;
 
-        $(document).ready(function() {
-            loadLogs(1);
-        });
+    $(document).ready(function() {
+        loadLogs(1);
+    });
 
-        function changePage(delta) {
-            loadLogs(currentPage + delta);
-        }
+    function loadLogs(page) {
+        if(page < 1) return;
 
-        function loadLogs(page) {
-            if(page < 1) return;
+        const $btn = $('.title i');
+        $btn.addClass('fa-spin'); // 简单loading效果
 
-            const $btn = $('.title i');
-            $btn.addClass('fa-spin'); // 简单loading效果
+        $.get(API_URL, {page: page, pageSize: PAGE_SIZE}, function(res) {
+            $btn.removeClass('fa-spin');
+            if(res.code === 200) {
+                renderTable(res.data.list);
+                renderPagination(res.data.total, page);
+                currentPage = page;
 
-            $.get(API_URL, {page: page, pageSize: PAGE_SIZE}, function(res) {
-                $btn.removeClass('fa-spin');
-                if(res.code === 200) {
-                    renderTable(res.data.list);
-                    currentPage = page;
-                    $('#currPage').text(page);
-
-                    // 简单的分页按钮状态控制
-                    $('#prevBtn').prop('disabled', page === 1);
-                    // 假设如果返回数量小于 pageSize 则没有下一页
-                    $('#nextBtn').prop('disabled', res.data.list.length < PAGE_SIZE);
-                }
-            }).fail(() => $btn.removeClass('fa-spin'));
-        }
-
-        function renderTable(list) {
-            const tbody = $('#logBody');
-            tbody.empty();
-
-            if(!list || list.length === 0) {
-                tbody.html('<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">暂无日志</td></tr>');
-                return;
+                $('#totalCount').text(res.data.total);
+                $('#currPage').text(page);
+                $('#totalPage').text(Math.ceil(res.data.total/PAGE_SIZE)||1);
             }
+        }).fail(() => $btn.removeClass('fa-spin'));
+    }
 
-            list.forEach(log => {
-                // 操作类型美化
-                let opClass = 'badge-op';
-                if(log.opType === 'RESET_PWD') opClass += ' op-RESET_PWD';
-                if(log.opType.includes('STATUS')) opClass += ' op-UPDATE_STATUS';
+    function renderTable(list) {
+        const tbody = $('#logBody');
+        tbody.empty();
 
-                const time = log.opTime.replace('T', ' ');
+        if(!list || list.length === 0) {
+            tbody.html('<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">暂无日志</td></tr>');
+            return;
+        }
 
-                const tr = `
+        list.forEach(log => {
+            // 操作类型美化
+            let opClass = 'badge-op';
+            if(log.opType === 'RESET_PWD') opClass += ' op-RESET_PWD';
+            if(log.opType.includes('STATUS')) opClass += ' op-UPDATE_STATUS';
+
+            const time = log.opTime ? log.opTime.replace('T', ' ') : '-';
+
+            const tr = `
                     <tr>
                         <td class="mono">${log.id}</td>
                         <td>
@@ -183,9 +190,44 @@
                         <td style="text-align:right; font-size:12px; color:#64748b;">${time}</td>
                     </tr>
                 `;
-                tbody.append(tr);
-            });
+            tbody.append(tr);
+        });
+    }
+
+    function renderPagination(total, curr) {
+        const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
+        const $pg = $('#pagination');
+        $pg.empty();
+
+        // 辅助函数：生成按钮
+        const btn = (p, icon, dis) => `<button class="pg-btn ${p===curr?'active':''}" onclick="loadLogs(${p})" ${dis?'disabled':''}>${icon}</button>`;
+
+        // 上一页
+        $pg.append(btn(curr-1, '<i class="fas fa-chevron-left"></i>', curr<=1));
+
+        if (totalPages <= 7) {
+            for(let i=1; i<=totalPages; i++) $pg.append(btn(i, i, false));
+        } else {
+            if(curr <= 4) {
+                for(let i=1; i<=5; i++) $pg.append(btn(i, i, false));
+                $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
+                $pg.append(btn(totalPages, totalPages, false));
+            } else if (curr >= totalPages - 3) {
+                $pg.append(btn(1, 1, false));
+                $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
+                for(let i=totalPages-4; i<=totalPages; i++) $pg.append(btn(i, i, false));
+            } else {
+                $pg.append(btn(1, 1, false));
+                $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
+                for(let i=curr-1; i<=curr+1; i++) $pg.append(btn(i, i, false));
+                $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
+                $pg.append(btn(totalPages, totalPages, false));
+            }
         }
+
+        // 下一页
+        $pg.append(btn(curr+1, '<i class="fas fa-chevron-right"></i>', curr>=totalPages));
+    }
     /*]]>*/
 </script>
 </body>

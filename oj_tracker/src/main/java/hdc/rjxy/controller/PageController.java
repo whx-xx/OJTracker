@@ -5,7 +5,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
 public class PageController {
-    //todo 统一分页样式
     //todo 统一弹窗样式
     //todo 统一默认头像样式
 

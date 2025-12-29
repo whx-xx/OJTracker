@@ -44,4 +44,9 @@ public class TestController {
         // 返回视图名称，对应 /WEB-INF/templates/test_page.html
         return "test_page";
     }
+
+    @GetMapping("/error")
+    public void testError() {
+        throw new IllegalArgumentException("测试参数异常拦截");
+    }
 }

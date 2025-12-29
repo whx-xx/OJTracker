@@ -1,38 +1,40 @@
+# --- 敏感配置文件 (务必包含) ---
+# 忽略阿里云 OSS 配置文件，防止密钥泄露
+oss.properties
+
+ db.properties
+
+# --- Maven 构建产物 ---
 target/
-!.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+*.war
+*.jar
+*.ear
+*.zip
+*.tar.gz
+*.rar
 
-### IntelliJ IDEA ###
-.idea/modules.xml
-.idea/jarRepositories.xml
-.idea/compiler.xml
-.idea/libraries/
-*.iws
+# --- Java 编译文件 ---
+*.class
+
+# --- 日志文件 ---
+*.log
+
+# --- IDE 配置文件 (IntelliJ IDEA) ---
+.idea/
 *.iml
+*.iws
 *.ipr
+out/
 
-### Eclipse ###
-.apt_generated
+# --- IDE 配置文件 (Eclipse) ---
+.settings/
 .classpath
-.factorypath
 .project
-.settings
-.springBeans
-.sts4-cache
+bin/
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### VS Code ###
+# --- IDE 配置文件 (VS Code) ---
 .vscode/
 
-### Mac OS ###
+# --- 操作系统临时文件 ---
 .DS_Store
+Thumbs.db

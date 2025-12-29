@@ -3,3 +3,4 @@ aliyun.oss.endpoint=your-endpoint
 aliyun.oss.accessKeyId=your-access-key-id
 aliyun.oss.accessKeySecret=your-access-key-secret
 aliyun.oss.bucketName=your-bucket-name
+aliyun.oss.urlPrefix=http://whxleadnews.oss-cn-beijing.aliyuncs.com/

@@ -78,14 +78,13 @@
         p.name         AS platformName,
         ul.status      AS status,
         ul.error_code  AS errorCode,
-        ul.error_message AS errorMessage,
-        ul.fetched_at  AS fetchedAt
+        ul.error_message AS errorMessage
         FROM sync_user_log ul
         LEFT JOIN user u ON u.id = ul.user_id
         LEFT JOIN platform p ON p.id = ul.platform_id
         WHERE ul.job_id = #{jobId}
         AND ul.status = 'FAIL'
-        ORDER BY ul.fetched_at DESC
+        ORDER BY ul.id DESC
     </select>
 
 
@@ -130,6 +129,5 @@
         ORDER BY start_time DESC
         LIMIT #{limit}
     </select>
-
 
 </mapper>

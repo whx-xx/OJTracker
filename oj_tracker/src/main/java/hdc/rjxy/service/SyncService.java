@@ -190,7 +190,7 @@ public class SyncService {
 
         syncLogMapper.updateJobFinish(
                 jobId, status, end, durationMs,
-                total, success, fail + skip, message
+                total, success, fail, message
         );
 
         return jobId;
@@ -509,7 +509,7 @@ public class SyncService {
         String message = "SUCCESS=" + success + ", FAIL=" + fail + ", SKIP=" + skip;
 
         syncLogMapper.updateJobFinish(newJobId, status, end, durationMs,
-                total, success, fail + skip, message);
+                total, success, fail, message);
 
         return newJobId;
     }

@@ -24,6 +24,7 @@ public class AdminSyncController {
         this.syncService = syncService;
     }
 
+    // 1. 任务列表分页
     @GetMapping("/jobs")
     public R<PageResult<SyncJobLogVO>> jobs(
             @RequestParam(value = "page", required = false, defaultValue = "1") int page,
@@ -44,7 +45,8 @@ public class AdminSyncController {
         return R.ok(pr);
     }
 
-
+    // 2. [关键修复] 获取任务详情 (用于弹窗)
+    // 修正 URL 映射以匹配前端: /api/admin/sync/jobs/{jobId}
     @GetMapping("/jobs/{jobId}")
     public R<SyncJobDetailVO> jobDetail(@PathVariable(value = "jobId") Long jobId, HttpSession session) {
         UserSession me = (UserSession) session.getAttribute(LOGIN_USER);
@@ -54,6 +56,7 @@ public class AdminSyncController {
         return R.ok(syncService.jobDetail(jobId));
     }
 
+    // 3. 手动触发同步
     @PostMapping("/run")
     public R<Long> run(@RequestParam("jobType") String jobType,
                        @RequestParam(value = "days", required = false) Integer days,
@@ -68,13 +71,14 @@ public class AdminSyncController {
         }
 
         if ("DAILY_SYNC".equalsIgnoreCase(jobType)) {
-            int d = (days == null) ? 3 : days;   // 默认 3 天
+            int d = (days == null) ? 3 : days;
             return R.ok(syncService.runCfDailySync("MANUAL", d));
         }
 
         return R.fail(400, "未知 jobType: " + jobType);
     }
 
+    // 4. 概览数据
     @GetMapping("/overview")
     public R<SyncOverviewVO> overview(
             @RequestParam(value = "limit", defaultValue = "20") int limit,
@@ -87,6 +91,7 @@ public class AdminSyncController {
         return R.ok(syncService.overview(limit));
     }
 
+    // 5. 重跑失败任务
     @PostMapping("/rerun")
     public R<Long> rerun(@RequestParam("jobId") Long jobId, HttpSession session) {
         UserSession me = (UserSession) session.getAttribute(LOGIN_USER);
@@ -95,6 +100,4 @@ public class AdminSyncController {
 
         return R.ok(syncService.rerunFailedUsers(jobId, "MANUAL_RERUN"));
     }
-
-
 }

@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class PageController {
 
-    //todo 调度任务的返回结果不正确
+    //todo 调度日志返回了成功/失败/跳过
     //todo 操作日志扩展
     //todo 添加jwt认证
 

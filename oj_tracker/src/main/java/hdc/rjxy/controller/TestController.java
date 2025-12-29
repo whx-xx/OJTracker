@@ -1,5 +1,9 @@
 package hdc.rjxy.controller;
 
+import hdc.rjxy.common.R;
+import hdc.rjxy.mapper.UserMapper;
+import hdc.rjxy.pojo.User;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,6 +17,9 @@ import java.util.Map;
 @Controller
 @RequestMapping("/test")
 public class TestController {
+
+    @Autowired
+    private UserMapper userMapper;
 
     /**
      * 验证 1: JSON 接口测试
@@ -48,5 +55,18 @@ public class TestController {
     @GetMapping("/error")
     public void testError() {
         throw new IllegalArgumentException("测试参数异常拦截");
+    }
+
+    @GetMapping("/db/mp")
+    @ResponseBody
+    public R<User> testMp() {
+        // 使用 MP 自带的 selectById，不需要在 XML 里写 SQL
+        // 假设数据库里有个 id=1 的用户
+        User user = userMapper.selectById(1L);
+
+        if (user == null) {
+            return R.fail("未找到用户，但数据库连接正常");
+        }
+        return R.ok(user);
     }
 }

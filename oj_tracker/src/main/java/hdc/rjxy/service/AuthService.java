@@ -1,6 +1,5 @@
 package hdc.rjxy.service;
 
-import hdc.rjxy.mapper.AdminOpLogMapper;
 import hdc.rjxy.mapper.TeamMapper;
 import hdc.rjxy.mapper.TeamMemberMapper;
 import hdc.rjxy.mapper.UserMapper;
@@ -10,26 +9,30 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.servlet.http.HttpServletRequest;
+// 移除 HttpServletRequest 导入，因为业务层不再处理 HTTP 请求相关对象
+// import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 public class AuthService {
 
     private final UserMapper userMapper;
-    private final AdminOpLogMapper adminOpLogMapper;
+    // [删除] 移除 AdminOpLogMapper
+    // private final AdminOpLogMapper adminOpLogMapper;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
     private final TeamMapper teamMapper;
     private final TeamMemberMapper teamMemberMapper;
 
-    public AuthService(UserMapper userMapper, AdminOpLogMapper adminOpLogMapper, TeamMapper teamMapper, TeamMemberMapper teamMemberMapper) {
+    // [修改] 构造函数移除 AdminOpLogMapper
+    public AuthService(UserMapper userMapper, TeamMapper teamMapper, TeamMemberMapper teamMemberMapper) {
         this.userMapper = userMapper;
-        this.adminOpLogMapper = adminOpLogMapper;
+        // this.adminOpLogMapper = adminOpLogMapper; // [删除]
         this.teamMapper = teamMapper;
         this.teamMemberMapper = teamMemberMapper;
     }
 
     /** username 可以是 admin，也可以是学号：优先按 username 查，查不到再按 studentNo 查 */
     public UserSession login(String usernameOrStudentNo, String password) {
+        // ... (保持原样，未修改) ...
         User user = userMapper.findByUsername(usernameOrStudentNo);
         if (user == null) {
             user = userMapper.findByStudentNo(usernameOrStudentNo);
@@ -37,7 +40,6 @@ public class AuthService {
         if (user == null) return null;
 
         if (user.getStatus() != null && user.getStatus() == 0) {
-            // 禁用用户不给登录
             throw new IllegalStateException("账号已被禁用，请联系管理员");
         }
 
@@ -59,6 +61,7 @@ public class AuthService {
 
     @Transactional
     public Long register(String studentNo, String username, String rawPassword) {
+        // ... (保持原样，未修改) ...
         if (studentNo == null || studentNo.isBlank()) {
             throw new IllegalArgumentException("学号不能为空");
         }
@@ -87,6 +90,7 @@ public class AuthService {
 
     @Transactional
     public void changePassword(Long userId, String oldPwd, String newPwd) {
+        // ... (保持原样，未修改) ...
         User user = userMapper.findById(userId);
         if (user == null) throw new IllegalArgumentException("用户不存在");
         if (user.getStatus() != null && user.getStatus() == 0) {
@@ -103,12 +107,14 @@ public class AuthService {
         userMapper.updatePasswordAndMustChange(userId, encoder.encode(newPwd), 0);
     }
 
+    // [重要修改] 方法签名简化，逻辑移除日志记录
     @Transactional
-    public void adminResetPassword(Long adminId, Long targetUserId, HttpServletRequest req) {
+    public void adminResetPassword(Long targetUserId) {
         // 重置为 000000 + 强制改密
         userMapper.updatePasswordAndMustChange(targetUserId, encoder.encode("000000"), 1);
 
-        String ip = req.getRemoteAddr();
-        adminOpLogMapper.insert(adminId, targetUserId, "RESET_PWD", ip, "reset to 000000");
+        // [删除] 原有的手动日志代码
+        // String ip = req.getRemoteAddr();
+        // adminOpLogMapper.insert(adminId, targetUserId, "RESET_PWD", ip, "reset to 000000");
     }
 }

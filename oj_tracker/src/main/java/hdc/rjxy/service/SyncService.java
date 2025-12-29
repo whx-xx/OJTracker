@@ -1,7 +1,9 @@
 package hdc.rjxy.service;
 
+import hdc.rjxy.cf.CfClientException;
 import hdc.rjxy.cf.CfUserRatingResponse;
 import hdc.rjxy.cf.CfUserStatusResponse;
+import hdc.rjxy.cf.CodeforcesClient;
 import hdc.rjxy.common.SyncErrorCodeDict;
 import hdc.rjxy.mapper.*;
 import hdc.rjxy.pojo.vo.*;
@@ -13,10 +15,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
-
-import hdc.rjxy.cf.CodeforcesClient;
-import hdc.rjxy.cf.CfClientException;
-
 
 @Service
 public class SyncService {
@@ -76,24 +74,28 @@ public class SyncService {
         return vo;
     }
 
+    public SyncOverviewVO overview(int recentLimit) {
+        int lim = Math.max(1, Math.min(recentLimit, 50));
+        SyncOverviewVO vo = new SyncOverviewVO();
+        vo.setLatestRating(syncLogMapper.findLatestByType("RATING_SYNC"));
+        vo.setLatestDaily(syncLogMapper.findLatestByType("DAILY_SYNC"));
+        vo.setRecent(syncLogMapper.listRecent(lim, null));
+        return vo;
+    }
+
+    // ================= 核心调度逻辑 =================
 
     @Transactional
     public Long runCfRatingSync(String triggerSource) {
-
         final String jobType = "RATING_SYNC";
         final Long platformId = 1L; // CF
         final ZoneId zone = ZoneId.of("Asia/Shanghai");
 
-        if (triggerSource == null || triggerSource.isBlank()) {
-            triggerSource = "MANUAL";
-        }
-
+        // 1. 开启任务
         LocalDateTime start = LocalDateTime.now();
-        syncLogMapper.insertJob(jobType, "RUNNING", start, triggerSource);;
-        Long jobId = syncLogMapper.lastInsertId();
+        Long jobId = startJob(jobType, triggerSource, start);
 
-        List<TeamMemberSimpleVO> members =
-                teamMemberMapper.listEnabledMembers("DEFAULT");
+        List<TeamMemberSimpleVO> members = teamMemberMapper.listEnabledMembers("DEFAULT");
 
         int total = members.size();
         int success = 0;
@@ -105,116 +107,67 @@ public class SyncService {
             String handle = upaMapper.findIdentifierValue(userId, platformId);
 
             if (handle == null || handle.isBlank()) {
-                syncLogMapper.insertUserLog(jobId, userId, platformId,
-                        "SKIP", "HANDLE_MISSING", "未绑定 Codeforces");
+                logUser(jobId, userId, platformId, "SKIP", "HANDLE_MISSING", "未绑定 Codeforces");
                 skip++;
                 continue;
             }
 
             try {
-                RatingPointVO last =
-                        ratingSnapshotMapper.findLast(userId, platformId, handle.trim());
-                LocalDateTime lastTime =
-                        (last == null) ? null : last.getTime();
+                RatingPointVO last = ratingSnapshotMapper.findLast(userId, platformId, handle.trim());
+                LocalDateTime lastTime = (last == null) ? null : last.getTime();
 
-                List<CfUserRatingResponse.Item> items =
-                        cfClient.getUserRating(handle.trim());
+                List<CfUserRatingResponse.Item> items = cfClient.getUserRating(handle.trim());
 
                 int inserted = 0;
-
                 for (CfUserRatingResponse.Item it : items) {
-                    LocalDateTime t = Instant
-                            .ofEpochSecond(it.getRatingUpdateTimeSeconds())
-                            .atZone(zone)
-                            .toLocalDateTime();
+                    LocalDateTime t = Instant.ofEpochSecond(it.getRatingUpdateTimeSeconds())
+                            .atZone(zone).toLocalDateTime();
 
-                    if (lastTime != null && !t.isAfter(lastTime)) {
-                        continue;
-                    }
+                    if (lastTime != null && !t.isAfter(lastTime)) continue;
 
-                    // [修复] 传入 rank 字段
                     ratingSnapshotMapper.insert(userId, platformId, handle.trim(),
                             it.getNewRating(), it.getContestName(), it.getRank(), t);
-
                     inserted++;
                 }
 
                 if (inserted == 0) {
-                    syncLogMapper.insertUserLog(jobId, userId, platformId,
-                            "SKIP", "RATING_UNCHANGED", "无新增比赛");
+                    logUser(jobId, userId, platformId, "SKIP", "RATING_UNCHANGED", "无新增比赛");
                     skip++;
                 } else {
-                    syncLogMapper.insertUserLog(jobId, userId, platformId,
-                            "SUCCESS", null, "新增 " + inserted + " 条");
+                    logUser(jobId, userId, platformId, "SUCCESS", null, "新增 " + inserted + " 条");
                     success++;
                 }
 
             } catch (CfClientException e) {
-                // CF 已分类错误
-                syncLogMapper.insertUserLog(
-                        jobId,
-                        userId,
-                        platformId,
-                        "FAIL",
-                        e.getCode(),          // 用 CF_CLIENT 给你的 code
-                        e.getMessage()
-                );
+                logUser(jobId, userId, platformId, "FAIL", e.getCode(), e.getMessage());
                 fail++;
-
             } catch (Exception e) {
-                // 非 CF 错误（DB、空指针、你自己代码 bug）
-                syncLogMapper.insertUserLog(
-                        jobId,
-                        userId,
-                        platformId,
-                        "FAIL",
-                        "UNKNOWN",
-                        e.getMessage()
-                );
+                logUser(jobId, userId, platformId, "FAIL", "UNKNOWN", e.getMessage());
                 fail++;
             }
-
+            // 避免频繁请求
+            sleepRandom();
         }
 
-        LocalDateTime end = LocalDateTime.now();
-        long durationMs = java.time.Duration.between(start, end).toMillis();
-
-        String status;
-        if (fail == 0) status = "SUCCESS";
-        else if (success == 0) status = "FAIL";
-        else status = "PARTIAL_FAIL";
-
-        String message = "SUCCESS=" + success +
-                ", FAIL=" + fail +
-                ", SKIP=" + skip;
-
-        syncLogMapper.updateJobFinish(
-                jobId, status, end, durationMs,
-                total, success, fail, message
-        );
-
+        // 3. 结束任务
+        endJob(jobId, start, total, success, fail, skip);
         return jobId;
     }
 
 
     @Transactional
     public Long runCfDailySync(String triggerSource, int days) {
-        // ... (保持不变) ...
         final String jobType = "DAILY_SYNC";
         final Long platformId = 1L; // CF
         final String teamCode = "DEFAULT";
         final ZoneId zone = ZoneId.of("Asia/Shanghai");
 
-        // 后续增量：只补最近 1~2 天（有定时任务）
+        // 后续增量：只补最近 1~2 天
         int incDays = Math.max(1, Math.min(days, 2));
 
-        if (triggerSource == null || triggerSource.isBlank()) {
-            triggerSource = "MANUAL";
-        }
-
+        // 1. 开启任务
         LocalDateTime start = LocalDateTime.now();
-        syncLogMapper.insertJob(jobType, "RUNNING", start, triggerSource);
-        Long jobId = syncLogMapper.lastInsertId();
+        Long jobId = startJob(jobType, triggerSource, start);
 
         List<TeamMemberSimpleVO> members = teamMemberMapper.listEnabledMembers(teamCode);
 
@@ -230,8 +183,7 @@ public class SyncService {
 
             String handle = upaMapper.findIdentifierValue(userId, platformId);
             if (handle == null || handle.isBlank()) {
-                syncLogMapper.insertUserLog(jobId, userId, platformId,
-                        "SKIP", "HANDLE_MISSING", "未绑定 Codeforces handle");
+                logUser(jobId, userId, platformId, "SKIP", "HANDLE_MISSING", "未绑定 Codeforces handle");
                 skip++;
                 sleepRandom();
                 continue;
@@ -246,14 +198,14 @@ public class SyncService {
                 // daily_activity 的写入窗口
                 LocalDate minDayForDaily;
                 if (firstSync) {
-                    minDayForDaily = null; // 首次全量：后面从 submissions 算出最早 day，但只写“有提交的天”
+                    minDayForDaily = null; // 首次全量：后面从 submissions 算出最早 day
                 } else {
                     minDayForDaily = today.minusDays(incDays - 1L);
                     LocalDate overlap = lastDay.minusDays(1);
                     if (overlap.isBefore(minDayForDaily)) minDayForDaily = overlap;
                 }
 
-                // 聚合容器（按天）
+                // 聚合容器
                 Map<LocalDate, Integer> submitCnt = new HashMap<>();
                 Map<LocalDate, Integer> acceptCnt = new HashMap<>();
                 Map<LocalDate, Set<String>> solvedSet = new HashMap<>();
@@ -281,7 +233,7 @@ public class SyncService {
                         Long sec = s.getCreationTimeSeconds();
                         if (sec == null) continue;
 
-                        // 后续增量：遇到已同步过的 id -> 停止（因为更老）
+                        // 增量停止条件
                         if (!needFull && submissionId != null && submissionId <= lastMaxId) {
                             shouldStop = true;
                             break;
@@ -290,7 +242,6 @@ public class SyncService {
                         LocalDateTime submitTime = Instant.ofEpochSecond(sec).atZone(zone).toLocalDateTime();
                         LocalDate day = submitTime.toLocalDate();
 
-                        // 题目字段
                         Integer contestId = (s.getProblem() == null) ? null : s.getProblem().getContestId();
                         String index = (s.getProblem() == null) ? null : s.getProblem().getIndex();
                         String name = (s.getProblem() == null) ? null : s.getProblem().getName();
@@ -301,7 +252,7 @@ public class SyncService {
                             problemUrl = "https://codeforces.com/problemset/problem/" + contestId + "/" + index;
                         }
 
-                        // 写 submission_log（IGNORE 防重复）
+                        // 写 submission_log
                         if (submissionId != null) {
                             int ins = submissionLogMapper.insertIgnore(
                                     userId, platformId, handle,
@@ -311,7 +262,7 @@ public class SyncService {
                             if (ins > 0) newSubmissions++;
                         }
 
-                        // solved_problem：只记录第一次 AC（IGNORE）
+                        // solved_problem
                         if ("OK".equalsIgnoreCase(verdict) && contestId != null && index != null) {
                             String key = contestId + "_" + index;
                             int insSolved = solvedProblemMapper.insertIgnore(
@@ -323,7 +274,6 @@ public class SyncService {
                         }
 
                         // daily_activity 聚合
-                        // 首次：全量聚合所有 day；增量：只聚合 minDayForDaily..today（窗口外的不算）
                         if (!firstSync) {
                             if (day.isBefore(minDayForDaily) || day.isAfter(today)) continue;
                         } else {
@@ -344,7 +294,6 @@ public class SyncService {
                     }
 
                     if (shouldStop) break;
-
                     from += pageSize;
                     pages++;
                     sleepRandom();
@@ -353,11 +302,9 @@ public class SyncService {
                 // 写 daily_activity
                 if (firstSync) {
                     if (minDayForDaily == null) {
-                        syncLogMapper.insertUserLog(jobId, userId, platformId,
-                                "SUCCESS", null, "首次全量：无提交记录");
+                        logUser(jobId, userId, platformId, "SUCCESS", null, "首次全量：无提交记录");
                         success++;
                     } else {
-                        // 首次全量：只写“有提交的天”
                         for (Map.Entry<LocalDate, Integer> e : submitCnt.entrySet()) {
                             LocalDate d = e.getKey();
                             int sc = e.getValue();
@@ -365,82 +312,41 @@ public class SyncService {
                             int solved = solvedSet.getOrDefault(d, Collections.emptySet()).size();
                             dailyActivityMapper.upsert(userId, platformId, handle, d, sc, ac, solved);
                         }
-
-                        syncLogMapper.insertUserLog(jobId, userId, platformId,
-                                "SUCCESS", null, "首次全量：days=" + submitCnt.size()
-                                        + ", newSub=" + newSubmissions
-                                        + ", newSolved=" + newSolved);
+                        logUser(jobId, userId, platformId, "SUCCESS", null,
+                                "首次全量：days=" + submitCnt.size() + ", newSub=" + newSubmissions + ", newSolved=" + newSolved);
                         success++;
                     }
                 } else {
-                    // 增量：范围很小，写 minDayForDaily..today（没提交也写 0）
                     for (LocalDate d = minDayForDaily; !d.isAfter(today); d = d.plusDays(1)) {
                         int sc = submitCnt.getOrDefault(d, 0);
                         int ac = acceptCnt.getOrDefault(d, 0);
                         int solved = solvedSet.getOrDefault(d, Collections.emptySet()).size();
                         dailyActivityMapper.upsert(userId, platformId, handle, d, sc, ac, solved);
                     }
-
-                    syncLogMapper.insertUserLog(jobId, userId, platformId,
-                            "SUCCESS", null, "增量：" + minDayForDaily + " ~ " + today
-                                    + ", newSub=" + newSubmissions
-                                    + ", newSolved=" + newSolved);
+                    logUser(jobId, userId, platformId, "SUCCESS", null,
+                            "增量：" + minDayForDaily + "~" + today + ", newSub=" + newSubmissions + ", newSolved=" + newSolved);
                     success++;
                 }
 
             } catch (CfClientException e) {
-                syncLogMapper.insertUserLog(jobId, userId, platformId,
-                        "FAIL", e.getCode(), e.getMessage());
+                logUser(jobId, userId, platformId, "FAIL", e.getCode(), e.getMessage());
                 fail++;
             } catch (Exception e) {
-                syncLogMapper.insertUserLog(jobId, userId, platformId,
-                        "FAIL", "UNKNOWN", e.getMessage());
+                logUser(jobId, userId, platformId, "FAIL", "UNKNOWN", e.getMessage());
                 fail++;
             } finally {
                 sleepRandom();
             }
         }
 
-        LocalDateTime end = LocalDateTime.now();
-        long durationMs = java.time.Duration.between(start, end).toMillis();
-
-        String status;
-        if (fail == 0) status = "SUCCESS";
-        else if (success == 0) status = "FAIL";
-        else status = "PARTIAL_FAIL";
-
-        String message = "SUCCESS=" + success + ", FAIL=" + fail + ", SKIP=" + skip;
-
-        syncLogMapper.updateJobFinish(jobId, status, end, durationMs,
-                total, success, fail, message);
-
+        // 3. 结束任务
+        endJob(jobId, start, total, success, fail, skip);
         return jobId;
-    }
-
-
-    private void sleepRandom() {
-        try {
-            long sleepMs = 300 + new java.util.Random().nextInt(501); // 300~800
-            Thread.sleep(sleepMs);
-        } catch (InterruptedException ignored) {
-        }
-    }
-
-
-    public SyncOverviewVO overview(int recentLimit) {
-        int lim = Math.max(1, Math.min(recentLimit, 50));
-
-        SyncOverviewVO vo = new SyncOverviewVO();
-        vo.setLatestRating(syncLogMapper.findLatestByType("RATING_SYNC"));
-        vo.setLatestDaily(syncLogMapper.findLatestByType("DAILY_SYNC"));
-        vo.setRecent(syncLogMapper.listRecent(lim, null));
-        return vo;
     }
 
 
     @Transactional
     public Long rerunFailedUsers(Long oldJobId, String triggerSource) {
-        // ... (保持不变) ...
         if (oldJobId == null) throw new IllegalArgumentException("jobId不能为空");
 
         SyncJobLogVO oldJob = syncLogMapper.findJob(oldJobId);
@@ -449,18 +355,13 @@ public class SyncService {
         String jobType = oldJob.getJobType();
         if (jobType == null || jobType.isBlank()) throw new IllegalArgumentException("原jobType为空");
 
-        if (triggerSource == null || triggerSource.isBlank()) triggerSource = "MANUAL_RERUN";
-
+        // 1. 开启任务
         LocalDateTime start = LocalDateTime.now();
-        syncLogMapper.insertJob(jobType, "RUNNING", start, triggerSource);
-        Long newJobId = syncLogMapper.lastInsertId();
+        Long newJobId = startJob(jobType, triggerSource == null ? "MANUAL_RERUN" : triggerSource, start);
 
         List<SyncUserFailVO> fails = syncLogMapper.listFailUsers(oldJobId);
         if (fails == null || fails.isEmpty()) {
-            LocalDateTime end = LocalDateTime.now();
-            long durationMs = java.time.Duration.between(start, end).toMillis();
-            syncLogMapper.updateJobFinish(newJobId, "SUCCESS", end, durationMs,
-                    0, 0, 0, "SUCCESS=0, FAIL=0, SKIP=0");
+            endJob(newJobId, start, 0, 0, 0, 0);
             return newJobId;
         }
 
@@ -481,25 +382,38 @@ public class SyncService {
                     rerunDailyForUser(newJobId, userId, platformId, 2);
                     success++;
                 } else {
-                    syncLogMapper.insertUserLog(newJobId, userId, platformId,
-                            "SKIP", "UNKNOWN_JOBTYPE", "不支持的jobType: " + jobType);
+                    logUser(newJobId, userId, platformId, "SKIP", "UNKNOWN_JOBTYPE", "不支持的jobType: " + jobType);
                     skip++;
                 }
             } catch (CfClientException e) {
-                syncLogMapper.insertUserLog(newJobId, userId, platformId,
-                        "FAIL", e.getCode(), e.getMessage());
+                logUser(newJobId, userId, platformId, "FAIL", e.getCode(), e.getMessage());
                 fail++;
             } catch (Exception e) {
-                syncLogMapper.insertUserLog(newJobId, userId, platformId,
-                        "FAIL", "UNKNOWN", e.getMessage());
+                logUser(newJobId, userId, platformId, "FAIL", "UNKNOWN", e.getMessage());
                 fail++;
             } finally {
                 sleepRandom();
             }
         }
 
+        // 3. 结束任务
+        endJob(newJobId, start, total, success, fail, skip);
+        return newJobId;
+    }
+
+    // ================= 私有辅助方法 (封装日志逻辑) =================
+
+    private Long startJob(String jobType, String triggerSource, LocalDateTime startTime) {
+        if (triggerSource == null || triggerSource.isBlank()) {
+            triggerSource = "MANUAL";
+        }
+        syncLogMapper.insertJob(jobType, "RUNNING", startTime, triggerSource);
+        return syncLogMapper.lastInsertId();
+    }
+
+    private void endJob(Long jobId, LocalDateTime startTime, int total, int success, int fail, int skip) {
         LocalDateTime end = LocalDateTime.now();
-        long durationMs = java.time.Duration.between(start, end).toMillis();
+        long durationMs = java.time.Duration.between(startTime, end).toMillis();
 
         String status;
         if (fail == 0) status = "SUCCESS";
@@ -508,11 +422,25 @@ public class SyncService {
 
         String message = "SUCCESS=" + success + ", FAIL=" + fail + ", SKIP=" + skip;
 
-        syncLogMapper.updateJobFinish(newJobId, status, end, durationMs,
-                total, success, fail, message);
-
-        return newJobId;
+        syncLogMapper.updateJobFinish(
+                jobId, status, end, durationMs,
+                total, success, fail, message
+        );
     }
+
+    private void logUser(Long jobId, Long userId, Long platformId, String status, String errorCode, String msg) {
+        syncLogMapper.insertUserLog(jobId, userId, platformId, status, errorCode, msg);
+    }
+
+    private void sleepRandom() {
+        try {
+            long sleepMs = 300 + new java.util.Random().nextInt(501); // 300~800
+            Thread.sleep(sleepMs);
+        } catch (InterruptedException ignored) {
+        }
+    }
+
+    // ================= 内部重跑逻辑 (使用 logUser) =================
 
     /** 只重跑某个用户的 rating */
     private void rerunRatingForUser(Long jobId, Long userId, Long platformId) {
@@ -520,8 +448,7 @@ public class SyncService {
 
         String handle = upaMapper.findIdentifierValue(userId, platformId);
         if (handle == null || handle.isBlank()) {
-            syncLogMapper.insertUserLog(jobId, userId, platformId,
-                    "SKIP", "HANDLE_MISSING", "未绑定 Codeforces");
+            logUser(jobId, userId, platformId, "SKIP", "HANDLE_MISSING", "未绑定 Codeforces");
             return;
         }
         handle = handle.trim();
@@ -538,18 +465,15 @@ public class SyncService {
 
             if (lastTime != null && !t.isAfter(lastTime)) continue;
 
-            // [修复] 传入 rank
             ratingSnapshotMapper.insert(userId, platformId, handle,
                     it.getNewRating(), it.getContestName(), it.getRank(), t);
             inserted++;
         }
 
         if (inserted == 0) {
-            syncLogMapper.insertUserLog(jobId, userId, platformId,
-                    "SKIP", "RATING_UNCHANGED", "无新增比赛");
+            logUser(jobId, userId, platformId, "SKIP", "RATING_UNCHANGED", "无新增比赛");
         } else {
-            syncLogMapper.insertUserLog(jobId, userId, platformId,
-                    "SUCCESS", null, "新增 " + inserted + " 条");
+            logUser(jobId, userId, platformId, "SUCCESS", null, "新增 " + inserted + " 条");
         }
     }
 
@@ -559,8 +483,7 @@ public class SyncService {
 
         String handle = upaMapper.findIdentifierValue(userId, platformId);
         if (handle == null || handle.isBlank()) {
-            syncLogMapper.insertUserLog(jobId, userId, platformId,
-                    "SKIP", "HANDLE_MISSING", "未绑定 Codeforces handle");
+            logUser(jobId, userId, platformId, "SKIP", "HANDLE_MISSING", "未绑定 Codeforces handle");
             return;
         }
         handle = handle.trim();
@@ -605,8 +528,7 @@ public class SyncService {
             dailyActivityMapper.upsert(userId, platformId, handle, d, sc, ac, solved);
         }
 
-        syncLogMapper.insertUserLog(jobId, userId, platformId,
-                "SUCCESS", null, "补 " + minDay + " ~ " + today);
+        logUser(jobId, userId, platformId, "SUCCESS", null, "补 " + minDay + " ~ " + today);
     }
 
 }

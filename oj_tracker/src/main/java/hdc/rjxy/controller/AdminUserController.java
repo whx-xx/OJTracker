@@ -1,5 +1,6 @@
 package hdc.rjxy.controller;
 
+import hdc.rjxy.aop.LogAdminOp;
 import hdc.rjxy.common.PageResult;
 import hdc.rjxy.common.R;
 import hdc.rjxy.pojo.UserSession;
@@ -36,6 +37,7 @@ public class AdminUserController {
     }
 
     @PutMapping("/{id}/nickname")
+    @LogAdminOp(opType = "UPDATE_NICKNAME")
     public R<Void> updateNickname(@PathVariable("id") Long id,
                                   @RequestBody UpdateNicknameReq req) {
         adminUserService.updateNickname(id, req.getNickname());
@@ -43,6 +45,7 @@ public class AdminUserController {
     }
 
     @PutMapping("/{id}/status")
+    @LogAdminOp(opType = "UPDATE_STATUS")
     public R<Void> updateStatus(@PathVariable("id") Long id,
                                 @RequestBody UpdateStatusReq req) {
         adminUserService.updateStatus(id, req.getStatus());
@@ -50,6 +53,7 @@ public class AdminUserController {
     }
 
     @PostMapping("/{id}/reset-password")
+    @LogAdminOp(opType = "RESET_PWD")
     public R<Void> resetPassword(@PathVariable("id") Long targetUserId,
                                        HttpSession session,
                                        HttpServletRequest req) {
@@ -57,7 +61,7 @@ public class AdminUserController {
         if (admin == null) return R.fail(401, "未登录");
         if (!"ADMIN".equals(admin.getRole())) return R.fail(403, "无权限");
 
-        authService.adminResetPassword(admin.getId(), targetUserId, req);
+        authService.adminResetPassword(targetUserId);
         return R.ok(null);
     }
 

@@ -38,7 +38,7 @@ public class AdminBootstrap {
         u.setNickname("管理员");
         u.setRole("ADMIN");
         u.setStatus(1);
-        u.setPasswordHash(encoder.encode("xxxx"));
+        u.setPasswordHash(encoder.encode("000000"));
         u.setMustChangePassword(1);
 
         userMapper.insertAdmin(u);

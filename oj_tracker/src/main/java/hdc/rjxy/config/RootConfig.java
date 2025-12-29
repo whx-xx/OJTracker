@@ -10,7 +10,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 Root 容器：扫 service/init + 引入 MyBatisConfig
  */
 @Configuration
-@EnableScheduling // 开启定时任务
+@EnableScheduling
 @ComponentScan(basePackages = {
         "hdc.rjxy.service",
         "hdc.rjxy.init",
@@ -19,7 +19,8 @@ Root 容器：扫 service/init + 引入 MyBatisConfig
 @Import({
         MyBatisConfig.class,
         CfConfig.class,
-        JacksonConfig.class
+        JacksonConfig.class,
+        RedisConfig.class
 })
 public class RootConfig {
 }

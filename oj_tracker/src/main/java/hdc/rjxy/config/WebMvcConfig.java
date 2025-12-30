@@ -30,7 +30,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     private ApplicationContext applicationContext;
 
     // --- 拦截器配置 (暂时注释，后续添加了 AuthInterceptor 再解开) ---
-    /*
+
     @Autowired
     private hdc.rjxy.common.AuthInterceptor authInterceptor;
 
@@ -38,9 +38,16 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(authInterceptor)
                 .addPathPatterns("/**")
-                .excludePathPatterns("/static/**", "/login", "/");
+                .excludePathPatterns(
+                        "/",
+                        "/login",
+                        "/register",
+                        "/api/auth/**",
+                        "/static/**",
+                        "/favicon.ico"
+                );
     }
-    */
+
 
     // --- JSON 转换器配置 (支持 Java 8 时间类型) ---
     @Override

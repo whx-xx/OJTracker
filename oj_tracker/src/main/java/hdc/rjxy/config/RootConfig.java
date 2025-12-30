@@ -1,5 +1,6 @@
 package hdc.rjxy.config;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -14,5 +15,8 @@ import org.springframework.context.annotation.Import;
 //     RedisConfig.class    // 暂时注释：Redis配置
  })
 public class RootConfig {
-    // 目前是个空配置，仅作为 Root 容器的标识
+    @Bean
+    public org.springframework.security.crypto.password.PasswordEncoder passwordEncoder() {
+        return new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
+    }
 }

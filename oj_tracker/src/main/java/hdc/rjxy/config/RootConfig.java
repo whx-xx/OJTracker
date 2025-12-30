@@ -11,8 +11,8 @@ import org.springframework.context.annotation.Import;
         "hdc.rjxy.service" // 扫描 Service 层
 })
 @Import({
-    MyBatisConfig.class // 数据库配置
-//     RedisConfig.class    // 暂时注释：Redis配置
+    MyBatisConfig.class, // 数据库配置
+     RedisConfig.class // Redis配置
  })
 public class RootConfig {
     @Bean

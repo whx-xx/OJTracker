@@ -13,7 +13,9 @@ import org.springframework.context.annotation.Import;
 })
 @Import({
     MyBatisConfig.class, // 数据库配置
-    RedisConfig.class    // Redis配置
+    RedisConfig.class,   // Redis配置
+    CfConfig.class,
+    JacksonConfig.class
  })
 public class RootConfig {
     @Bean

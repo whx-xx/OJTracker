@@ -31,4 +31,5 @@ public class RedisConfig {
         }
         return new LettuceConnectionFactory(config);
     }
+    // 它是 Spring 应用与 Redis 服务器建立连接的“桥梁”和“连接管理器”
 }

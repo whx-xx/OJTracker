@@ -33,9 +33,6 @@ import java.util.List;
         "org.springdoc"        // 扫描 SpringDoc 的 Controller 和配置类
 })
 @Import({
-        SpringDocConfiguration.class,
-        SpringDocWebMvcConfiguration.class,
-        SwaggerConfig.class, // 确保 UI 资源被注册
         SpringDocConfig.class // 你自己的 Swagger 文档信息配置
 })
 public class WebMvcConfig implements WebMvcConfigurer {

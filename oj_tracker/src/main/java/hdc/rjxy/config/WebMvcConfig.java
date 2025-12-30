@@ -3,12 +3,18 @@ package hdc.rjxy.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.springdoc.core.configuration.SpringDocConfiguration;
+import org.springdoc.webmvc.core.configuration.SpringDocWebMvcConfiguration;
+import org.springdoc.webmvc.ui.SwaggerConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.*;
 import org.thymeleaf.spring6.SpringTemplateEngine;
@@ -16,21 +22,28 @@ import org.thymeleaf.spring6.templateresolver.SpringResourceTemplateResolver;
 import org.thymeleaf.spring6.view.ThymeleafViewResolver;
 import org.thymeleaf.templatemode.TemplateMode;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Configuration
 @EnableWebMvc // 开启 Spring MVC 支持
 @ComponentScan(basePackages = {
         "hdc.rjxy.controller", // 扫描 Controller
-        "hdc.rjxy.common"      // 扫描公共组件
+        "hdc.rjxy.common",     // 扫描公共组件
+        "org.springdoc"        // 扫描 SpringDoc 的 Controller 和配置类
+})
+@Import({
+        SpringDocConfiguration.class,
+        SpringDocWebMvcConfiguration.class,
+        SwaggerConfig.class, // 确保 UI 资源被注册
+        SpringDocConfig.class // 你自己的 Swagger 文档信息配置
 })
 public class WebMvcConfig implements WebMvcConfigurer {
 
     @Autowired
     private ApplicationContext applicationContext;
 
-    // --- 拦截器配置 (暂时注释，后续添加了 AuthInterceptor 再解开) ---
-
+    // 拦截器配置
     @Autowired
     private hdc.rjxy.common.AuthInterceptor authInterceptor;
 
@@ -44,7 +57,12 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/register",
                         "/api/auth/**",
                         "/static/**",
-                        "/favicon.ico"
+                        "/favicon.ico",
+                        // Swagger 放行
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/v3/api-docs/**",  // 接口数据 JSON
+                        "/webjars/**"
                 );
     }
 
@@ -52,12 +70,19 @@ public class WebMvcConfig implements WebMvcConfigurer {
     // --- JSON 转换器配置 (支持 Java 8 时间类型) ---
     @Override
     public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
+        // 1. [关键修复] 添加字节数组转换器
+        // 必须加在 Jackson 之前，否则 SpringDoc 返回的 byte[] 会被 Jackson 转成 Base64
+        converters.add(new ByteArrayHttpMessageConverter());
+
+        // 2. 添加字符串转换器 (防止返回 String 时乱码或被转义)
+        converters.add(new StringHttpMessageConverter(StandardCharsets.UTF_8));
+
         ObjectMapper mapper = new ObjectMapper();
         // 注册 Java 8 时间模块
         mapper.registerModule(new JavaTimeModule());
         // 禁止将日期写为时间戳，而是 ISO 字符串
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        converters.add(0, new MappingJackson2HttpMessageConverter(mapper));
+        converters.add(new MappingJackson2HttpMessageConverter(mapper));
     }
 
     // --- Thymeleaf 模板解析器 ---
@@ -94,5 +119,14 @@ public class WebMvcConfig implements WebMvcConfigurer {
         // 将 URL 中的 /static/** 映射到工程目录的 /static/ 下
         registry.addResourceHandler("/static/**")
                 .addResourceLocations("/static/");
+
+        // Swagger UI 资源映射
+        registry.addResourceHandler("/swagger-ui/**")
+                .addResourceLocations("classpath:/META-INF/resources/webjars/swagger-ui/5.17.14/");
+
+        // 映射 webjars (Swagger 依赖的基础资源)
+        registry.addResourceHandler("/webjars/**")
+                .addResourceLocations("classpath:/META-INF/resources/webjars/")
+                .resourceChain(false); // 开发环境建议关闭缓存
     }
 }

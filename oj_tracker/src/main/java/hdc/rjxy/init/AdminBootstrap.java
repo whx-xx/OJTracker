@@ -61,10 +61,5 @@ public class AdminBootstrap {
         userService.save(admin);
 
         logger.info(">> 管理员创建成功！账号: admin / 密码: 000000。请登录后立即修改密码。");
-
-        // TODO: 等 TeamService 重构完成后，在此处恢复将管理员加入默认团队的逻辑
-        // if (teamService != null) {
-        //     teamService.joinDefaultTeam(admin.getId());
-        // }
     }
 }

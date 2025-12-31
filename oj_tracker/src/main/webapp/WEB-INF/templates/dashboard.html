@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - OJTracker</title>
+
+    <!-- 依赖库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script th:src="@{/static/js/jquery.min.js}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* --- 全局变量 --- */
+        :root {
+            --bg-body: #f3f4f6;
+            --bg-card: #ffffff;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --accent-color: #2563eb;
+            --border-color: #e5e7eb;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+
+            /* Verdict Colors */
+            --v-ac: #10b981; --v-wa: #ef4444; --v-tle: #3b82f6; --v-mle: #f59e0b; --v-re: #8b5cf6; --v-ce: #6b7280;
+
+            /* Heatmap Colors */
+            --h-0: #ebedf0;
+            --h-1: #9be9a8;
+            --h-2: #40c463;
+            --h-3: #30a14e;
+            --h-4: #216e39;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 24px;
+            overflow-x: hidden;
+        }
+
+        .container { width: 100%; max-width: 1600px; margin: 0 auto; }
+
+        /* --- Header --- */
+        .header-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--bg-card); padding: 16px 24px;
+            border-radius: var(--radius); box-shadow: var(--shadow);
+            margin-bottom: 24px; border: 1px solid var(--border-color);
+            flex-wrap: wrap; gap: 10px; /* 防止小屏头部内容溢出 */
+        }
+
+        .platform-tabs { display: flex; gap: 8px; background: #f9fafb; padding: 4px; border-radius: 8px; border: 1px solid #f3f4f6; }
+        .platform-tab {
+            padding: 6px 20px; border-radius: 6px; cursor: pointer;
+            font-weight: 600; font-size: 14px; color: var(--text-secondary); transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .platform-tab:hover { color: var(--text-primary); background: rgba(0,0,0,0.03); }
+        .platform-tab.active { background-color: #ffffff; color: var(--accent-color); box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+
+        .handle-info { display: flex; align-items: center; font-size: 14px; color: var(--text-secondary); margin-right: 24px; }
+        .handle-val { font-weight: 700; color: var(--text-primary); margin: 0 8px; font-family: monospace; font-size: 15px; }
+        .manage-link { color: var(--text-secondary); font-size: 14px; transition: 0.2s; display: flex; align-items: center; }
+        .manage-link:hover { color: var(--accent-color); transform: rotate(90deg); }
+
+        .sync-btn {
+            background-color: #1f2937; color: white; border: none; padding: 10px 20px;
+            border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            white-space: nowrap;
+        }
+        .sync-btn:hover { background-color: #111827; transform: translateY(-1px); }
+        .sync-btn:active { transform: translateY(0); }
+        .sync-btn:disabled { opacity: 0.7; cursor: wait; transform: none; }
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* --- Dashboard Grid (核心修复区域) --- */
+        .dashboard-grid {
+            display: grid;
+            /* 修复：将固定宽度从380px减小到320px，适应笔记本屏幕 */
+            grid-template-columns: 320px minmax(0, 1fr);
+            gap: 24px;
+            align-items: start;
+        }
+
+        .card {
+            background: var(--bg-card); border-radius: var(--radius);
+            box-shadow: var(--shadow); padding: 24px; margin-bottom: 24px;
+            border: 1px solid var(--border-color); display: flex; flex-direction: column;
+            width: 100%;
+        }
+
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 8px; }
+        .card-title {
+            font-size: 16px; font-weight: 800; color: #111827;
+            display: flex; align-items: center; gap: 10px; letter-spacing: -0.02em;
+            white-space: nowrap;
+        }
+        .card-icon {
+            color: var(--accent-color); background: #eff6ff;
+            width: 32px; height: 32px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center; font-size: 14px;
+        }
+
+        /* --- Stats Grid --- */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .stat-card {
+            background: #fff;
+            border: 1px solid #f1f5f9;
+            border-radius: 16px;
+            padding: 16px; /* 稍微减小内边距 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            min-height: 100px; /* 稍微减小最小高度 */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-card::after {
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            right: -10px;
+            bottom: -15px;
+            font-size: 60px; /* 稍微调小背景图标 */
+            opacity: 0.08;
+            transform: rotate(-15deg);
+            pointer-events: none;
+            color: currentColor;
+        }
+
+        .stat-card.c-rating { color: #d97706; background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%); border-color: #fef3c7; }
+        .stat-card.c-rating::after { content: "\f091"; }
+        .stat-card.c-solved { color: #059669; background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%); border-color: #d1fae5; }
+        .stat-card.c-solved::after { content: "\f00c"; }
+        .stat-card.c-subs { color: #2563eb; background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); border-color: #dbeafe; }
+        .stat-card.c-subs::after { content: "\f121"; }
+        .stat-card.c-active { color: #7c3aed; background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%); border-color: #ede9fe; }
+        .stat-card.c-active::after { content: "\f06d"; }
+
+        .stat-label {
+            font-size: 12px; font-weight: 600; color: #64748b;
+            margin-bottom: 6px; z-index: 2; display: block;
+            text-align: center; white-space: nowrap;
+        }
+
+        .stat-value-bg {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 18px; /* 字体稍微缩小适配笔记本 */
+            font-weight: 900;
+            line-height: 1;
+            z-index: 2;
+            letter-spacing: -0.02em;
+        }
+
+        .c-rating .stat-value-bg { background: rgba(245, 158, 11, 0.15); color: #b45309; }
+        .c-solved .stat-value-bg { background: rgba(16, 185, 129, 0.15); color: #047857; }
+        .c-subs .stat-value-bg { background: rgba(59, 130, 246, 0.15); color: #1d4ed8; }
+        .c-active .stat-value-bg { background: rgba(139, 92, 246, 0.15); color: #6d28d9; }
+
+        /* --- Lists --- */
+        .modern-list { max-height: 400px; overflow-y: auto; scrollbar-width: thin; padding-right: 4px; }
+        .list-entry {
+            display: flex; align-items: center; padding: 12px;
+            border-radius: 10px; margin-bottom: 8px; background: #fff; border: 1px solid #f3f4f6;
+            transition: all 0.2s;
+        }
+        .list-entry:hover { border-color: #dbeafe; background: #f8fafc; transform: translateX(2px); }
+
+        .contest-rank-box {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            width: 44px; height: 44px; background: #f1f5f9; border-radius: 10px;
+            margin-right: 12px; flex-shrink: 0;
+        }
+        .delta-val { font-size: 13px; font-weight: 800; }
+        .delta-pos { color: #16a34a; }
+        .delta-neg { color: #dc2626; }
+        .delta-neutral { color: #64748b; }
+        .rank-lbl { font-size: 10px; color: #94a3b8; font-weight: 600; margin-top: -2px; }
+
+        .contest-info { flex: 1; min-width: 0; }
+        .contest-name {
+            font-size: 14px; font-weight: 700; color: #334155; display: block;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px;
+            text-decoration: none;
+        }
+        .contest-name:hover { color: var(--accent-color); text-decoration: underline; }
+        .contest-meta { font-size: 12px; color: #64748b; display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 14px; flex-shrink: 0; }
+        .dot-ac { background-color: var(--v-ac); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15); }
+        .dot-wa { background-color: var(--v-wa); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15); }
+        .dot-tle { background-color: var(--v-tle); }
+
+        .entry-main { flex: 1; min-width: 0; }
+        .entry-title { font-size: 14px; font-weight: 700; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; text-decoration: none; }
+        .entry-title:hover { color: var(--accent-color); }
+        .entry-sub { font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 8px; margin-top: 3px; }
+        .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; text-transform: uppercase; }
+        .tag-ac { background: #dcfce7; color: #166534; }
+        .tag-wa { background: #fee2e2; color: #991b1b; }
+        .tag-tle { background: #dbeafe; color: #1e40af; }
+
+        /* --- Heatmap --- */
+        .heatmap-container { overflow-x: auto; padding: 10px 0; scrollbar-width: thin; width: 100%; }
+        .heatmap-grid {
+            /* 默认大尺寸 */
+            display: grid; grid-template-rows: repeat(7, 18px); grid-auto-flow: column; gap: 5px; width: max-content;
+        }
+        .day-cell { width: 18px; height: 18px; border-radius: 4px; background-color: var(--h-0); transition: transform 0.1s; }
+        .day-cell:hover { transform: scale(1.15); border: 1px solid rgba(0,0,0,0.1); z-index: 10; }
+
+        /* --- Chart --- */
+        .chart-wrapper { position: relative; height: 340px; width: 100%; }
+        .pill-btn { padding: 4px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; color: var(--text-secondary); font-weight: 600; transition: all 0.2s; white-space: nowrap; }
+        .pill-btn:hover { background: #e5e7eb; }
+        .pill-btn.active { background: #1f2937; color: #fff; }
+
+        /* --- Global Tooltip --- */
+        #global-tooltip {
+            position: fixed; background: rgba(15, 23, 42, 0.95); color: #fff;
+            padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 500;
+            pointer-events: none; z-index: 10000; display: none;
+            transform: translate(-50%, -140%); backdrop-filter: blur(4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2); border: 1px solid rgba(255,255,255,0.1);
+            white-space: pre-line; line-height: 1.5;
+        }
+
+        /* --- 响应式断点优化 --- */
+
+        /* 针对 1400px 以下的笔记本屏幕，调整 Heatmap 尺寸防止过宽 */
+        @media (max-width: 1400px) {
+            .heatmap-grid {
+                grid-template-rows: repeat(7, 12px); /* 缩小行高 */
+                gap: 3px;
+            }
+            .day-cell {
+                width: 12px; /* 缩小格子 */
+                height: 12px;
+                border-radius: 2px;
+            }
+        }
+
+        /* 将单栏布局断点从 1200px 降低到 992px */
+        /* 这样常见的笔记本 (1366, 1280等) 依然可以显示双栏 */
+        @media (max-width: 992px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .container { padding: 10px; }
+            .header-bar { flex-direction: column; align-items: stretch; gap: 15px; }
+            .handle-info { justify-content: space-between; margin-right: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="global-tooltip"></div>
+
+<div class="container">
+
+    <!-- Top Header -->
+    <div class="header-bar">
+        <div style="display:flex;align-items:center;gap:20px;">
+            <div class="platform-tabs" id="platformTabs">
+                <div class="platform-tab active" data-code="CF">Codeforces</div>
+            </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content: space-between;">
+            <div class="handle-info" id="handleInfo" style="display:none;">
+                <span>Handle:</span>
+                <span id="currentHandle" class="handle-val">-</span>
+                <a href="javascript:void(0)" onclick="parent.activateMenu('/views/profile'); return false;" class="manage-link" title="管理账号"><i class="fas fa-cog"></i></a>
+            </div>
+
+            <button class="sync-btn" id="btnSync">
+                <i class="fas fa-sync-alt" id="syncIcon"></i>
+                <span>同步数据</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+
+        <!-- Left Column -->
+        <div class="left-column">
+
+            <!-- 1. Stats -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title"><i class="fas fa-chart-pie card-icon"></i> 数据概览</span>
+                </div>
+                <div class="stat-grid">
+                    <div class="stat-card c-rating">
+                        <span class="stat-label">当前积分</span>
+                        <span class="stat-value-bg" id="stat-rating">-</span>
+                    </div>
+                    <div class="stat-card c-solved">
+                        <span class="stat-label">累计解题</span>
+                        <span class="stat-value-bg" id="stat-solved">-</span>
+                    </div>
+                    <div class="stat-card c-subs">
+                        <span class="stat-label">提交总数</span>
+                        <span class="stat-value-bg" id="stat-subs">-</span>
+                    </div>
+                    <div class="stat-card c-active">
+                        <span class="stat-label">活跃天数</span>
+                        <span class="stat-value-bg" id="stat-active">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Recent Contests -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title"><i class="fas fa-trophy card-icon"></i> 最近参赛</span>
+                </div>
+                <div class="modern-list" id="recentContestsList">
+                    <div style="padding:20px;text-align:center;color:#999;font-size:13px;">加载中...</div>
+                </div>
+            </div>
+
+            <!-- 3. Weekly -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title"><i class="fas fa-calendar-check card-icon"></i> 本周练习</span>
+                </div>
+                <div class="modern-list" id="weeklyList">
+                    <div style="padding:20px;text-align:center;color:#999;">加载中...</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column -->
+        <div class="right-column">
+
+            <!-- 4. Heatmap -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title"><i class="fas fa-th card-icon"></i> 提交活跃度 (365天)</span>
+                </div>
+                <div class="heatmap-container">
+                    <div class="heatmap-grid" id="heatmapGrid"></div>
+                </div>
+                <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;font-size:12px;color:#64748b;margin-top:12px;">
+                    <span>Less</span>
+                    <div style="width:14px;height:14px;background:var(--h-0);border-radius:3px;"></div>
+                    <div style="width:14px;height:14px;background:var(--h-1);border-radius:3px;"></div>
+                    <div style="width:14px;height:14px;background:var(--h-2);border-radius:3px;"></div>
+                    <div style="width:14px;height:14px;background:var(--h-3);border-radius:3px;"></div>
+                    <div style="width:14px;height:14px;background:var(--h-4);border-radius:3px;"></div>
+                    <span>More</span>
+                </div>
+            </div>
+
+            <!-- 5. Rating Chart -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title"><i class="fas fa-line-chart card-icon"></i> Rating 趋势</span>
+                    <div style="display:flex; gap:4px; background:#f3f4f6; padding:3px; border-radius:8px;" id="ratingControls">
+                        <div class="pill-btn" data-days="90">90天</div>
+                        <div class="pill-btn active" data-days="365">1年</div>
+                        <div class="pill-btn" data-days="9999">全部</div>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="ratingChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 6. Timeline -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title"><i class="fas fa-history card-icon"></i> 提交记录</span>
+                    <div style="display:flex; gap:4px; background:#f3f4f6; padding:3px; border-radius:8px;" id="timelineControls">
+                        <div class="pill-btn active" data-range="TODAY">今天</div>
+                        <div class="pill-btn" data-range="WEEK">本周</div>
+                    </div>
+                </div>
+                <div class="modern-list" id="timelineList" style="max-height:360px;">
+                    <!-- JS Fill -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+
+    const API_BASE = /*[[@{/api}]]*/ '/api';
+    let currentPlatform = 'CF';
+    let platformMap = {};
+    let chartInstance = null;
+
+    // --- Chart Plugin: CF Zones ---
+    const cfRatingPlugin = {
+        id: 'cfBackground',
+        beforeDraw: (chart) => {
+            const { ctx, chartArea: { top, bottom, left, right, width, height }, scales: { y } } = chart;
+            ctx.save();
+            const zones = [
+                { max: 1200, color: '#e5e7eb' }, { max: 1400, color: '#dcfce7' },
+                { max: 1600, color: '#cffafe' }, { max: 1900, color: '#dbeafe' },
+                { max: 2100, color: '#f3e8ff' }, { max: 2300, color: '#ffedd5' },
+                { max: 2400, color: '#ffccbc' }, { max: 3000, color: '#fee2e2' },
+                { max: 4000, color: '#7f1d1d' }
+            ];
+            let prevY = bottom;
+            zones.forEach(zone => {
+                const yPos = y.getPixelForValue(zone.max);
+                const drawY = Math.max(top, Math.min(bottom, yPos));
+                if (prevY > top) {
+                    ctx.fillStyle = hexToRgba(zone.color, zone.max > 2400 ? 0.1 : 0.4);
+                    ctx.fillRect(left, drawY, width, prevY - drawY);
+                }
+                prevY = drawY;
+            });
+            ctx.restore();
+        }
+    };
+    function hexToRgba(hex, alpha) {
+        if(hex.startsWith('rgba')) return hex;
+        const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    $(document).ready(function() {
+        initGlobalTooltip();
+        initPlatforms();
+        bindEvents();
+    });
+
+    function initGlobalTooltip() {
+        const $tooltip = $('#global-tooltip');
+        $(document).on('mouseenter', '.day-cell', function() {
+            const tip = $(this).attr('data-tip');
+            if(tip) $tooltip.text(tip).show();
+        }).on('mouseleave', '.day-cell', function() {
+            $tooltip.hide();
+        }).on('mousemove', function(e) {
+            $tooltip.css({ top: e.clientY - 12 + 'px', left: e.clientX + 'px' });
+        });
+    }
+
+    function initPlatforms() {
+        $.get(API_BASE + '/me/platforms', function(res) {
+            if (isSuccess(res) && res.data) {
+                const $tabs = $('#platformTabs');
+                $tabs.empty();
+                platformMap = {};
+                if (res.data.length === 0) {
+                    $tabs.html('<span style="font-size:12px;color:#999;padding:0 10px;">暂无绑定</span>');
+                    $('#handleInfo').hide();
+                } else {
+                    res.data.forEach((p, i) => {
+                        platformMap[p.platformCode] = p;
+                        const active = i === 0 ? 'active' : '';
+                        if(i===0) currentPlatform = p.platformCode;
+                        $tabs.append(`<div class="platform-tab ${active}" data-code="${p.platformCode}">${p.platformName}</div>`);
+                    });
+                    updateHandleDisplay(currentPlatform);
+                    loadAllData();
+                }
+            }
+        });
+    }
+
+    function updateHandleDisplay(code) {
+        const info = platformMap[code];
+        if(info) {
+            $('#currentHandle').text(info.identifierValue || '-');
+            $('#handleInfo').css('display','flex');
+        } else {
+            $('#handleInfo').hide();
+        }
+    }
+
+    function loadAllData() {
+        loadSummary();
+        loadHeatmap();
+        loadRating(365);
+        loadWeeklyProblems();
+        loadTimeline('TODAY');
+    }
+
+    // --- 1. Summary (Updated Class) ---
+    function loadSummary() {
+        $.get(`${API_BASE}/users/summary?platformCode=${currentPlatform}&days=999999`, function(res) {
+            if (isSuccess(res)) {
+                const d = res.data;
+                // 注意这里使用的是新的 class .stat-value-bg
+                $('#stat-rating').text(d.ratingEnd || '-');
+                $('#stat-solved').text(d.solvedTotal || 0);
+                $('#stat-subs').text(d.submitTotal || 0);
+                $('#stat-active').text(d.activeDays || 0);
+            }
+        });
+    }
+
+    // --- 2. Heatmap ---
+    function loadHeatmap() {
+        const days = 365;
+        const $grid = $('#heatmapGrid');
+        $grid.html('');
+        $.get(`${API_BASE}/user/activity/heatmap?platformCode=${currentPlatform}&days=${days}`, function(res) {
+            const map = {};
+            if(isSuccess(res) && res.data) res.data.forEach(x => {if(x.day) map[x.day] = x.submitCnt||0;});
+
+            const today = new Date();
+            const start = new Date(today);
+            start.setDate(today.getDate() - days + 1);
+
+            for(let i=0; i<days; i++) {
+                const d = new Date(start);
+                d.setDate(start.getDate() + i);
+                const dateStr = formatDate(d);
+                const count = map[dateStr] || 0;
+                let c = 'var(--h-0)';
+                if(count>0) c='var(--h-1)'; if(count>3) c='var(--h-2)'; if(count>6) c='var(--h-3)'; if(count>10) c='var(--h-4)';
+
+                $grid.append($('<div>').addClass('day-cell').css('background-color',c).attr('data-tip', `${dateStr}\n${count} submissions`));
+            }
+
+            // Scroll to end (Right)
+            setTimeout(() => {
+                const container = $('.heatmap-container');
+                if(container.length > 0) {
+                    container.scrollLeft(container[0].scrollWidth);
+                }
+            }, 0);
+        });
+    }
+
+    // --- 3. Rating Chart ---
+    function loadRating(days) {
+        $.get(`${API_BASE}/user/rating/history?platformCode=${currentPlatform}&days=${days}`, function(res) {
+            if(isSuccess(res) && res.data) {
+                const raw = res.data;
+                renderChart(raw);
+                const recent = [...raw].reverse().slice(0, 5);
+                renderRecentContests(recent);
+            }
+        });
+    }
+
+    function renderRecentContests(data) {
+        const $el = $('#recentContestsList');
+        $el.empty();
+        if(!data || data.length === 0) {
+            $el.html('<div style="padding:15px;text-align:center;color:#999;font-size:13px;">无参赛记录</div>');
+            return;
+        }
+
+        data.forEach(item => {
+            const date = item.time ? item.time.substring(0, 10) : '';
+            const delta = item.delta !== undefined ? item.delta : 0;
+            const deltaStr = delta > 0 ? `+${delta}` : `${delta}`;
+            let deltaClass = 'delta-neutral';
+            if(delta > 0) deltaClass = 'delta-pos';
+            if(delta < 0) deltaClass = 'delta-neg';
+
+            $el.append(`
+                    <div class="list-entry">
+                        <div class="contest-rank-box">
+                            <span class="delta-val ${deltaClass}">${deltaStr}</span>
+                            <span class="rank-lbl">Delta</span>
+                        </div>
+                        <div class="contest-info">
+                            <a href="#" class="contest-name" title="${item.contestName}">${item.contestName}</a>
+                            <div class="contest-meta">
+                                <span><i class="far fa-calendar-alt"></i> ${date}</span>
+                                <span>${item.rank? 'Rank:'+item.rank : '-'}</span>
+                                <span>Rating: ${item.rating}</span>
+                            </div>
+                        </div>
+                    </div>
+                `);
+        });
+    }
+
+    function renderChart(raw) {
+        const labels = raw.map(x => x.time ? x.time.substring(0,10) : '');
+        const data = raw.map(x => x.rating);
+        const contests = raw.map(x => x.contestName||'');
+        const deltas = raw.map(x => x.delta);
+        const pointColors = data.map(r => getRatingColor(r));
+
+        const ctx = document.getElementById('ratingChart').getContext('2d');
+        if(chartInstance) chartInstance.destroy();
+
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Rating', data: data, borderColor: '#666', borderWidth: 1.5,
+                    pointBackgroundColor: pointColors, pointBorderColor: '#333',
+                    pointBorderWidth: 1, pointRadius: 4, pointHoverRadius: 7, fill: false, tension: 0
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'index' },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)', padding: 12, cornerRadius: 8,
+                        titleFont: { size: 13, weight: 'bold' }, bodyFont: { size: 13 },
+                        callbacks: {
+                            title: (items) => contests[items[0].dataIndex],
+                            label: (ctx) => {
+                                const idx = ctx.dataIndex;
+                                const r = ctx.parsed.y;
+                                const d = deltas[idx];
+                                const dStr = d !== undefined ? (d > 0 ? `+${d}` : d) : '-';
+                                return `Rating: ${r} (Delta: ${dStr})`;
+                            },
+                            labelTextColor: (ctx) => {
+                                const d = deltas[ctx.dataIndex];
+                                if(d > 0) return '#4ade80';
+                                if(d < 0) return '#f87171';
+                                return '#fff';
+                            }
+                        }
+                    }
+                },
+                scales: { x: { display: false }, y: { grid: { drawBorder: false, color: 'rgba(0,0,0,0.05)' } } }
+            },
+            plugins: [cfRatingPlugin]
+        });
+    }
+
+    // --- 4. Lists ---
+    function loadWeeklyProblems() {
+        $.get(`${API_BASE}/user/problems/week?platformCode=${currentPlatform}`, function(res) {
+            renderProblemList('#weeklyList', res, '本周暂无 AC');
+        });
+    }
+
+    function loadTimeline(range) {
+        $.get(`${API_BASE}/user/submissions/timeline?platformCode=${currentPlatform}&range=${range}&limit=30`, function(res) {
+            renderProblemList('#timelineList', res, '无提交记录');
+        });
+    }
+
+    function renderProblemList(sel, res, emptyMsg) {
+        const $el = $(sel);
+        $el.empty();
+        if(isSuccess(res) && res.data && res.data.length > 0) {
+            res.data.forEach(item => {
+                const v = normalizeVerdict(item.verdict);
+                const time = item.submitTime ? item.submitTime.replace('T',' ').substring(5,16) : '';
+                const name = `${item.problemIndex ? item.problemIndex + '. ' : ''}${item.problemName||'Unknown'}`;
+                const link = item.problemUrl || '#';
+
+                let dotClass = 'dot-wa';
+                let tagClass = 'tag-wa';
+                let tagText = v;
+                if(v === 'AC') { dotClass = 'dot-ac'; tagClass = 'tag-ac'; }
+                if(v === 'TLE') { dotClass = 'dot-tle'; }
+
+                $el.append(`
+                        <div class="list-entry">
+                            <div class="status-dot ${dotClass}" title="${v}"></div>
+                            <div class="entry-main">
+                                <a href="${link}" target="_blank" class="entry-title" title="${name}">${name}</a>
+                                <div class="entry-sub">
+                                    <span class="tag ${tagClass}">${tagText}</span>
+                                    <span>· ${time}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+            });
+        } else {
+            $el.html(`<div style="padding:20px;text-align:center;color:#999;font-size:13px;">${emptyMsg}</div>`);
+        }
+    }
+
+    function normalizeVerdict(v) {
+        if(!v) return 'N/A'; v=v.toUpperCase();
+        if(v.includes('OK')||v.includes('AC')) return 'AC';
+        if(v.includes('TIME')) return 'TLE';
+        if(v.includes('MEMORY')) return 'MLE';
+        if(v.includes('WRONG')) return 'WA';
+        if(v.includes('RUNTIME')) return 'RE';
+        if(v.includes('COMPILATION')) return 'CE';
+        return 'ERR';
+    }
+    function getRatingColor(r) {
+        if(r<1200) return '#cccccc'; if(r<1400) return '#77ff77'; if(r<1600) return '#03a89e';
+        if(r<1900) return '#0000ff'; if(r<2100) return '#aa00aa'; if(r<2400) return '#ff8c00'; return '#ff0000';
+    }
+    function formatDate(d) {
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+    function isSuccess(res) { return res && (res.code===200 || res.code===0); }
+
+    function bindEvents() {
+        $('#platformTabs').on('click', '.platform-tab', function() {
+            $(this).siblings().removeClass('active');
+            $(this).addClass('active');
+            currentPlatform = $(this).data('code');
+            updateHandleDisplay(currentPlatform);
+            loadAllData();
+        });
+
+        $('.pill-btn').click(function() {
+            $(this).siblings().removeClass('active').removeClass('active');
+            $(this).addClass('active');
+        });
+
+        $('#ratingControls .pill-btn').click(function() { loadRating($(this).data('days')); });
+        $('#timelineControls .pill-btn').click(function() { loadTimeline($(this).data('range')); });
+
+        $('#btnSync').click(function() {
+            const btn = $(this);
+            const icon = $('#syncIcon');
+            btn.prop('disabled', true).html('<i class="fas fa-sync-alt spin"></i> <span>同步中...</span>');
+            $.post(`${API_BASE}/user/submissions/refresh?platformCode=${currentPlatform}&count=200`, function(res) {
+                if(isSuccess(res)) loadAllData();
+                else alert('同步失败');
+            }).always(() => {
+                btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> <span>同步数据</span>');
+            });
+        });
+    }
+
+    /*]]>*/
+</script>
+
+</body>
+</html>

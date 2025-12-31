@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Rankings - OJTracker</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script th:src="@{/static/js/jquery.min.js}"></script>
+
+    <style>
+        :root {
+            --bg-body: #f3f4f6;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --accent-color: #3b82f6;
+
+            /* Podium Colors */
+            --gold-grad: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+            --silver-grad: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%);
+            --bronze-grad: linear-gradient(135deg, #fdba74 0%, #b45309 100%);
+
+            /* CF Rating Colors */
+            --cf-gray: #ccc;
+            --cf-green: #77ff77;
+            --cf-cyan: #77ddff;
+            --cf-blue: #aaaaff;
+            --cf-violet: #ff88ff;
+            --cf-orange: #ffcc88;
+            --cf-red: #ff7777;
+            --cf-legendary: #aa0000;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 30px;
+            overflow-x: hidden;
+        }
+
+        .container { max-width: 1000px; margin: 0 auto; }
+
+        /* --- Header --- */
+        .page-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.6s ease-out;
+        }
+        .page-title {
+            font-size: 26px; font-weight: 800; color: #0f172a;
+            display: flex; align-items: center; gap: 12px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .page-title i {
+            background: var(--gold-grad); -webkit-background-clip: text; color: transparent;
+            font-size: 32px; filter: drop-shadow(0 2px 4px rgba(245, 158, 11, 0.3));
+        }
+        .last-update {
+            font-size: 12px; color: var(--text-secondary); background: #fff;
+            padding: 6px 14px; border-radius: 20px; font-weight: 500;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;
+        }
+
+        /* --- Podium (Top 3) --- */
+        .podium-container {
+            display: flex; justify-content: center; align-items: flex-end;
+            margin-bottom: 50px; gap: 24px; padding-top: 20px;
+            perspective: 1000px;
+        }
+
+        .podium-item {
+            display: flex; flex-direction: column; align-items: center;
+            position: relative;
+            transform-origin: bottom;
+            animation: popUp 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            opacity: 0;
+        }
+        /* Staggered animation */
+        .p-2 { animation-delay: 0.1s; }
+        .p-1 { animation-delay: 0.3s; z-index: 10; }
+        .p-3 { animation-delay: 0.2s; }
+
+        .podium-avatar-box {
+            position: relative; margin-bottom: -15px; z-index: 2;
+            transition: transform 0.3s ease;
+        }
+        .podium-item:hover .podium-avatar-box { transform: translateY(-8px) scale(1.05); }
+
+        .podium-avatar {
+            width: 70px; height: 70px; border-radius: 50%;
+            border: 4px solid #fff;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+            background: #fff; overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .podium-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* 默认文字头像 */
+        .avatar-text {
+            width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+            font-weight: 800; color: #fff; font-size: 24px;
+            background: #cbd5e1; /* Default gray */
+        }
+
+        .crown {
+            position: absolute; top: -32px; left: 50%; transform: translateX(-50%) rotate(-5deg);
+            font-size: 32px; color: #fbbf24; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .podium-block {
+            width: 130px; border-radius: 16px 16px 8px 8px;
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            color: #fff; text-align: center; position: relative;
+            box-shadow: 0 10px 20px -5px rgba(0,0,0,0.2);
+            padding-top: 30px;
+        }
+
+        .podium-rank {
+            font-size: 48px; font-weight: 900; opacity: 0.25;
+            position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%);
+            line-height: 1; user-select: none;
+        }
+
+        .podium-info { z-index: 2; width: 100%; padding: 0 10px; }
+        .podium-name {
+            font-size: 15px; font-weight: 700; margin-bottom: 4px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        .podium-score {
+            font-size: 13px; font-weight: 600; opacity: 0.9;
+            background: rgba(0,0,0,0.15); padding: 2px 8px; border-radius: 10px;
+            display: inline-block;
+        }
+
+        /* Place Specific Styles */
+        .p-1 .podium-block { height: 160px; background: var(--gold-grad); }
+        .p-1 .podium-avatar { width: 90px; height: 90px; border-color: #fcd34d; }
+        .p-1 .avatar-text { background: #fbbf24; font-size: 32px; }
+
+        .p-2 .podium-block { height: 130px; background: var(--silver-grad); }
+        .p-2 .podium-avatar { border-color: #e2e8f0; }
+        .p-2 .avatar-text { background: #94a3b8; }
+
+        .p-3 .podium-block { height: 110px; background: var(--bronze-grad); }
+        .p-3 .podium-avatar { border-color: #fdba74; }
+        .p-3 .avatar-text { background: #d97706; }
+
+        /* --- Ranking List --- */
+        .rank-list-wrapper {
+            background: transparent;
+        }
+
+        .list-header {
+            display: grid; grid-template-columns: 60px 2fr 1.5fr 100px;
+            padding: 0 20px 10px; border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 10px; font-size: 12px; font-weight: 700; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: 0.05em;
+        }
+
+        .rank-card {
+            display: grid; grid-template-columns: 60px 2fr 1.5fr 100px; align-items: center;
+            background: #fff; padding: 12px 20px; border-radius: 12px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02); border: 1px solid transparent;
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            animation: slideUp 0.5s ease-out forwards;
+            opacity: 0; transform: translateY(20px);
+        }
+
+        /* Staggered list animation delay */
+        .rank-card:nth-child(n) { animation-delay: 0.4s; }
+        .rank-card:nth-child(2n) { animation-delay: 0.5s; }
+        .rank-card:nth-child(3n) { animation-delay: 0.6s; }
+
+        .rank-card:hover {
+            transform: translateY(-3px) scale(1.005);
+            box-shadow: 0 10px 20px -5px rgba(0,0,0,0.1);
+            border-color: #cbd5e1; z-index: 5;
+        }
+
+        .col-rank {
+            font-size: 18px; font-weight: 800; color: #94a3b8; text-align: center;
+            font-family: 'Montserrat', sans-serif;
+        }
+        .rank-icon { font-size: 20px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1)); }
+        .r-1 { color: #fbbf24; } .r-2 { color: #94a3b8; } .r-3 { color: #d97706; }
+
+        .col-user { display: flex; align-items: center; gap: 14px; }
+        .user-pic {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: #f1f5f9; overflow: hidden; flex-shrink: 0;
+            border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center;
+        }
+        .user-pic img { width: 100%; height: 100%; object-fit: cover; }
+        .list-avatar-text { font-weight: 700; color: var(--accent-color); font-size: 16px; }
+
+        .u-info { display: flex; flex-direction: column; }
+        .u-nick { font-weight: 700; color: var(--text-primary); font-size: 14px; }
+        .u-no { font-size: 11px; color: #94a3b8; }
+
+        .col-handle {
+            font-family: 'Consolas', monospace; font-size: 13px; color: #475569;
+            background: #f8fafc; padding: 4px 8px; border-radius: 6px; width: fit-content;
+        }
+
+        .col-rating { text-align: right; }
+        .rating-badge {
+            display: inline-block; padding: 4px 10px; border-radius: 8px;
+            font-weight: 800; font-size: 13px; color: #fff; min-width: 60px; text-align: center;
+        }
+
+        /* Animations */
+        @keyframes fadeInDown { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes popUp { 0% { opacity:0; transform:scale(0.8) translateY(50px); } 100% { opacity:1; transform:scale(1) translateY(0); } }
+        @keyframes slideUp { to { opacity:1; transform:translateY(0); } }
+        @keyframes float { 0%, 100% { transform:translate(-50%, -32px) rotate(-5deg); } 50% { transform:translate(-50%, -38px) rotate(5deg); } }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            .podium-container { display: none; }
+            .list-header { display: none; }
+            .rank-card {
+                grid-template-columns: 50px 1fr; grid-template-rows: auto auto;
+                gap: 10px 15px; padding: 15px;
+            }
+            .col-rank { grid-row: 1/3; align-self: center; font-size: 20px; }
+            .col-user { grid-column: 2; }
+            .col-handle { grid-column: 2; font-size: 12px; margin-top: -5px; }
+            .col-rating { position: absolute; right: 15px; top: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="page-header">
+        <div class="page-title"><i class="fas fa-trophy"></i> 团队排行榜</div>
+        <div class="last-update" id="lastUpdate"><i class="fas fa-clock" style="margin-right:5px"></i> Updating...</div>
+    </div>
+
+    <!-- Podium -->
+    <div class="podium-container" id="podiumBox" style="display:none;">
+        <!-- 2nd -->
+        <div class="podium-item p-2">
+            <div class="podium-avatar-box">
+                <div class="podium-avatar" id="p2-avatar"></div>
+            </div>
+            <div class="podium-block">
+                <div class="podium-info">
+                    <div class="podium-name" id="p2-name">-</div>
+                    <div class="podium-score" id="p2-score">-</div>
+                </div>
+                <div class="podium-rank">2</div>
+            </div>
+        </div>
+        <!-- 1st -->
+        <div class="podium-item p-1">
+            <div class="podium-avatar-box">
+                <i class="fas fa-crown crown"></i>
+                <div class="podium-avatar" id="p1-avatar"></div>
+            </div>
+            <div class="podium-block">
+                <div class="podium-info">
+                    <div class="podium-name" id="p1-name">-</div>
+                    <div class="podium-score" id="p1-score">-</div>
+                </div>
+                <div class="podium-rank">1</div>
+            </div>
+        </div>
+        <!-- 3rd -->
+        <div class="podium-item p-3">
+            <div class="podium-avatar-box">
+                <div class="podium-avatar" id="p3-avatar"></div>
+            </div>
+            <div class="podium-block">
+                <div class="podium-info">
+                    <div class="podium-name" id="p3-name">-</div>
+                    <div class="podium-score" id="p3-score">-</div>
+                </div>
+                <div class="podium-rank">3</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- List -->
+    <div class="rank-list-wrapper">
+        <div class="list-header">
+            <div style="text-align:center">Rank</div>
+            <div>Player</div>
+            <div>CF Handle</div>
+            <div style="text-align:right">Rating</div>
+        </div>
+        <div id="rankList">
+            <div style="text-align:center;padding:40px;color:#94a3b8;">
+                <i class="fas fa-spinner fa-spin" style="font-size:24px;margin-bottom:10px;"></i><br>Loading Data...
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+
+        const API_BASE = /*[[@{/api}]]*/ '/api';
+
+        $(document).ready(function() {
+            loadRankings();
+        });
+
+        function loadRankings() {
+            $.get(API_BASE + '/team/rankings?platformCode=CF', function(res) {
+                if (res.code === 200 || res.code === 0) {
+                    const data = res.data || [];
+                    renderPodium(data);
+                    renderTable(data);
+                } else {
+                    $('#rankList').html('<div style="text-align:center;padding:20px;color:#ef4444;">加载失败，请刷新重试</div>');
+                }
+            });
+        }
+
+        // 生成头像 HTML (支持图片 URL 或文字)
+        function getAvatarHtml(user, isPodium = false) {
+            if (user.avatar && user.avatar.trim() !== '') {
+                return `<img src="${user.avatar}" alt="${user.nickname}">`;
+            } else {
+                const char = (user.nickname || '?').charAt(0).toUpperCase();
+                // 列表用简单的文字，Podium用带背景的div
+                if (isPodium) {
+                    return `<div class="avatar-text">${char}</div>`;
+                } else {
+                    return `<div class="list-avatar-text">${char}</div>`;
+                }
+            }
+        }
+
+        function renderPodium(data) {
+            if (data.length < 3) return; // 不足3人暂不显示
+
+            const setPodium = (id, item) => {
+                $(`#${id}-name`).text(item.nickname);
+                $(`#${id}-score`).text(item.rating);
+                $(`#${id}-avatar`).html(getAvatarHtml(item, true));
+            };
+
+            setPodium('p1', data[0]);
+            setPodium('p2', data[1]);
+            setPodium('p3', data[2]);
+
+            $('#podiumBox').css('display', 'flex');
+        }
+
+        function renderTable(data) {
+            const container = $('#rankList');
+            container.empty();
+
+            if (data.length === 0) {
+                container.html('<div style="text-align:center;padding:30px;color:#94a3b8;">暂无排名数据</div>');
+                return;
+            }
+
+            // Update time
+            if(data[0].snapshotTime) {
+                $('#lastUpdate').html(`<i class="fas fa-clock" style="margin-right:5px"></i> Updated: ${data[0].snapshotTime.substring(0,10)}`);
+            }
+
+            data.forEach((item, index) => {
+                const rank = index + 1;
+                let rankContent = `#${rank}`;
+                let rankClass = '';
+
+                if(rank === 1) { rankContent = '<i class="fas fa-crown r-1"></i>'; }
+                else if(rank === 2) { rankContent = '<i class="fas fa-medal r-2"></i>'; }
+                else if(rank === 3) { rankContent = '<i class="fas fa-medal r-3"></i>'; }
+
+                const ratingColor = getRatingColor(item.rating);
+                const studentNo = item.studentNo ? item.studentNo : '';
+
+                const card = `
+                    <div class="rank-card">
+                        <div class="col-rank">
+                            <span class="rank-icon">${rankContent}</span>
+                        </div>
+                        <div class="col-user">
+                            <div class="user-pic">${getAvatarHtml(item)}</div>
+                            <div class="u-info">
+                                <div class="u-nick">${item.nickname}</div>
+                                <div class="u-no">${studentNo}</div>
+                            </div>
+                        </div>
+                        <div class="col-handle">${item.handle || '-'}</div>
+                        <div class="col-rating">
+                            <span class="rating-badge" style="background:${ratingColor}">${item.rating}</span>
+                        </div>
+                    </div>
+                `;
+                container.append(card);
+            });
+        }
+
+        function getRatingColor(r) {
+            if (r < 1200) return '#cccccc'; // Gray
+            if (r < 1400) return '#77ff77'; // Green
+            if (r < 1600) return '#03a89e'; // Cyan
+            if (r < 1900) return '#0000ff'; // Blue
+            if (r < 2100) return '#a0a';    // Violet
+            if (r < 2300) return '#ff8c00'; // Orange
+            if (r < 2400) return '#ff8c00'; // Orange
+            if (r < 2600) return '#ff7777'; // Red
+            if (r < 3000) return '#ff3333'; // Red
+            return '#aa0000'; // Legendary Grandmaster
+        }
+
+    /*]]>*/
+</script>
+
+</body>
+</html>

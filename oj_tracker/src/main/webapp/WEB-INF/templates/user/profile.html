@@ -531,8 +531,16 @@
             confirmPassword: confirmPassword
         }).then(res => {
             if(res.data.code === 200) {
-                Swal.fire('成功', '密码已修改，请重新登录', 'success').then(() => {
-                    window.parent.location.href = '/login';
+                Swal.fire({
+                    title: '修改成功',
+                    text: '密码已更新，请使用新密码重新登录',
+                    icon: 'success',
+                    confirmButtonText: '重新登录',
+                    allowOutsideClick: false
+                }).then(() => {
+                    axios.post('/api/auth/logout').finally(() => {
+                        window.parent.location.href = '/login';
+                    });
                 });
             } else {
                 Swal.fire('失败', res.data.msg, 'error');

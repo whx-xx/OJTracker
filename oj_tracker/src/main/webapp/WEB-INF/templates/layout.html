@@ -17,7 +17,7 @@
         :root {
             --primary-color: #4e54c8;
             --secondary-color: #8f94fb;
-            /* 1. 调整默认侧边栏宽度，稍微变窄一点 */
+            /* 侧边栏宽度配置 */
             --sidebar-width: 240px;
             --sidebar-collapsed-width: 70px;
             --header-height: 70px;
@@ -51,10 +51,10 @@
             color: var(--white);
             display: flex;
             flex-direction: column;
-            transition: width 0.3s ease; /* 添加平滑过渡 */
+            transition: width 0.3s ease;
             box-shadow: 4px 0 10px rgba(0,0,0,0.1);
             z-index: 100;
-            white-space: nowrap; /* 防止折叠时文字换行 */
+            white-space: nowrap;
         }
 
         .sidebar-brand {
@@ -62,7 +62,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 22px; /* 字体稍微调小 */
+            font-size: 22px;
             font-weight: 600;
             letter-spacing: 1px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
@@ -72,7 +72,7 @@
         .sidebar-brand i {
             margin-right: 10px;
             font-size: 24px;
-            min-width: 30px; /* 固定宽度，防止折叠时抖动 */
+            min-width: 30px;
             text-align: center;
         }
 
@@ -80,7 +80,7 @@
             flex: 1;
             padding-top: 20px;
             overflow-y: auto;
-            overflow-x: hidden; /* 隐藏横向滚动条 */
+            overflow-x: hidden;
         }
 
         .sidebar-menu li {
@@ -134,22 +134,22 @@
 
         body.collapsed .sidebar-brand span,
         body.collapsed .sidebar-menu a span {
-            display: none; /* 隐藏文字 */
+            display: none;
         }
 
         body.collapsed .menu-label {
-            opacity: 0; /* 隐藏标签标题 */
+            opacity: 0;
             height: 0;
             padding: 0;
         }
 
         body.collapsed .sidebar-menu a {
-            justify-content: center; /* 图标居中 */
+            justify-content: center;
             padding: 15px 0;
         }
 
         body.collapsed .sidebar-menu a i {
-            margin-right: 0; /* 移除图标右边距 */
+            margin-right: 0;
             font-size: 20px;
         }
 
@@ -167,7 +167,7 @@
             display: flex;
             flex-direction: column;
             width: calc(100% - var(--sidebar-width));
-            transition: width 0.3s ease; /* 内容区宽度跟随过渡 */
+            transition: width 0.3s ease;
         }
 
         /* === 顶部导航栏 === */
@@ -188,7 +188,7 @@
             gap: 20px;
         }
 
-        /* 2. 缩放按钮样式 */
+        /* 缩放按钮样式 */
         .toggle-btn {
             cursor: pointer;
             font-size: 20px;
@@ -334,7 +334,7 @@
             .sidebar-menu a i { margin: 0; font-size: 24px; }
             .sidebar-brand { justify-content: center; }
             .sidebar-brand i { margin: 0; }
-            .toggle-btn { display: none; } /* 移动端隐藏切换按钮，默认已经是小侧边栏 */
+            .toggle-btn { display: none; }
         }
     </style>
 </head>
@@ -449,38 +449,19 @@
         setupSidebarToggle();
     });
 
-    // 缩放逻辑
-    function setupSidebarToggle() {
-        sidebarToggle.addEventListener('click', () => {
-            document.body.classList.toggle('collapsed');
-
-            // 切换图标方向
-            const icon = sidebarToggle.querySelector('i');
-            if (document.body.classList.contains('collapsed')) {
-                icon.classList.remove('fa-outdent');
-                icon.classList.add('fa-indent');
-            } else {
-                icon.classList.remove('fa-indent');
-                icon.classList.add('fa-outdent');
-            }
-        });
-    }
-
+    // 1. 获取当前用户信息与强制修改密码检测
     function fetchCurrentUser() {
         axios.get('/api/auth/current')
             .then(response => {
                 const res = response.data;
                 if (res.code === 200 && res.data) {
                     const user = res.data;
-                    document.getElementById('userNickname').textContent = user.nickname || user.username;
-                    document.getElementById('userRole').textContent = user.role || '用户';
-                    if (user.avatar) {
-                        document.getElementById('userAvatar').src = user.avatar;
+
+                    // === 强制修改密码逻辑 ===
+                    if (user.mustChangePassword === 1) {
+                        handleMustChangePassword(user);
                     } else {
-                        document.getElementById('userAvatar').src = `https://ui-avatars.com/api/?name=${user.username}&background=8f94fb&color=fff`;
-                    }
-                    if (user.role === 'ADMIN' || user.role === 'ROOT') {
-                        document.getElementById('adminSection').style.display = 'block';
+                        setupNormalUser(user);
                     }
                 } else {
                     window.location.href = '/login';
@@ -492,16 +473,107 @@
             });
     }
 
+    // 渲染正常用户
+    function setupNormalUser(user) {
+        document.getElementById('userNickname').textContent = user.nickname || user.username;
+        document.getElementById('userRole').textContent = user.role || '用户';
+
+        if (user.avatar) {
+            document.getElementById('userAvatar').src = user.avatar;
+        } else {
+            document.getElementById('userAvatar').src = `https://ui-avatars.com/api/?name=${user.username}&background=8f94fb&color=fff`;
+        }
+
+        if (user.role === 'ADMIN' || user.role === 'ROOT') {
+            document.getElementById('adminSection').style.display = 'block';
+        }
+    }
+
+    // 处理强制修改密码状态
+    function handleMustChangePassword(user) {
+        setupNormalUser(user); // 仍需渲染头部，让用户知道已登录
+
+        // 1. 强制 Iframe 跳转到个人中心
+        const profilePath = '/views/profile';
+        contentFrame.src = profilePath;
+        pageTitle.textContent = '个人中心';
+
+        // 2. 锁定侧边栏链接
+        const allLinks = document.querySelectorAll('.sidebar-menu a');
+        allLinks.forEach(link => {
+            const href = link.getAttribute('href');
+
+            // 如果是个人中心，视觉上激活，但逻辑上也无需额外点击
+            if (href === profilePath) {
+                link.classList.add('active');
+                link.style.opacity = '1';
+            } else {
+                // 其他链接变灰且禁用
+                link.classList.remove('active');
+                link.style.opacity = '0.5';
+                link.style.cursor = 'not-allowed';
+                // 覆盖点击事件
+                link.onclick = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // 提示
+                    Swal.fire({
+                        icon: 'warning',
+                        title: '限制访问',
+                        text: '为了您的账户安全，请先在个人中心修改初始密码！',
+                        toast: true, position: 'top-end', showConfirmButton: false, timer: 3000
+                    });
+                };
+            }
+        });
+
+        // 3. 弹出不可关闭的警告框
+        Swal.fire({
+            title: '安全提示',
+            text: '系统检测到您正在使用初始密码。为了保障安全，请立即修改密码。',
+            icon: 'warning',
+            allowOutsideClick: false, // 禁止点击背景关闭
+            allowEscapeKey: false,    // 禁止ESC关闭
+            confirmButtonText: '去修改密码',
+            confirmButtonColor: '#4e54c8',
+            heightAuto: false // 防止布局塌缩
+        });
+    }
+
+    // 2. 侧边栏缩放逻辑
+    function setupSidebarToggle() {
+        sidebarToggle.addEventListener('click', () => {
+            document.body.classList.toggle('collapsed');
+
+            const icon = sidebarToggle.querySelector('i');
+            if (document.body.classList.contains('collapsed')) {
+                icon.classList.remove('fa-outdent');
+                icon.classList.add('fa-indent');
+            } else {
+                icon.classList.remove('fa-indent');
+                icon.classList.add('fa-outdent');
+            }
+        });
+    }
+
+    // 3. 菜单导航逻辑
     function setupMenuNavigation() {
         menuLinks.forEach(link => {
+            // 如果已经被上面的 handleMustChangePassword 覆盖了 onclick，这里就不会执行
+            // 或者我们可以检查 body 是否有特定标记
+
             link.addEventListener('click', function(e) {
                 if (this.getAttribute('href') === '#') return;
+                // 如果已经被禁用（通过 style 检测或者 class），则不执行后续逻辑
+                if (this.style.cursor === 'not-allowed') return;
+
                 e.preventDefault();
 
                 menuLinks.forEach(l => l.classList.remove('active'));
                 this.classList.add('active');
 
                 const targetUrl = this.getAttribute('href');
+                // 确保折叠后展开菜单也能高亮
                 document.querySelectorAll(`.sidebar-menu a[href="${targetUrl}"]`).forEach(l => l.classList.add('active'));
 
                 contentFrame.src = targetUrl;
@@ -514,6 +586,7 @@
         });
     }
 
+    // 4. 下拉菜单交互
     function setupDropdown() {
         userDropdownTrigger.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -527,6 +600,7 @@
         });
     }
 
+    // 5. 退出登录
     function setupLogout() {
         document.getElementById('btnLogout').addEventListener('click', (e) => {
             e.preventDefault();
@@ -540,7 +614,7 @@
                 cancelButtonColor: '#d33',
                 confirmButtonText: '退出登录',
                 cancelButtonText: '取消',
-                heightAuto: false // 关键修复：防止弹窗时页面高度塌缩
+                heightAuto: false
             }).then((result) => {
                 if (result.isConfirmed) {
                     axios.post('/api/auth/logout')

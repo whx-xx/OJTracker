@@ -3,6 +3,7 @@ package hdc.rjxy.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import hdc.rjxy.common.ForcePasswordChangeInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.*;
@@ -61,6 +62,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/v3/api-docs/**",
                         "/webjars/**"
                 );
+        // 注册强制修改密码拦截器
+        registry.addInterceptor(new ForcePasswordChangeInterceptor())
+                .addPathPatterns("/**") // 拦截所有
+                .excludePathPatterns("/login", "/register", "/css/**", "/js/**", "/error"); // 排除完全公开的资源
     }
 
     // --- JSON 转换器配置 ---

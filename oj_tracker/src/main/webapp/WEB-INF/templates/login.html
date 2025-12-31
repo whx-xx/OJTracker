@@ -9,10 +9,6 @@
     <!-- 引入 Axios -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
-    <!--
-      === CSS 部分 ===
-      建议在 Spring Boot 中放入: src/main/resources/static/css/login.css
-    -->
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
 
@@ -24,6 +20,7 @@
             --white: #ffffff;
             --error-color: #e74c3c;
             --success-color: #2ecc71;
+            --warning-color: #f1c40f;
         }
 
         * {
@@ -34,7 +31,7 @@
         }
 
         body {
-            background: linear-gradient(135deg, #a8c0ff 0%, #3f2b96 100%); /* 漂亮的渐变背景 */
+            background: linear-gradient(135deg, #a8c0ff 0%, #3f2b96 100%);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -295,6 +292,7 @@
         }
         .toast.success { border-left-color: var(--success-color); }
         .toast.error { border-left-color: var(--error-color); }
+        .toast.warning { border-left-color: var(--warning-color); }
         .toast i { margin-right: 10px; }
 
         @keyframes slideIn {
@@ -358,7 +356,8 @@
                 <i class="fas fa-lock"></i>
             </div>
 
-            <a href="#">忘记密码？</a>
+            <!-- 修改点：添加 id="forgotPassword" -->
+            <a href="#" id="forgotPassword">忘记密码？</a>
             <button type="submit" id="btnLogin">登 录</button>
         </form>
     </div>
@@ -383,10 +382,6 @@
 <!-- Toast 容器 -->
 <div class="toast-container" id="toastContainer"></div>
 
-<!--
-  === JavaScript 部分 ===
-  建议在 Spring Boot 中放入: src/main/resources/static/js/login.js
--->
 <script>
     // 1. 界面切换逻辑
     const signUpButton = document.getElementById('signUp');
@@ -401,10 +396,7 @@
         container.classList.remove("right-panel-active");
     });
 
-    // 2. Axios 配置 (基础URL可以根据需要配置)
-    // axios.defaults.baseURL = 'http://localhost:8080';
-
-    // 3. 工具函数：Toast 提示
+    // 2. 工具函数：Toast 提示
     function showToast(message, type = 'info') {
         const container = document.getElementById('toastContainer');
         const toast = document.createElement('div');
@@ -413,6 +405,7 @@
         let iconClass = 'fa-info-circle';
         if (type === 'success') iconClass = 'fa-check-circle';
         if (type === 'error') iconClass = 'fa-exclamation-circle';
+        if (type === 'warning') iconClass = 'fa-exclamation-triangle';
 
         toast.innerHTML = `<i class="fas ${iconClass}"></i><span>${message}</span>`;
 
@@ -425,9 +418,15 @@
         }, 3000);
     }
 
-    // 4. 登录逻辑
+    // 修改点：忘记密码点击逻辑
+    document.getElementById('forgotPassword').addEventListener('click', function(e) {
+        e.preventDefault();
+        showToast('请联系管理员重置密码', 'info');
+    });
+
+    // 3. 登录逻辑
     document.getElementById('loginForm').addEventListener('submit', function(e) {
-        e.preventDefault(); // 阻止表单默认提交刷新页面
+        e.preventDefault();
 
         const username = document.getElementById('loginUsername').value;
         const password = document.getElementById('loginPassword').value;
@@ -438,7 +437,6 @@
             return;
         }
 
-        // 禁用按钮防止重复提交
         btn.disabled = true;
         btn.textContent = '登录中...';
 
@@ -449,11 +447,19 @@
             .then(function (response) {
                 const res = response.data;
                 if (res.code === 200) {
-                    showToast('登录成功，正在跳转...', 'success');
-                    // 延迟一点点让用户看到提示
+                    const user = res.data; // 获取用户信息
+
+                    // === 优化点：检测强制修改密码状态 ===
+                    if (user.mustChangePassword === 1) {
+                        showToast('登录成功！为了账户安全，请立即修改密码', 'warning');
+                    } else {
+                        showToast('登录成功，正在跳转...', 'success');
+                    }
+
+                    // 延迟跳转，layout.html 会处理后续的锁定逻辑
                     setTimeout(() => {
-                        window.location.href = '/'; // 跳转到首页 (Controller 中的 index)
-                    }, 800);
+                        window.location.href = '/';
+                    }, 1000);
                 } else {
                     showToast(res.msg || '登录失败', 'error');
                     btn.disabled = false;
@@ -468,7 +474,7 @@
             });
     });
 
-    // 5. 注册逻辑
+    // 4. 注册逻辑
     document.getElementById('registerForm').addEventListener('submit', function(e) {
         e.preventDefault();
 

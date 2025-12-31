@@ -8,10 +8,7 @@ import org.springdoc.webmvc.core.configuration.SpringDocWebMvcConfiguration;
 import org.springdoc.webmvc.ui.SwaggerConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.*;
 import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
@@ -26,11 +23,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Configuration
-@EnableWebMvc // 开启 Spring MVC 支持
+@EnableWebMvc               // 开启 Spring MVC 支持
+@EnableAspectJAutoProxy     // 开启 aop代理
 @ComponentScan(basePackages = {
         "hdc.rjxy.controller", // 扫描 Controller
         "hdc.rjxy.common",     // 扫描公共组件
-        "org.springdoc"        // 扫描 SpringDoc 的 Controller 和配置类
+        "org.springdoc",       // 扫描 SpringDoc 的 Controller 和配置类
+        "hdc.rjxy.aop"
 })
 @Import({
         SpringDocConfig.class // 你自己的 Swagger 文档信息配置

@@ -87,11 +87,9 @@ public class AdminSyncController {
     // 7. 切换定时任务开关
     @LogAdminOp("切换定时任务状态")
     @PostMapping("/schedule/toggle")
-    public R<Boolean> toggleSchedule(@RequestParam("enabled") Boolean enabled, HttpSession session) {
+    public R<Boolean> toggleSchedule(HttpSession session) {
         checkAdmin(session);
-        if (enabled == null) return R.fail("状态不能为空");
-
-        syncScheduler.setEnabled(enabled);
+        syncScheduler.setEnabled(!syncScheduler.isEnabled());
         return R.ok(syncScheduler.isEnabled());
     }
 

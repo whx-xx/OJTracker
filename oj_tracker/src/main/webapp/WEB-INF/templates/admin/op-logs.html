@@ -3,232 +3,370 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Operation Logs</title>
+    <title>操作日志</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script th:src="@{/static/js/jquery.min.js}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+
         :root {
-            --bg-body: #f8fafc;
-            --bg-card: #ffffff;
-            --text-main: #0f172a;
-            --text-light: #64748b;
-            --primary: #3b82f6;
-            --border: #e2e8f0;
-            --radius: 10px;
+            --primary-color: #4e54c8;
+            --secondary-color: #8f94fb;
+            --text-dark: #34495e;
+            --text-gray: #7f8c8d;
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
         }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: transparent;
-            margin: 0; padding: 20px 40px;
-            color: var(--text-main);
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background-color: var(--bg-color); padding: 20px; color: var(--text-dark); overflow-y: auto; }
+
+        /* === 顶部工具栏 === */
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 15px;
+            flex-wrap: wrap;
         }
 
-        .container {
-            background: var(--bg-card);
-            border-radius: var(--radius);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            border: 1px solid var(--border);
-            display: flex; flex-direction: column;
-            height: calc(100vh - 40px); /* Fill available height */
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
         }
 
-        .header {
-            padding: 20px 24px;
-            border-bottom: 1px solid var(--border);
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-        .title i { color: var(--text-light); }
-
-        .table-container { flex: 1; overflow: auto; }
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-
-        thead { position: sticky; top: 0; background: #f8fafc; z-index: 10; }
-        th { padding: 12px 24px; font-size: 12px; font-weight: 600; color: #64748b; border-bottom: 1px solid var(--border); }
-
-        td { padding: 16px 24px; font-size: 13px; color: #334155; border-bottom: 1px solid #f1f5f9; }
-        tbody tr:hover { background: #f8fafc; }
-
-        .badge-op {
-            padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;
-            background: #f1f5f9; color: #475569; font-family: monospace;
+        /* 下拉框 */
+        .form-select {
+            padding: 10px 35px 10px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            outline: none;
+            font-size: 14px;
+            color: var(--text-dark);
+            background-color: white;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 16px;
+            appearance: none;
+            cursor: pointer;
+            min-width: 180px; /* 稍微加宽以适应中文长文本 */
+            transition: all 0.3s;
         }
 
-        /* Specific Op Colors */
-        .op-RESET_PWD { background: #fee2e2; color: #991b1b; }
-        .op-UPDATE_STATUS { background: #fff7ed; color: #9a3412; }
-
-        .user-info { display: flex; flex-direction: column; }
-        .user-sub { font-size: 11px; color: #94a3b8; }
-
-        .mono { font-family: 'SF Mono', 'Roboto Mono', monospace; font-size: 12px; color: #64748b; }
-
-        /* --- Pagination (Modern) --- */
-        .pagination-footer {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 12px 24px; border-top: 1px solid var(--border);
-            background: #fcfcfd;
+        .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(78, 84, 200, 0.1);
         }
-        .page-desc { font-size: 13px; color: #64748b; }
-        .pg-container { display: flex; gap: 4px; background: #fff; padding: 2px; border-radius: 6px; border: 1px solid var(--border); }
 
-        .pg-btn {
-            min-width: 28px; height: 28px; padding: 0 8px; border-radius: 4px;
-            border: none; background: transparent;
-            color: #475569; font-size: 13px; font-weight: 500;
-            cursor: pointer; transition: all 0.15s;
+        /* 搜索框 */
+        .search-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 300px;
         }
-        .pg-btn:hover:not(:disabled) { background: #f1f5f9; color: #0f172a; }
-        .pg-btn.active { background: #eff6ff; color: var(--primary); font-weight: 600; }
-        .pg-btn:disabled { color: #cbd5e1; cursor: default; }
+
+        .search-wrapper i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-gray);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 15px 10px 40px;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            outline: none;
+            background: white;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(78, 84, 200, 0.1);
+        }
+
+        /* === 卡片与表格 === */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            min-height: 500px;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            width: 100%;
+            flex: 1;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        thead { background-color: #f8fafc; border-bottom: 2px solid var(--border-color); }
+        th, td { padding: 15px 20px; text-align: left; border-bottom: 1px solid var(--border-color); font-size: 14px; }
+        th { font-weight: 600; color: var(--text-gray); font-size: 12px; text-transform: uppercase; white-space: nowrap; }
+
+        /* 列表项样式 */
+        .log-time { color: var(--text-gray); font-size: 13px; width: 160px; font-family: monospace; text-align: right; }
+        .log-admin { font-weight: 500; color: var(--primary-color); width: 140px; display: flex; align-items: center; gap: 5px; }
+        .log-action {
+            font-weight: 600;
+            font-size: 12px;
+            padding: 4px 8px;
+            background: #f1f5f9;
+            border-radius: 4px;
+            display: inline-block;
+            white-space: nowrap; /* 防止操作类型换行 */
+        }
+
+        .log-target-wrapper { width: 180px; }
+        .log-target {
+            font-family: 'Courier New', monospace;
+            color: #d35400;
+            background: #fff5eb;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .log-target-global {
+            font-family: 'Courier New', monospace;
+            color: #2980b9;
+            background: #ebf5fb;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .log-remark { color: #555; font-size: 13px; }
+
+        /* === 分页组件 (统一风格) === */
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            background: #fff;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .pagination-info {
+            font-size: 13px;
+            color: var(--text-gray);
+        }
+
+        .page-btn {
+            border: 1px solid var(--border-color);
+            background: white;
+            color: var(--text-dark);
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .page-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .page-btn.disabled {
+            background-color: #f5f5f5;
+            color: #ccc;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="header">
-        <div class="title"><i class="fas fa-shield-alt"></i> 管理员审计日志</div>
-        <button class="pg-btn" style="border: 1px solid var(--border);" onclick="loadLogs(1)"><i class="fas fa-sync-alt"></i></button>
-    </div>
+<!-- 顶部筛选工具栏 -->
+<div class="toolbar">
+    <div class="filter-group">
+        <!-- 操作类型筛选 (已修改为指定中文内容) -->
+        <select id="typeSelect" class="form-select" onchange="handleSearch()">
+            <option value="">全部</option>
+            <option value="强制修改昵称">强制修改昵称</option>
+            <option value="切换定时任务状态">切换定时任务状态</option>
+            <option value="手动触发同步任务">手动触发同步任务</option>
+            <option value="更新用户状态">更新用户状态</option>
+            <option value="重置用户密码">重置用户密码</option>
+        </select>
 
-    <div class="table-container">
-        <table>
-            <thead>
-            <tr>
-                <th style="width:60px">ID</th>
-                <th>操作人 (Admin)</th>
-                <th>操作类型</th>
-                <th>目标用户</th>
-                <th>IP 地址</th>
-                <th>详情 (Remark)</th>
-                <th style="text-align:right">操作时间</th>
-            </tr>
-            </thead>
-            <tbody id="logBody">
-            </tbody>
-        </table>
-    </div>
-
-    <div class="pagination-footer">
-        <div class="page-desc">
-            第 <span id="currPage" style="font-weight:600;color:#0f172a">1</span> 页 / 共 <span id="totalPage">1</span> 页，总计 <span id="totalCount">0</span> 条
-        </div>
-        <div class="pg-container" id="pagination">
+        <!-- 目标对象模糊搜索 -->
+        <div class="search-wrapper">
+            <i class="fas fa-search"></i>
+            <input type="text" class="search-input" id="searchInput" placeholder="搜索目标对象..." onkeyup="handleSearchDebounced()">
         </div>
     </div>
 </div>
 
-<script th:inline="javascript">
-    /*<![CDATA[*/
-    const API_URL = /*[[@{/api/admin/op-logs}]]*/ '/api/admin/op-logs';
-    let currentPage = 1;
-    const PAGE_SIZE = 6;
+<div class="card">
+    <div class="table-responsive">
+        <table>
+            <thead>
+            <tr>
+                <th>操作人</th>
+                <th>动作类型</th>
+                <th>目标对象</th>
+                <th>详细备注</th>
+                <th style="text-align: right;">时间</th>
+            </tr>
+            </thead>
+            <tbody id="logTableBody">
+            <tr><td colspan="5" style="text-align:center; padding:40px; color:#999;"><i class="fas fa-spinner fa-spin"></i> 加载中...</td></tr>
+            </tbody>
+        </table>
+    </div>
 
-    $(document).ready(function() {
-        loadLogs(1);
-    });
+    <!-- 分页组件 -->
+    <div class="pagination-container" id="paginationContainer" style="display:none;">
+        <div class="pagination-info" id="pageInfo"></div>
+        <div id="pagination" style="display:flex;"></div>
+    </div>
+</div>
+
+<script>
+    let currentPage = 1;
+    const pageSize = 15;
+    let searchTimeout;
+
+    document.addEventListener('DOMContentLoaded', () => loadLogs(1));
 
     function loadLogs(page) {
-        if(page < 1) return;
+        currentPage = page;
+        const tbody = document.getElementById('logTableBody');
 
-        const $btn = $('.title i');
-        $btn.addClass('fa-spin'); // 简单loading效果
+        // 获取筛选参数
+        const opType = document.getElementById('typeSelect').value;
+        const target = document.getElementById('searchInput').value.trim();
 
-        $.get(API_URL, {page: page, pageSize: PAGE_SIZE}, function(res) {
-            $btn.removeClass('fa-spin');
-            if(res.code === 200) {
-                renderTable(res.data.list);
-                renderPagination(res.data.total, page);
-                currentPage = page;
-
-                $('#totalCount').text(res.data.total);
-                $('#currPage').text(page);
-                $('#totalPage').text(Math.ceil(res.data.total/PAGE_SIZE)||1);
+        axios.get('/api/admin/logs', {
+            params: {
+                page: page,
+                size: pageSize,
+                opType: opType,
+                keyword: target
             }
-        }).fail(() => $btn.removeClass('fa-spin'));
+        }).then(res => {
+            if(res.data.code === 200) {
+                const data = res.data.data;
+                renderTable(data.records);
+                renderPagination(data.total, data.pages, data.current);
+                document.getElementById('paginationContainer').style.display = 'flex';
+            } else {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px; color:var(--danger-color);">加载失败: ${res.data.msg}</td></tr>`;
+            }
+        }).catch(err => {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px; color:#999;">网络错误</td></tr>`;
+        });
     }
 
     function renderTable(list) {
-        const tbody = $('#logBody');
-        tbody.empty();
+        const tbody = document.getElementById('logTableBody');
+        tbody.innerHTML = '';
 
         if(!list || list.length === 0) {
-            tbody.html('<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">暂无日志</td></tr>');
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:40px; color:#999;">未找到相关日志</td></tr>`;
             return;
         }
 
         list.forEach(log => {
-            // 操作类型美化
-            let opClass = 'badge-op';
-            if(log.opType === 'RESET_PWD') opClass += ' op-RESET_PWD';
-            if(log.opType.includes('STATUS')) opClass += ' op-UPDATE_STATUS';
+            // 处理目标对象显示：如果有 targetUserName 则显示，否则显示“全局”
+            const targetHtml = log.targetUserName
+                ? `<span class="log-target">${log.targetUserName}</span>`
+                : `<span class="log-target-global">全局 (Global)</span>`;
 
-            const time = log.opTime ? log.opTime.replace('T', ' ') : '-';
-
-            const tr = `
-                    <tr>
-                        <td class="mono">${log.id}</td>
-                        <td>
-                            <div class="user-info">
-                                <span style="font-weight:600">${log.adminName}</span>
-                                <span class="user-sub">ID: ${log.adminId}</span>
-                            </div>
-                        </td>
-                        <td><span class="${opClass}">${log.opType}</span></td>
-                        <td>
-                            <div class="user-info">
-                                <span>${log.targetName}</span>
-                                <span class="user-sub">ID: ${log.targetUserId}</span>
-                            </div>
-                        </td>
-                        <td class="mono">${log.ip}</td>
-                        <td style="color:#475569;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${log.remark}">
-                            ${log.remark || '-'}
-                        </td>
-                        <td style="text-align:right; font-size:12px; color:#64748b;">${time}</td>
-                    </tr>
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                    <td class="log-admin">
+                        <i class="fas fa-user-shield"></i> ${log.adminName}
+                    </td>
+                    <td><span class="log-action">${log.opType}</span></td>
+                    <td class="log-target-wrapper">${targetHtml}</td>
+                    <td class="log-remark">${log.remark || '-'}</td>
+                    <td class="log-time">${formatTime(log.opTime)}</td>
                 `;
-            tbody.append(tr);
+            tbody.appendChild(tr);
         });
     }
 
-    function renderPagination(total, curr) {
-        const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
-        const $pg = $('#pagination');
-        $pg.empty();
+    // 统一的分页渲染逻辑
+    function renderPagination(total, totalPages, current) {
+        const info = document.getElementById('pageInfo');
+        const container = document.getElementById('pagination');
 
-        // 辅助函数：生成按钮
-        const btn = (p, icon, dis) => `<button class="pg-btn ${p===curr?'active':''}" onclick="loadLogs(${p})" ${dis?'disabled':''}>${icon}</button>`;
+        const startRecord = (current - 1) * pageSize + 1;
+        const endRecord = Math.min(current * pageSize, total);
 
-        // 上一页
-        $pg.append(btn(curr-1, '<i class="fas fa-chevron-left"></i>', curr<=1));
+        info.textContent = `第 ${startRecord}-${endRecord} 条 / 共 ${total} 条`;
+
+        let html = '';
+
+        html += `<button class="page-btn" ${current === 1 ? 'disabled' : ''} onclick="loadLogs(${current - 1})"><i class="fas fa-chevron-left"></i></button>`;
 
         if (totalPages <= 7) {
-            for(let i=1; i<=totalPages; i++) $pg.append(btn(i, i, false));
+            for (let i = 1; i <= totalPages; i++) html += pageBtn(i, current);
         } else {
-            if(curr <= 4) {
-                for(let i=1; i<=5; i++) $pg.append(btn(i, i, false));
-                $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
-                $pg.append(btn(totalPages, totalPages, false));
-            } else if (curr >= totalPages - 3) {
-                $pg.append(btn(1, 1, false));
-                $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
-                for(let i=totalPages-4; i<=totalPages; i++) $pg.append(btn(i, i, false));
-            } else {
-                $pg.append(btn(1, 1, false));
-                $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
-                for(let i=curr-1; i<=curr+1; i++) $pg.append(btn(i, i, false));
-                $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
-                $pg.append(btn(totalPages, totalPages, false));
-            }
+            html += pageBtn(1, current);
+            if (current > 3) html += `<span style="line-height:28px; padding:0 5px; color:#ccc;">...</span>`;
+
+            let start = Math.max(2, current - 1);
+            let end = Math.min(totalPages - 1, current + 1);
+            for (let i = start; i <= end; i++) html += pageBtn(i, current);
+
+            if (current < totalPages - 2) html += `<span style="line-height:28px; padding:0 5px; color:#ccc;">...</span>`;
+            html += pageBtn(totalPages, current);
         }
 
-        // 下一页
-        $pg.append(btn(curr+1, '<i class="fas fa-chevron-right"></i>', curr>=totalPages));
+        html += `<button class="page-btn" ${current === totalPages ? 'disabled' : ''} onclick="loadLogs(${current + 1})"><i class="fas fa-chevron-right"></i></button>`;
+
+        container.innerHTML = html;
     }
-    /*]]>*/
+
+    function pageBtn(i, current) {
+        return `<button class="page-btn ${i === current ? 'active' : ''}" onclick="loadLogs(${i})">${i}</button>`;
+    }
+
+    // 搜索防抖
+    function handleSearch() {
+        loadLogs(1);
+    }
+
+    function handleSearchDebounced() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            loadLogs(1);
+        }, 500);
+    }
+
+    function formatTime(iso) {
+        if(!iso) return '-';
+        const d = new Date(iso);
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
 </script>
 </body>
 </html>

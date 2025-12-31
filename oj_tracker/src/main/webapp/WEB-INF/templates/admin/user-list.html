@@ -3,505 +3,690 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Management</title>
-
+    <title>用户管理</title>
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script th:src="@{/static/js/jquery.min.js}"></script>
+    <!-- Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+
         :root {
-            --bg-body: #f8fafc;
-            --bg-card: #ffffff;
-            --text-main: #0f172a;
-            --text-light: #64748b;
-            --primary: #3b82f6;
-            --primary-hover: #2563eb;
-            --border: #e2e8f0;
-            --radius: 10px;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --primary-color: #4e54c8;
+            --secondary-color: #8f94fb;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --warning-color: #f1c40f;
+            --text-dark: #34495e;
+            --text-light: #7f8c8d;
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
         }
 
-        * { box-sizing: border-box; outline: none; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: transparent; /* 透出 layout 背景 */
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px 40px;
+            background-color: var(--bg-color);
+            padding: 20px;
+            color: var(--text-dark);
+            overflow-y: auto;
         }
 
-        .container { max-width: 100%; margin: 0 auto; }
-
-        /* --- Toolbar --- */
+        /* === 顶部工具栏 (筛选+搜索) === */
         .toolbar {
-            display: flex; justify-content: flex-end; align-items: center;
-            margin-bottom: 20px; gap: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 15px;
+            flex-wrap: wrap;
         }
 
         .filter-group {
-            display: flex; gap: 10px; align-items: center;
-            background: #fff; padding: 4px; border-radius: 8px;
-            border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
         }
 
-        .search-box { position: relative; width: 260px; }
-        .search-box i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+        /* 下拉框样式 */
+        .form-select {
+            padding: 10px 35px 10px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            outline: none;
+            font-size: 14px;
+            color: var(--text-dark);
+            background-color: white;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 16px;
+            appearance: none; /* 移除默认箭头 */
+            cursor: pointer;
+            min-width: 140px;
+            transition: all 0.3s;
+        }
+
+        .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(78, 84, 200, 0.1);
+        }
+
+        /* 搜索框样式 */
+        .search-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .search-wrapper i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
+        }
+
         .search-input {
-            width: 100%; padding: 8px 12px 8px 36px;
-            border: none; background: transparent; font-size: 13px; color: var(--text-main);
+            width: 100%;
+            padding: 10px 15px 10px 40px;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            outline: none;
+            background: white;
+            transition: all 0.3s;
+            font-size: 14px;
         }
-        .search-input::placeholder { color: #94a3b8; }
 
-        .select-filter {
-            border: none; background: #f8fafc; font-size: 13px; color: var(--text-main);
-            padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 500;
-            border-right: 1px solid transparent;
+        .search-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(78, 84, 200, 0.1);
         }
-        .select-filter:hover { background: #f1f5f9; }
 
-        .btn {
-            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-            padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
-            border: 1px solid transparent; cursor: pointer; transition: all 0.2s;
-            box-shadow: var(--shadow-sm);
-        }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
-        .btn-white { background: white; border-color: var(--border); color: var(--text-main); }
-        .btn-white:hover { background: #f8fafc; border-color: #cbd5e1; }
-        .btn-danger { background: #ef4444; color: white; }
-        .btn-danger:hover { background: #dc2626; transform: translateY(-1px); }
-
-        /* --- Table --- */
-        .table-container {
-            background: var(--bg-card); border-radius: var(--radius);
-            box-shadow: var(--shadow-sm); border: 1px solid var(--border);
+        /* === 卡片与表格 === */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
             overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            min-height: 500px;
         }
 
-        table { width: 100%; border-collapse: collapse; text-align: left; }
+        .table-responsive {
+            overflow-x: auto;
+            width: 100%;
+            flex: 1;
+        }
 
-        thead { background: #f8fafc; border-bottom: 1px solid var(--border); }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background-color: #f8fafc;
+            border-bottom: 2px solid var(--border-color);
+        }
+
         th {
-            padding: 14px 24px; font-size: 12px; font-weight: 600; color: #475569;
-            text-transform: uppercase; letter-spacing: 0.05em;
+            text-align: left;
+            padding: 15px 20px;
+            font-weight: 600;
+            color: var(--text-light);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
         }
 
-        tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.15s; }
-        tbody tr:last-child { border-bottom: none; }
-        tbody tr:hover { background: #f8fafc; }
-
-        td { padding: 16px 24px; font-size: 14px; color: #334155; vertical-align: middle; }
-
-        /* User Info */
-        .user-cell { display: flex; align-items: center; gap: 12px; }
-        .avatar-box {
-            width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
-            overflow: hidden; display: flex; align-items: center; justify-content: center;
-            font-size: 14px; font-weight: 700; color: #fff;
-            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+        td {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+            vertical-align: middle;
+            color: var(--text-dark);
         }
-        .avatar-box img { width: 100%; height: 100%; object-fit: cover; }
-        .u-info { display: flex; flex-direction: column; }
-        .u-name { font-weight: 600; color: var(--text-main); font-size: 14px; }
-        .u-nick { font-size: 12px; color: var(--text-light); }
 
-        /* Badges */
-        .badge {
-            display: inline-flex; align-items: center; padding: 2px 8px;
-            border-radius: 99px; font-size: 11px; font-weight: 600; border: 1px solid transparent;
+        tbody tr:hover {
+            background-color: #fcfcfc;
         }
-        .role-admin { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
-        .role-user { background: #e0f2fe; color: #075985; border-color: #bae6fd; }
 
+        /* 用户信息列 */
+        .user-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid #eee;
+        }
+
+        .user-details div {
+            line-height: 1.2;
+        }
+
+        .user-nick {
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        .user-no {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        /* 状态标签 */
         .status-badge {
-            display: inline-flex; align-items: center; gap: 6px;
-            font-size: 13px; font-weight: 500;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
         }
-        .dot { width: 6px; height: 6px; border-radius: 50%; }
-        .st-active { color: #059669; }
-        .st-active .dot { background: #10b981; box-shadow: 0 0 0 2px #d1fae5; }
-        .st-disabled { color: #64748b; }
-        .st-disabled .dot { background: #94a3b8; }
 
-        /* Actions */
-        .actions { display: flex; gap: 6px; justify-content: flex-end; opacity: 0.7; transition: opacity 0.2s; }
-        tr:hover .actions { opacity: 1; }
+        .status-active { background: rgba(46, 204, 113, 0.15); color: var(--success-color); }
+        .status-banned { background: rgba(231, 76, 60, 0.15); color: var(--danger-color); }
 
-        .icon-btn {
-            width: 30px; height: 30px; border-radius: 6px; border: 1px solid transparent;
-            background: transparent; color: #64748b; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+        /* 操作按钮组 */
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
         }
-        .icon-btn:hover { background: #fff; border-color: var(--border); shadow: var(--shadow-sm); color: var(--primary); }
-        .btn-delete:hover { color: #ef4444; border-color: #fecaca; background: #fef2f2; }
 
-        /* --- Pagination (Modern) --- */
-        .pagination-footer {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 12px 24px; border-top: 1px solid var(--border);
-            background: #fcfcfd;
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
         }
-        .page-desc { font-size: 13px; color: #64748b; }
-        .pg-container { display: flex; gap: 4px; background: #fff; padding: 2px; border-radius: 6px; border: 1px solid var(--border); }
 
-        .pg-btn {
-            min-width: 28px; height: 28px; padding: 0 8px; border-radius: 4px;
-            border: none; background: transparent;
-            color: #475569; font-size: 13px; font-weight: 500;
-            cursor: pointer; transition: all 0.15s;
+        .btn-edit { background-color: var(--secondary-color); }
+        .btn-edit:hover { background-color: var(--primary-color); }
+
+        .btn-key { background-color: var(--warning-color); }
+        .btn-key:hover { background-color: #d35400; }
+
+        .btn-ban { background-color: var(--danger-color); }
+        .btn-ban:hover { background-color: #c0392b; }
+
+        .btn-unban { background-color: var(--success-color); }
+        .btn-unban:hover { background-color: #27ae60; }
+
+        /* === 分页组件 (与 Rankings 一致) === */
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            background: #fff;
+            border-top: 1px solid #f0f0f0;
         }
-        .pg-btn:hover:not(:disabled) { background: #f1f5f9; color: #0f172a; }
-        .pg-btn.active { background: #eff6ff; color: var(--primary); font-weight: 600; }
-        .pg-btn:disabled { color: #cbd5e1; cursor: default; }
 
-        /* --- Modal --- */
+        .pagination-info {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        .page-btn {
+            border: 1px solid var(--border-color);
+            background: white;
+            color: var(--text-dark);
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .page-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .page-btn:disabled {
+            background-color: #f5f5f5;
+            color: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* === 模态框样式 === */
         .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.4); z-index: 999;
-            display: none; align-items: center; justify-content: center;
-            backdrop-filter: blur(2px);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
-        .modal {
-            background: #fff; width: 400px; border-radius: 12px;
-            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
-            padding: 24px; transform: scale(0.95); opacity: 0; transition: all 0.2s;
-        }
-        .modal-overlay.active .modal { transform: scale(1); opacity: 1; }
 
-        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--text-main); }
-        .form-label { display: block; font-size: 13px; font-weight: 500; color: #475569; margin-bottom: 6px; }
-        .form-control {
-            width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;
-            font-size: 14px; margin-bottom: 16px; transition: border 0.2s;
+        .modal-overlay.show {
+            display: flex;
+            opacity: 1;
         }
-        .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px #eff6ff; }
-        .form-control:disabled { background: #f8fafc; color: #94a3b8; }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
 
-        /* Toast */
-        #toast {
-            position: fixed; top: 20px; right: 20px; z-index: 2000;
-            padding: 10px 20px; border-radius: 8px; color: #fff; font-weight: 500;
-            box-shadow: var(--shadow-md); display: none;
+        .custom-modal {
+            background: white;
+            width: 400px;
+            border-radius: 12px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+            padding: 25px;
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
         }
-        .spin { animation: spin 1s linear infinite; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            .hide-sm { display: none; }
-            .toolbar { flex-direction: column; align-items: stretch; }
-            .search-box { width: 100%; }
+        .modal-overlay.show .custom-modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 { font-size: 18px; font-weight: 600; margin: 0; }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-dark); }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            outline: none;
+        }
+        .form-group input:focus { border-color: var(--primary-color); }
+
+        .modal-footer {
+            margin-top: 25px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn-cancel {
+            background: #f1f5f9;
+            color: #666;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .btn-confirm {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 6px;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
 
-<div id="toast"></div>
+<!-- 顶部筛选工具栏 -->
+<div class="toolbar">
+    <div class="filter-group">
+        <!-- 状态筛选 -->
+        <select id="statusSelect" class="form-select" onchange="handleSearch()">
+            <option value="">所有状态</option>
+            <option value="1">正常</option>
+            <option value="0">封禁</option>
+        </select>
 
-<div id="editModal" class="modal-overlay">
-    <div class="modal">
-        <div class="modal-title">修改用户昵称</div>
-        <input type="hidden" id="editUserId">
-        <label class="form-label">用户名</label>
-        <input type="text" id="editUsername" class="form-control" disabled>
-        <label class="form-label">新昵称</label>
-        <input type="text" id="editNickname" class="form-control" placeholder="请输入...">
-        <div class="modal-actions">
-            <button class="btn btn-white" onclick="closeModal('editModal')">取消</button>
-            <button class="btn btn-primary" onclick="submitEdit()">保存</button>
+        <!-- 模糊搜索 -->
+        <div class="search-wrapper">
+            <i class="fas fa-search"></i>
+            <input type="text" class="search-input" id="searchInput" placeholder="搜索学号或昵称..." onkeyup="handleSearchDebounced()">
         </div>
     </div>
 </div>
 
-<div id="confirmModal" class="modal-overlay">
-    <div class="modal" style="width: 380px;">
-        <div class="modal-title" id="confirmTitle">提示</div>
-        <div style="margin-bottom: 24px; color: #475569; font-size: 14px; line-height: 1.6;" id="confirmMessage">
-            确认执行此操作吗？
+<!-- 表格卡片 -->
+<div class="card">
+    <div class="table-responsive">
+        <table>
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>用户信息</th>
+                <th>角色</th>
+                <th>状态</th>
+                <th>注册时间</th>
+                <th style="text-align: right;">操作</th>
+            </tr>
+            </thead>
+            <tbody id="tableBody">
+            <tr><td colspan="6" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-spinner fa-spin"></i> 加载中...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 分页组件 -->
+    <div class="pagination-container" id="paginationContainer" style="display:none;">
+        <div class="pagination-info" id="pageInfo"></div>
+        <div id="pagination" style="display:flex;"></div>
+    </div>
+</div>
+
+<!-- === 编辑弹窗 === -->
+<div class="modal-overlay" id="editModal">
+    <div class="custom-modal">
+        <div class="modal-header">
+            <h3 id="modalTitle">编辑用户</h3>
+            <button class="close-modal" onclick="closeModal('editModal')">&times;</button>
         </div>
-        <div class="modal-actions">
-            <button class="btn btn-white" onclick="closeModal('confirmModal')">取消</button>
-            <button class="btn btn-primary" id="confirmBtn">确定</button>
+        <div class="modal-body">
+            <form id="editForm">
+                <input type="hidden" id="editUserId">
+                <div class="form-group">
+                    <label>学号</label>
+                    <input type="text" id="editStudentNo" disabled style="background:#f5f5f5; cursor:not-allowed;">
+                </div>
+                <div class="form-group">
+                    <label>昵称</label>
+                    <input type="text" id="editNickname" placeholder="请输入新昵称">
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('editModal')">取消</button>
+            <button class="btn-confirm" onclick="submitEdit()">保存修改</button>
         </div>
     </div>
 </div>
 
-<div class="container">
-
-    <div class="toolbar">
-        <div class="filter-group">
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" class="search-input" placeholder="搜索 学号/用户名/昵称...">
-            </div>
-            <div style="width:1px;height:20px;background:#e2e8f0;"></div>
-            <select id="statusFilter" class="select-filter">
-                <option value="">全部状态</option>
-                <option value="1">正常</option>
-                <option value="0">禁用</option>
-            </select>
-        </div>
-
-        <button class="btn btn-white" onclick="loadUsers(1)">
-            <i class="fas fa-sync-alt" id="refreshIcon"></i>
-        </button>
-    </div>
-
-    <div class="table-container">
-        <div class="table-responsive">
-            <table>
-                <thead>
-                <tr>
-                    <th style="width:60px;">ID</th>
-                    <th style="width:280px;">用户信息</th>
-                    <th>学号</th>
-                    <th>角色</th>
-                    <th>状态</th>
-                    <th class="hide-sm">注册时间</th>
-                    <th style="text-align:right;">操作</th>
-                </tr>
-                </thead>
-                <tbody id="userTableBody">
-                <tr><td colspan="7" style="text-align:center;padding:40px;color:#94a3b8;">加载中...</td></tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="pagination-footer">
-            <div class="page-desc">
-                第 <span id="currPage" style="font-weight:600;color:#0f172a">1</span> 页 / 共 <span id="totalPage">1</span> 页，总计 <span id="totalCount">0</span> 条
-            </div>
-            <div class="pg-container" id="pagination">
-            </div>
-        </div>
-    </div>
-</div>
-
-<script th:inline="javascript">
-    /*<![CDATA[*/
-
-    const API_BASE = /*[[@{/api}]]*/ '/api';
+<script>
+    // === 全局变量 ===
     let currentPage = 1;
-    const PAGE_SIZE = 8;
-    let confirmCallback = null; // 用于存储确认回调
+    const pageSize = 15;
+    let searchTimeout;
 
-    $(document).ready(function() {
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
         loadUsers(1);
-        $('#searchInput').on('keypress', function(e) { if(e.which===13) loadUsers(1); });
-        $('#statusFilter').change(function() { loadUsers(1); });
-
-        // 绑定确认按钮点击事件
-        $('#confirmBtn').click(function() {
-            if (confirmCallback) confirmCallback();
-            closeModal('confirmModal');
-        });
     });
 
-    // --- 加载数据 ---
+    // 1. 加载用户列表
     function loadUsers(page) {
-        const keyword = $('#searchInput').val();
-        const status = $('#statusFilter').val();
-        const $icon = $('#refreshIcon');
-        $icon.addClass('spin');
+        currentPage = page;
+        const tbody = document.getElementById('tableBody');
 
-        const params = { page: page, pageSize: PAGE_SIZE, keyword: keyword };
-        if(status !== "") params.status = status;
+        // 获取查询参数
+        const status = document.getElementById('statusSelect').value;
+        const keyword = document.getElementById('searchInput').value.trim();
 
-        $.get(`${API_BASE}/admin/users`, params, function(res) {
-            $icon.removeClass('spin');
-            if (res.code === 200 || res.code === 0) {
-                renderTable(res.data.list);
-                renderPagination(res.data.total, page);
-                currentPage = page;
-                $('#totalCount').text(res.data.total);
-                $('#currPage').text(page);
-                $('#totalPage').text(Math.ceil(res.data.total/PAGE_SIZE)||1);
-            } else {
-                showToast('error', res.msg || '加载失败');
+        axios.get('/api/admin/users', {
+            params: {
+                page: page,
+                size: pageSize,
+                keyword: keyword,
+                status: status // 传递状态参数
             }
-        }).fail(() => { $icon.removeClass('spin'); showToast('error', '请求失败'); });
+        })
+            .then(res => {
+                if(res.data.code === 200) {
+                    const data = res.data.data;
+                    renderTable(data.records);
+                    renderPagination(data.total, data.pages, data.current);
+
+                    document.getElementById('paginationContainer').style.display = 'flex';
+                } else {
+                    Swal.fire('错误', res.data.msg, 'error');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:red;padding:30px;">加载失败</td></tr>`;
+            });
     }
 
-    function renderTable(list) {
-        const tbody = $('#userTableBody');
-        tbody.empty();
-        if (!list || list.length === 0) {
-            tbody.html('<tr><td colspan="7" style="text-align:center;padding:40px;color:#94a3b8;">暂无数据</td></tr>');
+    // 2. 渲染表格
+    function renderTable(users) {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+
+        if(!users || users.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:#999;">未找到匹配的用户</td></tr>`;
             return;
         }
 
-        list.forEach(u => {
-            const roleBadge = u.role === 'ADMIN' ?
-                `<span class="badge role-admin">管理员</span>` : `<span class="badge role-user">用户</span>`;
+        users.forEach(user => {
+            const avatarUrl = `https://ui-avatars.com/api/?name=${user.username}&background=random&color=fff&size=64`;
+            const isBanned = user.status === 0;
 
-            const isActive = u.status === 1;
-            const statusHtml = isActive
-                ? `<span class="status-badge st-active"><div class="dot"></div>正常</span>`
-                : `<span class="status-badge st-disabled"><div class="dot"></div>禁用</span>`;
+            const statusBadge = isBanned
+                ? `<span class="status-badge status-banned"><i class="fas fa-ban"></i> 已封禁</span>`
+                : `<span class="status-badge status-active">正常</span>`;
 
-            // 头像逻辑
-            let avatarHtml;
-            if(u.avatar && u.avatar.trim()!==''){
-                avatarHtml = `<img src="${u.avatar}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                    <td>#${user.id}</td>
+                    <td>
+                        <div class="user-cell">
+                            <img src="${avatarUrl}" class="user-avatar" alt="av">
+                            <div class="user-details">
+                                <div class="user-nick">${user.nickname || user.username}</div>
+                                <div class="user-no">${user.studentNo}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>${user.role}</td>
+                    <td>${statusBadge}</td>
+                    <td>${formatDate(user.createdAt)}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-icon btn-edit" title="编辑信息" onclick="openEditModal(${user.id}, '${user.studentNo}', '${user.nickname || ''}')">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                            <button class="btn-icon btn-key" title="重置密码" onclick="resetPassword(${user.id}, '${user.username}')">
+                                <i class="fas fa-key"></i>
+                            </button>
+                            ${isBanned
+                ? `<button class="btn-icon btn-unban" title="解封" onclick="toggleStatus(${user.id}, 1)"><i class="fas fa-check"></i></button>`
+                : `<button class="btn-icon btn-ban" title="封禁" onclick="toggleStatus(${user.id}, 0)"><i class="fas fa-ban"></i></button>`
             }
-            // 随机背景色
-            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'];
-            const bg = colors[u.id % colors.length];
-            const char = (u.nickname||u.username||'?').charAt(0).toUpperCase();
-            avatarHtml = (avatarHtml || '') + `<div style="display:${avatarHtml?'none':'flex'};width:100%;height:100%;align-items:center;justify-content:center;background:${bg};color:#fff;">${char}</div>`;
-
-            const tr = `
-                    <tr>
-                        <td style="color:#94a3b8;font-family:monospace;">${u.id}</td>
-                        <td>
-                            <div class="user-cell">
-                                <div class="avatar-box">${avatarHtml}</div>
-                                <div class="u-info">
-                                    <div class="u-name">${u.username}</div>
-                                    <div class="u-nick">${u.nickname || '-'}</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td style="font-family:monospace;color:#64748b;">${u.studentNo || '-'}</td>
-                        <td>${roleBadge}</td>
-                        <td>${statusHtml}</td>
-                        <td class="hide-sm" style="color:#64748b;font-size:12px;">${u.createdAt ? u.createdAt.replace('T',' ').substring(0,16) : '-'}</td>
-                        <td style="text-align:right;">
-                            <div class="actions">
-                                <button class="icon-btn" onclick="openEditModal(${u.id}, '${u.username}', '${u.nickname||''}')" title="编辑"><i class="fas fa-pen"></i></button>
-                                <button class="icon-btn" onclick="resetPassword(${u.id}, '${u.username}')" title="重置密码"><i class="fas fa-key"></i></button>
-                                <button class="icon-btn ${isActive?'btn-delete':''}" onclick="toggleStatus(${u.id}, ${u.status})" title="${isActive?'禁用':'启用'}">
-                                    <i class="fas ${isActive?'fa-ban':'fa-check-circle'}"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
+                        </div>
+                    </td>
                 `;
-            tbody.append(tr);
+            tbody.appendChild(tr);
         });
     }
 
-    function renderPagination(total, curr) {
-        const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
-        const $pg = $('#pagination');
-        $pg.empty();
+    // 3. 渲染分页 (样式与 Rankings 一致)
+    function renderPagination(total, totalPages, current) {
+        const info = document.getElementById('pageInfo');
+        const container = document.getElementById('pagination');
 
-        const btn = (p, icon, dis) => `<button class="pg-btn ${p===curr?'active':''}" onclick="loadUsers(${p})" ${dis?'disabled':''}>${icon}</button>`;
+        const startRecord = (current - 1) * pageSize + 1;
+        const endRecord = Math.min(current * pageSize, total);
 
-        $pg.append(btn(curr-1, '<i class="fas fa-chevron-left"></i>', curr<=1));
+        info.textContent = `第 ${startRecord}-${endRecord} 条 / 共 ${total} 条`;
 
+        let html = '';
+        html += `<button class="page-btn" ${current === 1 ? 'disabled' : ''} onclick="loadUsers(${current - 1})"><i class="fas fa-chevron-left"></i></button>`;
+
+        // 简单逻辑：首页...当前页...尾页
         if (totalPages <= 7) {
-            for(let i=1; i<=totalPages; i++) $pg.append(btn(i, i, false));
+            for (let i = 1; i <= totalPages; i++) html += pageBtn(i, current);
         } else {
-            if(curr <= 4) {
-                for(let i=1; i<=5; i++) $pg.append(btn(i, i, false));
-                $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
-                $pg.append(btn(totalPages, totalPages, false));
-            } else if (curr >= totalPages - 3) {
-                $pg.append(btn(1, 1, false));
-                $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
-                for(let i=totalPages-4; i<=totalPages; i++) $pg.append(btn(i, i, false));
-            } else {
-                $pg.append(btn(1, 1, false));
-                $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
-                for(let i=curr-1; i<=curr+1; i++) $pg.append(btn(i, i, false));
-                $pg.append('<span style="padding:0 5px;color:#94a3b8;">...</span>');
-                $pg.append(btn(totalPages, totalPages, false));
-            }
+            html += pageBtn(1, current);
+            if (current > 3) html += `<span style="line-height:28px; padding:0 5px; color:#ccc;">...</span>`;
+
+            let start = Math.max(2, current - 1);
+            let end = Math.min(totalPages - 1, current + 1);
+            for (let i = start; i <= end; i++) html += pageBtn(i, current);
+
+            if (current < totalPages - 2) html += `<span style="line-height:28px; padding:0 5px; color:#ccc;">...</span>`;
+            html += pageBtn(totalPages, current);
         }
 
-        $pg.append(btn(curr+1, '<i class="fas fa-chevron-right"></i>', curr>=totalPages));
+        html += `<button class="page-btn" ${current === totalPages ? 'disabled' : ''} onclick="loadUsers(${current + 1})"><i class="fas fa-chevron-right"></i></button>`;
+
+        container.innerHTML = html;
     }
 
-    // --- Actions ---
-
-    // 显示确认弹窗的通用函数
-    function showConfirm(title, msg, callback, danger = false) {
-        $('#confirmTitle').text(title);
-        $('#confirmMessage').html(msg);
-        confirmCallback = callback;
-
-        const $btn = $('#confirmBtn');
-        if(danger) {
-            $btn.removeClass('btn-primary').addClass('btn-danger');
-        } else {
-            $btn.removeClass('btn-danger').addClass('btn-primary');
-        }
-
-        $('#confirmModal').css('display', 'flex').hide().fadeIn(150).addClass('active');
+    function pageBtn(i, current) {
+        return `<button class="page-btn ${i === current ? 'active' : ''}" onclick="loadUsers(${i})">${i}</button>`;
     }
 
-    function openEditModal(id, username, nickname) {
-        $('#editUserId').val(id);
-        $('#editUsername').val(username);
-        $('#editNickname').val(nickname);
-        $('#editModal').css('display', 'flex').hide().fadeIn(150).addClass('active');
+    // 4. 搜索处理 (立即搜索 + 防抖)
+    function handleSearch() {
+        loadUsers(1);
     }
 
-    function closeModal(id) { $(`#${id}`).removeClass('active').fadeOut(150); }
+    function handleSearchDebounced() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            loadUsers(1);
+        }, 500);
+    }
+
+    // === 业务操作 ===
+
+    function openEditModal(id, studentNo, nickname) {
+        document.getElementById('editUserId').value = id;
+        document.getElementById('editStudentNo').value = studentNo;
+        document.getElementById('editNickname').value = nickname;
+        document.getElementById('editModal').classList.add('show');
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).classList.remove('show');
+    }
 
     function submitEdit() {
-        const id = $('#editUserId').val();
-        const nick = $('#editNickname').val();
-        $.ajax({
-            url: `${API_BASE}/admin/users/${id}/nickname`, type: 'PUT',
-            contentType: 'application/json', data: JSON.stringify({nickname: nick}),
-            success: function(res) {
-                if(res.code===200||res.code===0){ showToast('success', '修改成功'); closeModal('editModal'); loadUsers(currentPage); }
-                else showToast('error', res.msg);
+        const id = document.getElementById('editUserId').value;
+        const nickname = document.getElementById('editNickname').value;
+
+        if(!nickname) {
+            Swal.fire('提示', '昵称不能为空', 'warning');
+            return;
+        }
+
+        axios.put(`/api/admin/users/${id}/nickname`, { nickname: nickname })
+            .then(res => {
+                if(res.data.code === 200) {
+                    closeModal('editModal');
+                    Swal.fire({
+                        icon: 'success', title: '修改成功', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000
+                    });
+                    loadUsers(currentPage);
+                } else {
+                    Swal.fire('失败', res.data.msg, 'error');
+                }
+            });
+    }
+
+    function toggleStatus(id, newStatus) {
+        const actionText = newStatus === 1 ? '解封' : '封禁';
+        const color = newStatus === 1 ? '#2ecc71' : '#e74c3c';
+
+        Swal.fire({
+            title: `确定要${actionText}该用户吗？`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: color,
+            cancelButtonColor: '#95a5a6',
+            confirmButtonText: `是的，${actionText}`,
+            cancelButtonText: '取消'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                axios.put(`/api/admin/users/${id}/status`, { status: newStatus })
+                    .then(res => {
+                        if(res.data.code === 200) {
+                            Swal.fire('已完成', `用户已${actionText}`, 'success');
+                            loadUsers(currentPage);
+                        } else {
+                            Swal.fire('失败', res.data.msg, 'error');
+                        }
+                    });
             }
         });
     }
 
-    function resetPassword(id, u) {
-        // 使用自定义弹窗替换 confirm
-        showConfirm(
-            '重置密码',
-            `确定将用户 <b style="color:#0f172a">${u}</b> 的密码重置为 <span style="font-family:monospace;background:#f1f5f9;padding:2px 6px;border-radius:4px;">123456</span> 吗？`,
-            function() {
-                $.post(`${API_BASE}/admin/users/${id}/reset-password`, function(res) {
-                    if(res.code===200||res.code===0) showToast('success', '密码已重置');
-                    else showToast('error', res.msg);
-                });
+    function resetPassword(id, username) {
+        Swal.fire({
+            title: '重置密码',
+            text: `用户 [${username}] 的密码将重置为默认值。`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#f1c40f',
+            cancelButtonColor: '#95a5a6',
+            confirmButtonText: '确认重置'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                axios.put(`/api/admin/users/${id}/reset-password`)
+                    .then(res => {
+                        if(res.data.code === 200) {
+                            Swal.fire('成功', '密码已重置', 'success');
+                        } else {
+                            Swal.fire('失败', res.data.msg, 'error');
+                        }
+                    });
             }
-        );
+        });
     }
 
-    function toggleStatus(id, s) {
-        const ns = s===1?0:1;
-        const txt = ns===1?'启用':'禁用';
-        const color = ns===1 ? '#10b981' : '#ef4444'; // 启用绿色，禁用红色
-        const isDanger = (ns === 0); // 禁用操作视为危险操作
-
-        // 使用自定义弹窗替换 confirm
-        showConfirm(
-            `${txt}账号`,
-            `确定要 <span style="color:${color};font-weight:bold">${txt}</span> 该账号吗？<br>该操作将立即生效。`,
-            function() {
-                $.ajax({
-                    url: `${API_BASE}/admin/users/${id}/status`, type: 'PUT',
-                    contentType: 'application/json', data: JSON.stringify({status: ns}),
-                    success: function(res) {
-                        if(res.code===200||res.code===0){ showToast('success', '已'+txt); loadUsers(currentPage); }
-                        else showToast('error', res.msg);
-                    }
-                });
-            },
-            isDanger
-        );
+    function formatDate(isoStr) {
+        if(!isoStr) return '-';
+        const d = new Date(isoStr);
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     }
 
-    function showToast(type, msg) {
-        const t = $('#toast');
-        t.text(msg).css('background', type==='success'?'#10b981':'#ef4444').fadeIn().delay(2000).fadeOut();
-    }
-
-    /*]]>*/
 </script>
-
 </body>
 </html>

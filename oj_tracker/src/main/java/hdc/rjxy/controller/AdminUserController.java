@@ -27,8 +27,9 @@ public class AdminUserController {
     @GetMapping
     public R<Page<UserAdminVO>> list(@RequestParam(value = "page", defaultValue = "1") int page,
                                      @RequestParam(value = "size", defaultValue = "20") int size,
-                                     @RequestParam(value = "keyword", required = false) String keyword) {
-        return R.ok(adminUserService.pageUsers(page, size, keyword));
+                                     @RequestParam(value = "keyword", required = false) String keyword,
+                                     @RequestParam(value = "status", required = false) String status) {
+        return R.ok(adminUserService.pageUsers(page, size, keyword, status));
     }
 
     @LogAdminOp("更新用户状态")

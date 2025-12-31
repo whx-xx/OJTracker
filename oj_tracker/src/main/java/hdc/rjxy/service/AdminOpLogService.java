@@ -6,5 +6,5 @@ import hdc.rjxy.pojo.vo.AdminOpLogVO;
 
 public interface AdminOpLogService {
     void saveLog(AdminOpLog log);
-    Page<AdminOpLogVO> page(int page, int size);
+    Page<AdminOpLogVO> page(int page, int size, String opType, String keyword);
 }

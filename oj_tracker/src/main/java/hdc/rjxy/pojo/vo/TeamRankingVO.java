@@ -8,6 +8,7 @@ public class TeamRankingVO {
     private Long userId;
     private String studentNo;
     private String nickname;
+    private String handle;
     private Integer rating;
     private LocalDateTime snapshotTime;
 }

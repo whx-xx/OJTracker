@@ -1,7 +1,10 @@
 package hdc.rjxy.aop;
 
+import hdc.rjxy.mapper.UserMapper;
 import hdc.rjxy.pojo.AdminOpLog;
+import hdc.rjxy.pojo.User;
 import hdc.rjxy.pojo.UserSession;
+import hdc.rjxy.pojo.dto.UpdateNicknameReq;
 import hdc.rjxy.pojo.dto.UpdateStatusReq;
 import hdc.rjxy.service.AdminOpLogService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,23 +32,62 @@ public class AdminLogAspect {
     @Autowired
     private AdminOpLogService adminOpLogService;
 
+    @Autowired
+    private UserMapper userMapper;
+
     @Around("@annotation(logAnno)")
     public Object around(ProceedingJoinPoint point, LogAdminOp logAnno) throws Throwable {
         Object result = null;
         Exception ex = null;
+        String oldData = null; // 用于存储旧数据（如旧昵称）
 
         try {
+            // 1. 预处理：如果是修改昵称操作，先查出旧昵称
+            oldData = preHandleOldData(point);
+
+            // 2. 执行目标方法
             result = point.proceed();
             return result;
         } catch (Exception e) {
             ex = e;
             throw e;
         } finally {
-            saveLog(point, logAnno, ex);
+            // 3. 记录日志
+            saveLog(point, logAnno, ex, oldData);
         }
     }
 
-    private void saveLog(ProceedingJoinPoint point, LogAdminOp logAnno, Exception ex) {
+    /**
+     * 预处理：获取旧数据
+     */
+    private String preHandleOldData(ProceedingJoinPoint point) {
+        try {
+            Object[] args = point.getArgs();
+            if (args == null) return null;
+
+            // 判断是否包含修改昵称的 DTO
+            boolean isNicknameUpdate = false;
+            for (Object arg : args) {
+                if (arg instanceof UpdateNicknameReq) {
+                    isNicknameUpdate = true;
+                    break;
+                }
+            }
+
+            if (isNicknameUpdate) {
+                Long targetUserId = resolveTargetUserId(point);
+                if (targetUserId != null) {
+                    User user = userMapper.selectById(targetUserId);
+                    return user != null ? user.getNickname() : null;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("AOP预获取旧数据失败", e);
+        }
+        return null;
+    }
+
+    private void saveLog(ProceedingJoinPoint point, LogAdminOp logAnno, Exception ex, String oldData) {
         try {
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             HttpServletRequest request = (attributes != null) ? attributes.getRequest() : null;
@@ -61,8 +103,6 @@ public class AdminLogAspect {
             opLog.setOpTime(LocalDateTime.now());
 
             // 1. 解析目标用户 ID
-            // 关键修复：如果没有找到目标用户，必须返回 null，而不是 0L。
-            // 因为 0L 会触发外键约束错误 (Foreign key constraint fails)，而 null 被允许。
             Long targetUserId = resolveTargetUserId(point);
             opLog.setTargetUserId(targetUserId);
 
@@ -70,8 +110,8 @@ public class AdminLogAspect {
             if (ex != null) {
                 opLog.setRemark("操作失败: " + ex.getMessage());
             } else {
-                String detail = resolveDetailRemark(point);
-                // 如果解析出了详情，就拼接到日志中
+                // 传入 oldData 进行解析
+                String detail = resolveDetailRemark(point, oldData);
                 opLog.setRemark(detail.isEmpty() ? "" : detail);
             }
 
@@ -99,14 +139,11 @@ public class AdminLogAspect {
                 Parameter param = parameters[i];
                 Object argValue = args[i];
 
-                // 只关心 Long 类型的参数 (用户ID)
                 if (argValue instanceof Long) {
-                    // 策略A：检查 @PathVariable 注解
                     PathVariable pathVar = param.getAnnotation(PathVariable.class);
                     if (pathVar != null) {
                         return (Long) argValue;
                     }
-                    // 策略B：检查参数名
                     String name = param.getName();
                     if ("userId".equals(name) || "id".equals(name)) {
                         return (Long) argValue;
@@ -116,18 +153,15 @@ public class AdminLogAspect {
         } catch (Exception e) {
             log.warn("解析操作日志目标ID异常", e);
         }
-        // 关键修复：返回 null 而不是 0L
         return null;
     }
 
     /**
-     * 解析操作详情（支持 UpdateStatusReq 和 Sync 任务）
-     * 改进版：优先使用 @RequestParam 注解获取参数名，解决编译后参数名丢失导致 remark 为空的问题
+     * 解析操作详情
      */
-    private String resolveDetailRemark(ProceedingJoinPoint point) {
+    private String resolveDetailRemark(ProceedingJoinPoint point, String oldData) {
         try {
             MethodSignature signature = (MethodSignature) point.getSignature();
-            // 使用 Java 反射获取参数对象，以便获取注解
             Parameter[] parameters = signature.getMethod().getParameters();
             Object[] args = point.getArgs();
 
@@ -141,7 +175,6 @@ public class AdminLogAspect {
                 Object arg = args[i];
                 Parameter param = parameters[i];
 
-                // 1. 获取参数名：优先取 @RequestParam 的 value/name，其次取变量名
                 String paramName = param.getName();
                 RequestParam requestParam = param.getAnnotation(RequestParam.class);
                 if (requestParam != null) {
@@ -152,29 +185,31 @@ public class AdminLogAspect {
                     }
                 }
 
-                // 2. 处理同步任务 (AdminSyncController.run)
-                // 匹配 jobType (String)
-                if ("jobType".equals(paramName) && arg instanceof String) {
-                    sb.append("类型: ").append(arg);
-                }
-                // 匹配 days (Integer)
-                if ("days".equals(paramName) && arg instanceof Integer) {
-                    sb.append(", 天数: ").append(arg);
-                }
-
-                // 3. 处理重跑任务 (AdminSyncController.rerun)
-                // 匹配 jobId (Long)
-                if ("jobId".equals(paramName) && arg instanceof Long) {
-                    if ("rerun".equals(signature.getName())) {
-                        sb.append("重跑JobId: ").append(arg);
-                    }
-                }
-
-                // 4. 处理 UpdateStatusReq (用户状态变更)
+                // 1. 处理 UpdateStatusReq
                 if (arg instanceof UpdateStatusReq) {
                     UpdateStatusReq req = (UpdateStatusReq) arg;
                     if (req.getStatus() != null) {
                         return req.getStatus() == 1 ? "动作: 解封" : "动作: 封禁";
+                    }
+                }
+
+                // 2. 处理 UpdateNicknameReq (新增)
+                if (arg instanceof UpdateNicknameReq) {
+                    UpdateNicknameReq req = (UpdateNicknameReq) arg;
+                    String oldStr = (oldData == null) ? "未知" : oldData;
+                    return "原昵称: " + oldStr + " -> 新昵称: " + req.getNickname();
+                }
+
+                // 3. 处理 Sync 任务
+                if ("jobType".equals(paramName) && arg instanceof String) {
+                    sb.append("类型: ").append(arg);
+                }
+                if ("days".equals(paramName) && arg instanceof Integer) {
+                    sb.append(", 天数: ").append(arg);
+                }
+                if ("jobId".equals(paramName) && arg instanceof Long) {
+                    if ("rerun".equals(signature.getName())) {
+                        sb.append("重跑JobId: ").append(arg);
                     }
                 }
             }

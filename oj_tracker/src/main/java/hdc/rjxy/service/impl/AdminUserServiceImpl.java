@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,7 +26,7 @@ public class AdminUserServiceImpl implements AdminUserService {
     private PasswordEncoder passwordEncoder;
 
     @Override
-    public Page<UserAdminVO> pageUsers(int pageNum, int pageSize, String keyword) {
+    public Page<UserAdminVO> pageUsers(int pageNum, int pageSize, String keyword, String status) {
         Page<User> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
 
@@ -33,6 +34,9 @@ public class AdminUserServiceImpl implements AdminUserService {
             wrapper.and(w -> w.like(User::getUsername, keyword)
                     .or().like(User::getNickname, keyword)
                     .or().like(User::getStudentNo, keyword));
+        }
+        if (Objects.equals(status, "0") || Objects.equals(status, "1")) {
+             wrapper.eq(User::getStatus, status);
         }
         wrapper.orderByDesc(User::getId);
 

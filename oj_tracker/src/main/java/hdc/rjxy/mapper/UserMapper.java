@@ -25,7 +25,8 @@ public interface UserMapper extends BaseMapper<User> {
             "  u.student_no AS studentNo, " +
             "  u.nickname AS nickname, " +
             "  rs.rating AS rating, " +
-            "  rs.snapshot_time AS snapshotTime " +
+            "  rs.snapshot_time AS snapshotTime, " +
+            "  rs.handle AS handle " +
             "FROM user u " +
             "LEFT JOIN rating_snapshot rs ON rs.user_id = u.id " +
             "  AND rs.platform_id = #{platformId} " +

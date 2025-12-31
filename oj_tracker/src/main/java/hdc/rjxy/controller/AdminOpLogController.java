@@ -26,8 +26,10 @@ public class AdminOpLogController {
     @GetMapping
     public R<Page<AdminOpLogVO>> list(
             @RequestParam(value = "page", defaultValue = "1") int page,
-            @RequestParam(value = "size", defaultValue = "20") int size
+            @RequestParam(value = "size", defaultValue = "20") int size,
+            @RequestParam(value = "opType", required = false) String opType,
+            @RequestParam(value = "keyword", required = false) String keyword
     ) {
-        return R.ok(adminOpLogService.page(page, size));
+        return R.ok(adminOpLogService.page(page, size, opType, keyword));
     }
 }

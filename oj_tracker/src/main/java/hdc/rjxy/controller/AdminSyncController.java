@@ -8,6 +8,7 @@ import hdc.rjxy.pojo.vo.SyncJobDetailVO;
 import hdc.rjxy.pojo.vo.SyncJobLogVO;
 import hdc.rjxy.pojo.vo.SyncOverviewVO;
 import hdc.rjxy.service.SyncService;
+import hdc.rjxy.task.SyncScheduler;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 public class AdminSyncController {
 
     private final SyncService syncService;
+    private final SyncScheduler syncScheduler;
 
     // 1. 任务列表
     @GetMapping("/jobs")
@@ -73,6 +75,24 @@ public class AdminSyncController {
     public R<Long> rerun(@RequestParam("jobId") Long jobId, HttpSession session) {
         checkAdmin(session);
         return R.ok(syncService.rerunFailedUsers(jobId, "MANUAL_RERUN"));
+    }
+
+    // 6. 获取定时任务开关状态
+    @GetMapping("/schedule/status")
+    public R<Boolean> getScheduleStatus(HttpSession session) {
+        checkAdmin(session);
+        return R.ok(syncScheduler.isEnabled());
+    }
+
+    // 7. 切换定时任务开关
+    @LogAdminOp("切换定时任务状态")
+    @PostMapping("/schedule/toggle")
+    public R<Boolean> toggleSchedule(@RequestParam("enabled") Boolean enabled, HttpSession session) {
+        checkAdmin(session);
+        if (enabled == null) return R.fail("状态不能为空");
+
+        syncScheduler.setEnabled(enabled);
+        return R.ok(syncScheduler.isEnabled());
     }
 
     private void checkAdmin(HttpSession session) {

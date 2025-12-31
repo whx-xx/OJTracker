@@ -1,6 +1,8 @@
 package hdc.rjxy.config;
 
 import jakarta.servlet.Filter;
+import jakarta.servlet.MultipartConfigElement;
+import jakarta.servlet.ServletRegistration;
 import org.springframework.web.filter.CharacterEncodingFilter;
 import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
 
@@ -35,5 +37,25 @@ public class AppInitializer extends AbstractAnnotationConfigDispatcherServletIni
         encodingFilter.setEncoding("UTF-8");
         encodingFilter.setForceEncoding(true);
         return new Filter[]{encodingFilter};
+    }
+
+    /**
+     * 自定义 Servlet 注册信息，开启文件上传支持 (Multipart)
+     */
+    @Override
+    protected void customizeRegistration(ServletRegistration.Dynamic registration) {
+        // 配置上传限制
+        // location: 临时文件存储路径 ("" 表示使用容器默认临时目录)
+        // maxFileSize: 单个文件最大 5MB (5 * 1024 * 1024)
+        // maxRequestSize: 整个请求最大 10MB (10 * 1024 * 1024)
+        // fileSizeThreshold: 文件大小超过 0 字节就写入磁盘
+        MultipartConfigElement multipartConfig = new MultipartConfigElement(
+                "",
+                5 * 1024 * 1024,
+                10 * 1024 * 1024,
+                0
+        );
+
+        registration.setMultipartConfig(multipartConfig);
     }
 }

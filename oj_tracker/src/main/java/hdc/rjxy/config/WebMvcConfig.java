@@ -3,9 +3,6 @@ package hdc.rjxy.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import org.springdoc.core.configuration.SpringDocConfiguration;
-import org.springdoc.webmvc.core.configuration.SpringDocWebMvcConfiguration;
-import org.springdoc.webmvc.ui.SwaggerConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.*;
@@ -24,15 +21,19 @@ import java.util.List;
 
 @Configuration
 @EnableWebMvc               // 开启 Spring MVC 支持
-@EnableAspectJAutoProxy     // 开启 aop代理
-@ComponentScan(basePackages = {
-        "hdc.rjxy.controller", // 扫描 Controller
-        "hdc.rjxy.common",     // 扫描公共组件
-        "org.springdoc",       // 扫描 SpringDoc 的 Controller 和配置类
-        "hdc.rjxy.aop"
-})
+@EnableAspectJAutoProxy     // 开启 AOP 代理
+@ComponentScan(
+        basePackages = {
+                "hdc.rjxy.controller", // 扫描 Controller
+                "hdc.rjxy.common",     // 扫描公共组件
+                "org.springdoc",       // 扫描 SpringDoc
+                "hdc.rjxy.aop"
+        },
+        // 排除 SpringDoc 自带的 SwaggerUiHome，解决根路径 "/" 冲突问题
+        excludeFilters = @ComponentScan.Filter(type = FilterType.REGEX, pattern = "org\\.springdoc\\.webmvc\\.ui\\.SwaggerUiHome")
+)
 @Import({
-        SpringDocConfig.class // 你自己的 Swagger 文档信息配置
+        SpringDocConfig.class // Swagger 文档配置
 })
 public class WebMvcConfig implements WebMvcConfigurer {
 
@@ -57,26 +58,23 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         // Swagger 放行
                         "/swagger-ui/**",
                         "/swagger-ui.html",
-                        "/v3/api-docs/**",  // 接口数据 JSON
+                        "/v3/api-docs/**",
                         "/webjars/**"
                 );
     }
 
-
-    // --- JSON 转换器配置 (支持 Java 8 时间类型) ---
+    // --- JSON 转换器配置 ---
     @Override
     public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
-        // 1. [关键修复] 添加字节数组转换器
-        // 必须加在 Jackson 之前，否则 SpringDoc 返回的 byte[] 会被 Jackson 转成 Base64
+        // 1. 添加字节数组转换器 (防止 swagger 图片乱码)
         converters.add(new ByteArrayHttpMessageConverter());
 
-        // 2. 添加字符串转换器 (防止返回 String 时乱码或被转义)
+        // 2. 添加字符串转换器
         converters.add(new StringHttpMessageConverter(StandardCharsets.UTF_8));
 
+        // 3. Jackson 配置
         ObjectMapper mapper = new ObjectMapper();
-        // 注册 Java 8 时间模块
         mapper.registerModule(new JavaTimeModule());
-        // 禁止将日期写为时间戳，而是 ISO 字符串
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         converters.add(new MappingJackson2HttpMessageConverter(mapper));
     }
@@ -86,8 +84,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public SpringResourceTemplateResolver templateResolver() {
         SpringResourceTemplateResolver resolver = new SpringResourceTemplateResolver();
         resolver.setApplicationContext(applicationContext);
-        resolver.setPrefix("/WEB-INF/templates/"); // 模板文件位置
-        resolver.setSuffix(".html");               // 后缀
+        resolver.setPrefix("/WEB-INF/templates/");
+        resolver.setSuffix(".html");
         resolver.setTemplateMode(TemplateMode.HTML);
         resolver.setCharacterEncoding("UTF-8");
         resolver.setCacheable(false); // 开发环境关闭缓存
@@ -109,20 +107,19 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.viewResolver(resolver);
     }
 
-    // --- 静态资源映射 (CSS/JS/图片) ---
+    // --- 静态资源映射 ---
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // 将 URL 中的 /static/** 映射到工程目录的 /static/ 下
+        // 静态资源 (CSS/JS/Img)
         registry.addResourceHandler("/static/**")
                 .addResourceLocations("/static/");
 
-        // Swagger UI 资源映射
+        // Swagger UI
         registry.addResourceHandler("/swagger-ui/**")
-                .addResourceLocations("classpath:/META-INF/resources/webjars/swagger-ui/5.17.14/");
+                .addResourceLocations("classpath:/META-INF/resources/webjars/swagger-ui/5.17.14/"); // 注意版本号可能需要根据实际jar包调整，或者直接指向 swagger-ui 目录
 
-        // 映射 webjars (Swagger 依赖的基础资源)
         registry.addResourceHandler("/webjars/**")
                 .addResourceLocations("classpath:/META-INF/resources/webjars/")
-                .resourceChain(false); // 开发环境建议关闭缓存
+                .resourceChain(false);
     }
 }

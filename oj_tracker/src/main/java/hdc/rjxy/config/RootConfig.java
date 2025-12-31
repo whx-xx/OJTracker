@@ -9,7 +9,8 @@ import org.springframework.context.annotation.Import;
 @Configuration
 @ComponentScan(basePackages = {
         "hdc.rjxy.service", // 扫描 Service 包
-        "hdc.rjxy.init"     // 扫描 init 包
+        "hdc.rjxy.init",    // 扫描 init 包
+        "hdc.rjxy.task"     // 扫描 task 包
 })
 @Import({
     MyBatisConfig.class, // 数据库配置

@@ -14,6 +14,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -59,16 +60,19 @@ public class AdminLogAspect {
             opLog.setOpType(logAnno.value());
             opLog.setOpTime(LocalDateTime.now());
 
-            // 1. 解析目标用户 ID (增加兜底逻辑，防止数据库报错)
+            // 1. 解析目标用户 ID
+            // 关键修复：如果没有找到目标用户，必须返回 null，而不是 0L。
+            // 因为 0L 会触发外键约束错误 (Foreign key constraint fails)，而 null 被允许。
             Long targetUserId = resolveTargetUserId(point);
-            opLog.setTargetUserId(targetUserId != null ? targetUserId : 0L);
+            opLog.setTargetUserId(targetUserId);
 
             // 2. 设置备注
             if (ex != null) {
                 opLog.setRemark("操作失败: " + ex.getMessage());
             } else {
                 String detail = resolveDetailRemark(point);
-                opLog.setRemark("操作成功" + (detail.isEmpty() ? "" : ": " + detail));
+                // 如果解析出了详情，就拼接到日志中
+                opLog.setRemark(detail.isEmpty() ? "" : detail);
             }
 
             adminOpLogService.saveLog(opLog);
@@ -80,18 +84,14 @@ public class AdminLogAspect {
 
     /**
      * 智能解析 targetUserId
-     * 策略：
-     * 1. 寻找带有 @PathVariable 的 Long 类型参数 (最准确)
-     * 2. 寻找参数名为 userId 或 id 的 Long 类型参数
      */
     private Long resolveTargetUserId(ProceedingJoinPoint point) {
         try {
             MethodSignature signature = (MethodSignature) point.getSignature();
-            // 获取方法的参数元数据 (包含注解信息)
             Parameter[] parameters = signature.getMethod().getParameters();
             Object[] args = point.getArgs();
 
-            if (parameters == null || args == null) return 0L;
+            if (parameters == null || args == null) return null;
 
             for (int i = 0; i < parameters.length; i++) {
                 if (i >= args.length) break;
@@ -101,15 +101,12 @@ public class AdminLogAspect {
 
                 // 只关心 Long 类型的参数 (用户ID)
                 if (argValue instanceof Long) {
-
-                    // 策略A：检查 @PathVariable 注解 (最稳健，不受编译参数影响)
+                    // 策略A：检查 @PathVariable 注解
                     PathVariable pathVar = param.getAnnotation(PathVariable.class);
                     if (pathVar != null) {
-                        // 如果是 Long 类型的 PathVariable，99% 是 userId
                         return (Long) argValue;
                     }
-
-                    // 策略B：检查参数名 (作为补充)
+                    // 策略B：检查参数名
                     String name = param.getName();
                     if ("userId".equals(name) || "id".equals(name)) {
                         return (Long) argValue;
@@ -119,22 +116,73 @@ public class AdminLogAspect {
         } catch (Exception e) {
             log.warn("解析操作日志目标ID异常", e);
         }
-        return 0L; // 默认返回 0，满足数据库 NOT NULL 约束
+        // 关键修复：返回 null 而不是 0L
+        return null;
     }
 
+    /**
+     * 解析操作详情（支持 UpdateStatusReq 和 Sync 任务）
+     * 改进版：优先使用 @RequestParam 注解获取参数名，解决编译后参数名丢失导致 remark 为空的问题
+     */
     private String resolveDetailRemark(ProceedingJoinPoint point) {
-        Object[] args = point.getArgs();
-        if (args == null) return "";
+        try {
+            MethodSignature signature = (MethodSignature) point.getSignature();
+            // 使用 Java 反射获取参数对象，以便获取注解
+            Parameter[] parameters = signature.getMethod().getParameters();
+            Object[] args = point.getArgs();
 
-        for (Object arg : args) {
-            if (arg instanceof UpdateStatusReq) {
-                UpdateStatusReq req = (UpdateStatusReq) arg;
-                if (req.getStatus() != null) {
-                    return req.getStatus() == 1 ? "启用用户" : "禁用用户";
+            if (args == null || parameters == null) return "";
+
+            StringBuilder sb = new StringBuilder();
+
+            for (int i = 0; i < parameters.length; i++) {
+                if (i >= args.length) break;
+
+                Object arg = args[i];
+                Parameter param = parameters[i];
+
+                // 1. 获取参数名：优先取 @RequestParam 的 value/name，其次取变量名
+                String paramName = param.getName();
+                RequestParam requestParam = param.getAnnotation(RequestParam.class);
+                if (requestParam != null) {
+                    if (!requestParam.value().isEmpty()) {
+                        paramName = requestParam.value();
+                    } else if (!requestParam.name().isEmpty()) {
+                        paramName = requestParam.name();
+                    }
+                }
+
+                // 2. 处理同步任务 (AdminSyncController.run)
+                // 匹配 jobType (String)
+                if ("jobType".equals(paramName) && arg instanceof String) {
+                    sb.append("类型: ").append(arg);
+                }
+                // 匹配 days (Integer)
+                if ("days".equals(paramName) && arg instanceof Integer) {
+                    sb.append(", 天数: ").append(arg);
+                }
+
+                // 3. 处理重跑任务 (AdminSyncController.rerun)
+                // 匹配 jobId (Long)
+                if ("jobId".equals(paramName) && arg instanceof Long) {
+                    if ("rerun".equals(signature.getName())) {
+                        sb.append("重跑JobId: ").append(arg);
+                    }
+                }
+
+                // 4. 处理 UpdateStatusReq (用户状态变更)
+                if (arg instanceof UpdateStatusReq) {
+                    UpdateStatusReq req = (UpdateStatusReq) arg;
+                    if (req.getStatus() != null) {
+                        return req.getStatus() == 1 ? "动作: 解封" : "动作: 封禁";
+                    }
                 }
             }
-            // 你可以在这里继续解析 UpdateNicknameReq 等其他参数
+            return sb.toString();
+        } catch (Exception e) {
+            log.warn("解析操作日志详情异常", e);
+            return "";
         }
-        return "";
     }
+
 }

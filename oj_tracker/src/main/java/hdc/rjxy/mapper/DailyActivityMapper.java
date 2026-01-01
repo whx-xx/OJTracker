@@ -39,10 +39,11 @@ public interface DailyActivityMapper extends BaseMapper<DailyActivity> {
             "COUNT(CASE WHEN submit_cnt > 0 THEN 1 END) AS activeDays " +
             "FROM daily_activity " +
             "WHERE user_id = #{userId} AND platform_id = #{platformId} " +
+            "AND handle = #{handle} " +
             "AND day >= #{start} AND day <= #{end}")
     DailyActivitySummaryVO sumByRange(@Param("userId") Long userId,
                                       @Param("platformId") Long platformId,
-                                      @Param("handle") String handle, // handle 参数这里其实没用到，但为了兼容性保留
+                                      @Param("handle") String handle,
                                       @Param("start") LocalDate start,
                                       @Param("end") LocalDate end);
 }

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.*;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -46,6 +47,13 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
         Platform p = platformMapper.selectOne(new LambdaQueryWrapper<Platform>().eq(Platform::getCode, platformCode));
         if (p == null) throw new IllegalArgumentException("平台不存在");
 
+        // 获取 Handle
+        UserPlatformAccount account = upaMapper.selectOne(new LambdaQueryWrapper<UserPlatformAccount>()
+                .eq(UserPlatformAccount::getUserId, userId)
+                .eq(UserPlatformAccount::getPlatformId, p.getId()));
+        if (account == null) return Collections.emptyList();
+        String handle = account.getIdentifierValue();
+
         int lim = (limit == null || limit <= 0) ? 50 : Math.min(limit, 200);
         LocalDate today = LocalDate.now(ZONE);
         LocalDateTime start, end;
@@ -63,6 +71,7 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
         submissionLogMapper.selectPage(page, new LambdaQueryWrapper<SubmissionLog>()
                 .eq(SubmissionLog::getUserId, userId)
                 .eq(SubmissionLog::getPlatformId, p.getId())
+                .eq(SubmissionLog::getHandle, handle)
                 .ge(SubmissionLog::getSubmitTime, start)
                 .lt(SubmissionLog::getSubmitTime, end)
                 .orderByDesc(SubmissionLog::getSubmitTime));
@@ -166,13 +175,17 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
             LocalDateTime dayStart = day.atStartOfDay();
             LocalDateTime dayEnd = day.plusDays(1).atStartOfDay();
 
-            int solved = solvedProblemMapper.countSolvedInRange(userId, p.getId(), dayStart, dayEnd);
+            int solved = solvedProblemMapper.countSolvedInRange(userId, p.getId(), handle, dayStart, dayEnd);
             Long submitCnt = submissionLogMapper.selectCount(new LambdaQueryWrapper<SubmissionLog>()
                     .eq(SubmissionLog::getUserId, userId)
+                    .eq(SubmissionLog::getPlatformId, p.getId())
+                    .eq(SubmissionLog::getHandle, handle)
                     .ge(SubmissionLog::getSubmitTime, dayStart)
                     .lt(SubmissionLog::getSubmitTime, dayEnd));
             Long acceptCnt = submissionLogMapper.selectCount(new LambdaQueryWrapper<SubmissionLog>()
                     .eq(SubmissionLog::getUserId, userId)
+                    .eq(SubmissionLog::getPlatformId, p.getId())
+                    .eq(SubmissionLog::getHandle, handle)
                     .eq(SubmissionLog::getVerdict, "OK")
                     .ge(SubmissionLog::getSubmitTime, dayStart)
                     .lt(SubmissionLog::getSubmitTime, dayEnd));

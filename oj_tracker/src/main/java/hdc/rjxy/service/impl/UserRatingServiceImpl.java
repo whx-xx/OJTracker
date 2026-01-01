@@ -37,12 +37,15 @@ public class UserRatingServiceImpl implements UserRatingService {
                 .eq(UserPlatformAccount::getPlatformId, p.getId()));
         if (account == null) return new ArrayList<>();
 
+        String handle = account.getIdentifierValue();
+
         LocalDateTime end = LocalDateTime.now();
         LocalDateTime start = end.minusDays(days - 1L);
 
         List<RatingSnapshot> snapshots = ratingSnapshotMapper.selectList(new LambdaQueryWrapper<RatingSnapshot>()
                 .eq(RatingSnapshot::getUserId, userId)
                 .eq(RatingSnapshot::getPlatformId, p.getId())
+                .eq(RatingSnapshot::getHandle, handle)
                 .ge(RatingSnapshot::getSnapshotTime, start)
                 .le(RatingSnapshot::getSnapshotTime, end)
                 .orderByAsc(RatingSnapshot::getSnapshotTime));

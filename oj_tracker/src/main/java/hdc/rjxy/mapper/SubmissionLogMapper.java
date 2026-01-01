@@ -47,6 +47,7 @@ public interface SubmissionLogMapper extends BaseMapper<SubmissionLog> {
             "  FROM submission_log " +
             "  WHERE user_id = #{userId} " +
             "    AND platform_id = #{platformId} " +
+            "    AND handle = #{handle} " +
             "    AND submit_time >= #{start} " +
             "    AND submit_time < #{end} " +
             ") t " +

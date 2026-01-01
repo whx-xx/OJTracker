@@ -26,9 +26,11 @@ public interface SolvedProblemMapper extends BaseMapper<SolvedProblem> {
 
     @Select("SELECT COUNT(*) FROM solved_problem " +
             "WHERE user_id = #{userId} AND platform_id = #{platformId} " +
+            "AND handle = #{handle} " +
             "AND first_ac_time >= #{start} AND first_ac_time < #{end}")
     int countSolvedInRange(@Param("userId") Long userId,
                            @Param("platformId") Long platformId,
+                           @Param("handle") String handle,
                            @Param("start") LocalDateTime start,
                            @Param("end") LocalDateTime end);
 }

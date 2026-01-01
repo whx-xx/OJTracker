@@ -44,6 +44,7 @@ public class UserActivityServiceImpl implements UserActivityService {
         if (account == null || account.getIdentifierValue() == null) {
             return new ArrayList<>();
         }
+        String handle = account.getIdentifierValue();
 
         ZoneId zone = ZoneId.of("Asia/Shanghai");
         LocalDate today = LocalDate.now(zone);
@@ -52,6 +53,7 @@ public class UserActivityServiceImpl implements UserActivityService {
         List<DailyActivity> logs = dailyActivityMapper.selectList(new LambdaQueryWrapper<DailyActivity>()
                 .eq(DailyActivity::getUserId, userId)
                 .eq(DailyActivity::getPlatformId, p.getId())
+                .eq(DailyActivity::getHandle, handle)
                 .ge(DailyActivity::getDay, start)
                 .le(DailyActivity::getDay, today)
                 .orderByAsc(DailyActivity::getDay));

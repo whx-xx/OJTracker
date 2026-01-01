@@ -58,7 +58,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         Assert.hasText(req.getUsername(), "用户名不能为空");
 
         // 学号检验逻辑
-        if (!req.getStudentNo().matches("^20\\\\d{12}$")) {
+        if (!req.getStudentNo().matches("^20\\d{12}$")) {
             throw new IllegalArgumentException("学号格式错误：请输入14位学号（如 20231819403010）");
         }
 
@@ -67,18 +67,22 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             throw new IllegalArgumentException("密码至少6位");
         }
 
-        // 检查学号是否已存在
-        long count = this.count(new LambdaQueryWrapper<User>()
-                .eq(User::getStudentNo, req.getStudentNo()));
-        if (count > 0) {
-            throw new IllegalArgumentException("该学号已注册");
+        // 检查学号是否合法 (不能与现有的 studentNo 或 username 重复)
+        long studentNoCount = this.count(new LambdaQueryWrapper<User>()
+                .eq(User::getStudentNo, req.getStudentNo())
+                .or()
+                .eq(User::getUsername, req.getStudentNo()));
+        if (studentNoCount > 0) {
+            throw new IllegalArgumentException("该学号已被注册或与现有用户名冲突");
         }
 
-        // 检查用户名是否重复
+        // 检查用户名是否合法 (不能与现有的 username 或 studentNo 重复)
         long nameCount = this.count(new LambdaQueryWrapper<User>()
-                .eq(User::getUsername, req.getUsername()));
+                .eq(User::getUsername, req.getUsername())
+                .or()
+                .eq(User::getStudentNo, req.getUsername()));
         if (nameCount > 0) {
-            throw new IllegalArgumentException("用户名已被占用");
+            throw new IllegalArgumentException("该用户名已被占用或与现有学号冲突");
         }
 
         // 创建用户对象

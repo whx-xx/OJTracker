@@ -41,12 +41,21 @@ public class UserStatsServiceImpl implements UserStatsService {
         Platform p = platformMapper.selectOne(new LambdaQueryWrapper<Platform>().eq(Platform::getCode, platformCode));
         if (p == null) throw new IllegalArgumentException("平台不存在");
 
+        // 先查当前绑定的 Handle
+        UserPlatformAccount account = upaMapper.selectOne(new LambdaQueryWrapper<UserPlatformAccount>()
+                .eq(UserPlatformAccount::getUserId, userId)
+                .eq(UserPlatformAccount::getPlatformId, p.getId()));
+        if (account == null) return Collections.emptyList(); // 如果没绑定，直接返回空
+        String handle = account.getIdentifierValue();
+
+
         int lim = (limit == null || limit <= 0) ? 100 : Math.min(limit, 500);
 
         // 查询 Rating 记录，按时间倒序查最后 N 条
         List<RatingSnapshot> snapshots = ratingSnapshotMapper.selectList(new LambdaQueryWrapper<RatingSnapshot>()
                 .eq(RatingSnapshot::getUserId, userId)
                 .eq(RatingSnapshot::getPlatformId, p.getId())
+                .eq(RatingSnapshot::getHandle, handle)
                 .orderByDesc(RatingSnapshot::getSnapshotTime)
                 .last("LIMIT " + lim));
 
@@ -94,16 +103,17 @@ public class UserStatsServiceImpl implements UserStatsService {
         if (da == null) da = new DailyActivitySummaryVO();
 
         // 2. 解题数统计 (Solved)
-        int solvedTotal = solvedProblemMapper.countSolvedInRange(userId, p.getId(), startTime, endTime);
+        int solvedTotal = solvedProblemMapper.countSolvedInRange(userId, p.getId(), handle, startTime, endTime);
 
         // 3. 本周解题数 (最近7天)
         LocalDateTime weeklyStart = today.minusDays(6).atStartOfDay();
-        int weeklySolved = solvedProblemMapper.countSolvedInRange(userId, p.getId(), weeklyStart, endTime);
+        int weeklySolved = solvedProblemMapper.countSolvedInRange(userId, p.getId(), handle, weeklyStart, endTime);
 
         // 4. Rating 首尾数据 (用于计算 Delta)
         RatingSnapshot first = ratingSnapshotMapper.selectOne(new LambdaQueryWrapper<RatingSnapshot>()
                 .eq(RatingSnapshot::getUserId, userId)
                 .eq(RatingSnapshot::getPlatformId, p.getId())
+                .eq(RatingSnapshot::getHandle, handle)
                 .ge(RatingSnapshot::getSnapshotTime, startTime)
                 .le(RatingSnapshot::getSnapshotTime, endTime)
                 .orderByAsc(RatingSnapshot::getSnapshotTime)
@@ -112,6 +122,7 @@ public class UserStatsServiceImpl implements UserStatsService {
         RatingSnapshot last = ratingSnapshotMapper.selectOne(new LambdaQueryWrapper<RatingSnapshot>()
                 .eq(RatingSnapshot::getUserId, userId)
                 .eq(RatingSnapshot::getPlatformId, p.getId())
+                .eq(RatingSnapshot::getHandle, handle)
                 .ge(RatingSnapshot::getSnapshotTime, startTime)
                 .le(RatingSnapshot::getSnapshotTime, endTime)
                 .orderByDesc(RatingSnapshot::getSnapshotTime)
@@ -127,7 +138,7 @@ public class UserStatsServiceImpl implements UserStatsService {
         vo.setSubmitTotal(da.getSubmitTotal());
         vo.setAcceptTotal(da.getAcceptTotal());
         vo.setActiveDays(da.getActiveDays());
-        vo.setAvgSubmitPerDay(days == 0 ? 0 : (double) da.getSubmitTotal() / days);
+        vo.setAvgSubmitPerDay((double) da.getSubmitTotal() / days);
 
         vo.setSolvedTotal(solvedTotal);
         vo.setWeeklySolved(weeklySolved);

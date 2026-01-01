@@ -109,6 +109,7 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
             RatingSnapshot last = ratingSnapshotMapper.selectOne(new LambdaQueryWrapper<RatingSnapshot>()
                     .eq(RatingSnapshot::getUserId, userId)
                     .eq(RatingSnapshot::getPlatformId, p.getId())
+                    .eq(RatingSnapshot::getHandle, handle)
                     .orderByDesc(RatingSnapshot::getSnapshotTime)
                     .last("LIMIT 1"));
             LocalDateTime lastTime = (last != null) ? last.getSnapshotTime() : null;

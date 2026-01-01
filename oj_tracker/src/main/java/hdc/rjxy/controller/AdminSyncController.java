@@ -9,11 +9,13 @@ import hdc.rjxy.pojo.vo.SyncJobLogVO;
 import hdc.rjxy.pojo.vo.SyncOverviewVO;
 import hdc.rjxy.service.SyncService;
 import hdc.rjxy.task.SyncScheduler;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-
+@Tag(name = "管理员-同步管理", description = "管理员同步相关操作")
 @RestController
 @RequestMapping("/api/admin/sync")
 @RequiredArgsConstructor
@@ -23,6 +25,7 @@ public class AdminSyncController {
     private final SyncScheduler syncScheduler;
 
     // 1. 任务列表
+    @Operation(summary = "任务列表")
     @GetMapping("/jobs")
     public R<Page<SyncJobLogVO>> jobs(
             @RequestParam(value = "page", defaultValue = "1") int page,
@@ -35,6 +38,7 @@ public class AdminSyncController {
     }
 
     // 2. 任务详情
+    @Operation(summary = "任务详情")
     @GetMapping("/jobs/{jobId}")
     public R<SyncJobDetailVO> jobDetail(@PathVariable("jobId") Long jobId, HttpSession session) {
         checkAdmin(session);
@@ -42,6 +46,7 @@ public class AdminSyncController {
     }
 
     // 3. 手动触发同步
+    @Operation(summary = "手动触发同步")
     @LogAdminOp("手动触发同步任务")
     @PostMapping("/run")
     public R<Long> run(@RequestParam("jobType") String jobType,
@@ -60,6 +65,7 @@ public class AdminSyncController {
     }
 
     // 4. 概览数据
+    @Operation(summary = "概览数据")
     @GetMapping("/overview")
     public R<SyncOverviewVO> overview(
             @RequestParam(value = "limit", defaultValue = "20") int limit,
@@ -70,6 +76,7 @@ public class AdminSyncController {
     }
 
     // 5. 重跑失败任务
+    @Operation(summary = "重跑失败同步任务")
     @LogAdminOp("重跑失败同步任务")
     @PostMapping("/rerun")
     public R<Long> rerun(@RequestParam("jobId") Long jobId, HttpSession session) {
@@ -78,6 +85,7 @@ public class AdminSyncController {
     }
 
     // 6. 获取定时任务开关状态
+    @Operation(summary = "获取定时任务开关状态")
     @GetMapping("/schedule/status")
     public R<Boolean> getScheduleStatus(HttpSession session) {
         checkAdmin(session);
@@ -85,6 +93,7 @@ public class AdminSyncController {
     }
 
     // 7. 切换定时任务开关
+    @Operation(summary = "切换定时任务开关")
     @LogAdminOp("切换定时任务状态")
     @PostMapping("/schedule/toggle")
     public R<Boolean> toggleSchedule(HttpSession session) {

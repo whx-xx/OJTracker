@@ -18,7 +18,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
     MyBatisConfig.class, // 数据库配置
     RedisConfig.class,   // Redis配置
     CfConfig.class,
-    JacksonConfig.class
+    JacksonConfig.class,
+    ScheduleConfig.class
  })
 public class RootConfig {
     @Bean

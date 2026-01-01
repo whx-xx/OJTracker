@@ -249,26 +249,10 @@
             color: var(--text-gray);
         }
 
-        .btn-unbind {
-            padding: 6px 12px;
-            border: 1px solid var(--danger-color);
-            color: var(--danger-color);
-            background: transparent;
-            border-radius: 6px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-unbind:hover {
-            background: var(--danger-color);
-            color: white;
-        }
-
         .btn-add-platform {
             width: 100%;
             padding: 12px;
-            background: dashed;
+            /* 修复：移除了无效的 background: dashed; */
             border: 2px dashed var(--border-color);
             color: var(--text-gray);
             border-radius: 8px;
@@ -394,6 +378,10 @@
                 <button class="btn-add-platform" onclick="openBindModal()">
                     <i class="fas fa-plus"></i> 绑定新账号 (Codeforces)
                 </button>
+                <!-- 新增：覆盖提示 -->
+                <p style="color: #999; font-size: 12px; margin-top: 12px; text-align: center;">
+                    <i class="fas fa-info-circle"></i> 提示：如需更换绑定的账号，请直接重新绑定，新账号将自动覆盖旧账号。
+                </p>
             </div>
         </div>
 
@@ -464,6 +452,7 @@
 
                         const div = document.createElement('div');
                         div.className = 'platform-item';
+                        // 修改：移除了 button class="btn-unbind"
                         div.innerHTML = `
                                 <div class="platform-info">
                                     <div class="platform-icon">
@@ -474,7 +463,6 @@
                                         <p>Handle: <strong>${item.identifierValue}</strong></p>
                                     </div>
                                 </div>
-                                <button class="btn-unbind" onclick="unbindPlatform('${item.platformCode || 'CF'}')">解绑</button>
                             `;
                         container.appendChild(div);
                     });
@@ -571,13 +559,17 @@
                 axios.get('/api/me/platforms').then(res => {
                     let currentItems = [];
                     if(res.data.code === 200 && res.data.data) {
-                        currentItems = res.data.data.map(p => ({
-                            platformId: p.platformId || 1,
-                            identifierType: 'USERNAME',
-                            identifierValue: p.identifierValue
-                        }));
+                        // 修改：过滤掉旧的 CF 绑定，实现"覆盖"效果
+                        currentItems = res.data.data
+                            .filter(p => p.platformCode !== 'CF')
+                            .map(p => ({
+                                platformId: p.platformId || 1,
+                                identifierType: 'USERNAME',
+                                identifierValue: p.identifierValue
+                            }));
                     }
 
+                    // 添加新的绑定
                     currentItems.push({
                         platformId: 1,
                         identifierType: 'USERNAME',
@@ -595,37 +587,6 @@
                 });
             }
         });
-    }
-
-    function unbindPlatform(platformCode) {
-        Swal.fire({
-            title: '确认解绑?',
-            text: "解绑后将不再同步该账号的数据",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#e74c3c',
-            confirmButtonText: '是的，解绑'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                axios.get('/api/me/platforms').then(res => {
-                    let currentItems = res.data.data || [];
-                    const newItems = currentItems
-                        .filter(p => p.platformCode !== platformCode)
-                        .map(p => ({
-                            platformId: p.platformId,
-                            identifierType: 'USERNAME',
-                            identifierValue: p.identifierValue
-                        }));
-
-                    return axios.post('/api/me/platforms', { items: newItems });
-                }).then(res => {
-                    if(res.data.code === 200) {
-                        Swal.fire('已解绑', '', 'success');
-                        loadMyPlatforms();
-                    }
-                });
-            }
-        })
     }
 
     function uploadAvatar() {

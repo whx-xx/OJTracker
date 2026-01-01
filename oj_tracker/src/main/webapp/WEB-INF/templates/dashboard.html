@@ -347,7 +347,7 @@
 <div class="welcome-banner">
     <div class="welcome-text">
         <h1 id="welcomeUser">欢迎回来!</h1>
-        <p>准备好迎接今天的算法挑战了吗？</p>
+        <p>每一行代码，都是通往梦想的脚印。</p>
     </div>
     <button class="refresh-btn" onclick="triggerSync()">
         <i class="fas fa-sync-alt" id="syncIcon"></i>
@@ -465,6 +465,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         loadSummary();
+        loadUserProfile(); // 1. 新增：加载用户 Profile 获取 Handle
         loadHeatmap();
         loadRatingHistory(5000); // 默认加载全部
         loadWeeklyProblems();
@@ -479,7 +480,7 @@
         }, 300);
     });
 
-    // 1. Chart.js 插件：绘制背景色带
+    // Chart.js 插件：绘制背景色带
     const cfBackgroundPlugin = {
         id: 'cfBackground',
         beforeDraw: (chart) => {
@@ -542,6 +543,29 @@
         });
     }
 
+    // 修改：调用 /api/me/platforms 获取绑定列表来查找 Handle
+    function loadUserProfile() {
+        axios.get('/api/me/platforms')
+            .then(res => {
+                if (res.data.code === 200 && Array.isArray(res.data.data)) {
+                    // 查找 platformCode 为 CF 的条目
+                    const cfBinding = res.data.data.find(p => p.platformCode === 'CF');
+
+                    if (cfBinding && cfBinding.identifierValue) {
+                        document.getElementById('welcomeUser').textContent = `你好, ${cfBinding.identifierValue}!`;
+                    } else {
+                        document.getElementById('welcomeUser').textContent = `你好, CF Coder!`;
+                    }
+                } else {
+                    document.getElementById('welcomeUser').textContent = `你好, CF Coder!`;
+                }
+            })
+            .catch(() => {
+                // 接口失败时的兜底
+                document.getElementById('welcomeUser').textContent = `你好, CF Coder!`;
+            });
+    }
+
     function loadSummary() {
         axios.get('/api/users/summary', { params: { platformCode: 'CF' } })
             .then(res => {
@@ -551,7 +575,8 @@
                     animateValue("valRating", 0, data.ratingEnd || 0, 800);
                     animateValue("valWeeklySolved", 0, data.weeklySolved || 0, 800);
                     animateValue("valActiveDays", 0, data.activeDays || 0, 800);
-                    document.getElementById('welcomeUser').textContent = `你好, ${data.platformCode} Coder!`;
+
+                    // 2. 修改：移除了这里设置 welcomeUser 的逻辑，交由 loadUserProfile 处理
                 }
             }).catch(console.error);
     }
@@ -621,7 +646,7 @@
         return 'color-l4';
     }
 
-    // 3. 切换 Tab 逻辑
+    // 切换 Tab 逻辑
     function switchRatingTab(days, btn) {
         // 更新按钮样式
         const tabs = document.querySelectorAll('.chart-tab');
@@ -632,7 +657,7 @@
         loadRatingHistory(days);
     }
 
-    // 4. 加载 Rating 历史图表 (CF 风格)
+    // 加载 Rating 历史图表 (CF 风格)
     function loadRatingHistory(days) {
         const ctx = document.getElementById('ratingChart').getContext('2d');
 

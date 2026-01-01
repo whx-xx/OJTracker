@@ -4,15 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>提交记录</title>
+    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
-        body {
-            background-color: #f1f5f9;
-            padding: 20px;
+        :root {
+            --primary-color: #4e54c8;
+            --secondary-color: #8f94fb;
+            --text-light: #7f8c8d;
+            --text-dark: #34495e;
+            --border-color: #e2e8f0;
+            --bg-color: #f1f5f9;
         }
-        /* 时间轴样式保持不变，优化间距 */
+
+        body {
+            background-color: var(--bg-color);
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* 时间轴样式 */
         .timeline { position: relative; padding: 10px 0; }
         .timeline-item { position: relative; padding-left: 40px; margin-bottom: 15px; }
         .timeline-item::before { content: ''; position: absolute; left: 15px; top: 0; bottom: -15px; width: 2px; background-color: #e9ecef; }
@@ -20,9 +35,7 @@
         .timeline-icon { position: absolute; left: 0; top: 0; width: 32px; height: 32px; border-radius: 50%; text-align: center; line-height: 32px; color: #fff; font-size: 14px; z-index: 1; }
         .timeline-content { background: #fff; border: 1px solid #e9ecef; border-radius: 4px; padding: 12px 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: transform 0.2s; }
         .timeline-content:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .verdict-badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; }
-
-        .stat-card { border: none; border-radius: 8px; color: white; margin-bottom: 1rem; }
+        .verdict-badge { font-size: 0.75rem; padding: 3px 8px; border-radius: 10px; font-weight: 600; min-width: 40px; display: inline-block; text-align: center; }
 
         .toolbar-container {
             background: #fff;
@@ -31,6 +44,41 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             margin-bottom: 20px;
         }
+
+        /* === 分页样式 === */
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            background: #fff;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .pagination-info { font-size: 13px; color: var(--text-light); }
+
+        .page-btn {
+            border: 1px solid var(--border-color);
+            background: white;
+            color: var(--text-dark);
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .page-btn:hover:not(:disabled) { border-color: var(--primary-color); color: var(--primary-color); }
+        .page-btn.active { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
+        .page-btn:disabled { background-color: #f5f5f5; color: #ccc; cursor: not-allowed; }
+
+        .search-input-group input:focus { box-shadow: none; border-color: var(--primary-color); }
     </style>
 </head>
 <body>
@@ -46,11 +94,11 @@
         </div>
 
         <div class="d-flex gap-2 align-items-center">
-            <div class="input-group" style="width: 250px;">
-                <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
-                <input type="text" id="searchInput" class="form-control border-start-0" placeholder="筛选当前页(题目/结果)..." onkeyup="filterLocalPage()">
+            <div class="input-group search-input-group" style="width: 250px;">
+                <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                <input type="text" id="searchInput" class="form-control border-start-0" placeholder="搜索题目..." onkeyup="handleSearchDebounced()">
             </div>
-            <button type="button" class="btn btn-primary" onclick="refreshData()">
+            <button type="button" class="btn btn-primary" onclick="refreshData()" style="background-color: var(--primary-color); border-color: var(--primary-color);">
                 <i class="fas fa-sync-alt"></i> 同步
             </button>
         </div>
@@ -58,40 +106,15 @@
 
     <!-- 内容区域 -->
     <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body">
-            <div id="timeline-container" class="timeline">
+        <div class="card-body p-0">
+            <div id="timeline-container" class="timeline p-4">
                 <!-- JS 动态填充 -->
             </div>
         </div>
-        <!-- 分页条 -->
-        <div class="card-footer bg-white border-top-0 d-flex justify-content-end py-3">
-            <nav aria-label="Page navigation">
-                <ul class="pagination mb-0" id="pagination-container">
-                    <!-- JS 动态填充 -->
-                </ul>
-            </nav>
-        </div>
-    </div>
-</div>
-
-<!-- 1. 新增：Toast 容器 (用于显示右上角提示) -->
-<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;"></div>
-
-<!-- 2. 新增：确认模态框 (替代 confirm 弹窗) -->
-<div class="modal fade" id="confirmModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-bottom-0 pb-0">
-                <h5 class="modal-title fs-5 fw-bold">确认操作</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body py-4" id="confirmModalBody">
-                <!-- 动态内容 -->
-            </div>
-            <div class="modal-footer border-top-0 pt-0">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-primary px-4" id="confirmModalBtn">确定</button>
-            </div>
+        <!-- 分页容器 -->
+        <div class="pagination-container" id="paginationContainer" style="display:none;">
+            <div class="pagination-info" id="pageInfo"></div>
+            <div id="pagination" style="display:flex;"></div>
         </div>
     </div>
 </div>
@@ -102,68 +125,33 @@
 <script>
     // 全局状态
     let currentState = {
-        range: 'ALL', // 默认全部
+        range: 'TODAY',
         page: 1,
         size: 20,
         loading: false
     };
 
+    let searchTimeout;
+
     $(document).ready(function() {
         loadData();
     });
 
-    // --- 3. 新增：工具函数 ---
+    // --- 工具函数 ---
 
-    // 显示 Toast 提示
     function showToast(message, type = 'info') {
-        let bgClass = 'text-bg-primary';
-        let icon = '<i class="fas fa-info-circle me-2"></i>';
-
-        if (type === 'success') {
-            bgClass = 'text-bg-success';
-            icon = '<i class="fas fa-check-circle me-2"></i>';
-        } else if (type === 'error') {
-            bgClass = 'text-bg-danger';
-            icon = '<i class="fas fa-exclamation-circle me-2"></i>';
-        }
-
-        const toastHtml = `
-            <div class="toast align-items-center ${bgClass} border-0 shadow-sm" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex">
-                    <div class="toast-body fs-6">
-                        ${icon} ${message}
-                    </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-            </div>
-        `;
-
-        const $toast = $(toastHtml);
-        $('.toast-container').append($toast);
-        const toast = new bootstrap.Toast($toast[0], { delay: 3000 });
-        toast.show();
-
-        // 隐藏后移除 DOM
-        $toast.on('hidden.bs.toast', function () {
-            $(this).remove();
-        });
-    }
-
-    // 显示确认弹窗
-    function showConfirm(message, callback) {
-        $('#confirmModalBody').text(message);
-        const modalEl = document.getElementById('confirmModal');
-        const modal = new bootstrap.Modal(modalEl);
-
-        // 解绑旧事件并绑定新事件
-        $('#confirmModalBtn').off('click').on('click', function() {
-            modal.hide();
-            if (typeof callback === 'function') {
-                callback();
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
             }
         });
-
-        modal.show();
+        Toast.fire({ icon: type, title: message });
     }
 
     // --- 业务逻辑 ---
@@ -183,25 +171,40 @@
         loadData();
     }
 
+    function handleSearchDebounced() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            currentState.page = 1;
+            loadData();
+        }, 500);
+    }
+
     function loadData() {
         currentState.loading = true;
         const container = $('#timeline-container');
+        const pagination = $('#paginationContainer');
+
         container.html('<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">加载中...</p></div>');
+        pagination.hide();
+
+        const keyword = $('#searchInput').val().trim();
 
         $.get(`/api/user/submissions/timeline`, {
             platform: 'CF',
             range: currentState.range,
             page: currentState.page,
-            size: currentState.size
+            size: currentState.size,
+            keyword: keyword
         }, function(res) {
             currentState.loading = false;
             if (res.code === 200) {
                 const pageData = res.data;
                 renderTimeline(pageData.records);
-                renderPagination(pageData);
+                renderPagination(pageData.total, pageData.pages, pageData.current);
+                pagination.show();
             } else {
                 container.html(`<div class="text-center py-5 text-danger">${res.msg}</div>`);
-                showToast(res.msg, 'error'); // 加载失败也提示一下
+                showToast(res.msg, 'error');
             }
         }).fail(function() {
             currentState.loading = false;
@@ -211,66 +214,113 @@
     }
 
     function refreshData() {
-        // 4. 优化：使用自定义模态框替代 confirm
-        // 注意：这里先捕获触发按钮，因为 showConfirm 是异步的
         const btn = $(event.target).closest('button');
 
-        showConfirm("同步数据可能需要较长时间，确定立即同步吗？", function() {
-            // 用户点击“确定”后执行
-            const originalHtml = btn.html();
-            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> 同步中...');
+        Swal.fire({
+            title: '确认同步数据？',
+            text: "同步数据可能需要较长时间，确定立即执行吗？",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#4e54c8',
+            cancelButtonColor: '#95a5a6',
+            confirmButtonText: '确定同步',
+            cancelButtonText: '取消'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const originalHtml = btn.html();
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> 同步中...');
 
-            $.post('/api/user/submissions/refresh?count=100', function(res) {
-                if(res.code === 200) {
-                    // 5. 优化：使用 Toast 替代 alert
-                    showToast(`同步完成！新增: ${res.data.inserted} 条`, 'success');
-                    currentState.page = 1;
-                    loadData();
-                } else {
-                    showToast(res.msg || "同步失败", 'error');
-                }
-            }).fail(function() {
-                showToast("同步请求发送失败", 'error');
-            }).always(function() {
-                btn.prop('disabled', false).html(originalHtml);
-            });
+                $.post('/api/user/submissions/refresh?count=100', function(res) {
+                    if(res.code === 200) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '同步完成',
+                            text: `新增: ${res.data.inserted} 条`,
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+                        currentState.page = 1;
+                        loadData();
+                    } else {
+                        Swal.fire('同步失败', res.msg || "未知错误", 'error');
+                    }
+                }).fail(function() {
+                    Swal.fire('错误', '网络请求失败', 'error');
+                }).always(function() {
+                    btn.prop('disabled', false).html(originalHtml);
+                });
+            }
         });
     }
 
+    // 重点修改：状态映射逻辑
     function renderTimeline(list) {
         const container = $('#timeline-container');
         container.empty();
 
         if (!list || list.length === 0) {
+            let emptyText = "暂无提交记录";
+            if (currentState.range === 'TODAY') {
+                emptyText = "今日暂无提交记录，请点击右上角“同步”按钮获取最新数据";
+            } else if (currentState.range === 'WEEK') {
+                emptyText = "本周暂无提交记录";
+            } else if (currentState.range === 'MONTH') {
+                emptyText = "本月暂无提交记录";
+            } else {
+                emptyText = "未找到符合条件的提交记录";
+            }
+
             container.html(`
                 <div class="text-center py-5">
-                    <i class="fas fa-inbox fa-3x text-muted mb-3 opacity-50"></i>
-                    <p class="text-muted">该时间段暂无提交记录</p>
+                    <i class="fas fa-inbox fa-3x text-muted mb-3 opacity-25"></i>
+                    <p class="text-muted">${emptyText}</p>
                 </div>
             `);
             return;
         }
 
         list.forEach(item => {
+            // 默认值
+            let verdictShort = item.verdict;
             let verdictColor = 'bg-secondary';
             let icon = '<i class="fas fa-question"></i>';
 
+            // 映射 Codeforces Verdict 到标准 OJ 术语
+            // 注意：API 返回的通常是大写带下划线的字符串
             if (item.verdict === 'OK') {
+                verdictShort = 'AC';
                 verdictColor = 'bg-success';
                 icon = '<i class="fas fa-check"></i>';
             } else if (item.verdict === 'WRONG_ANSWER') {
+                verdictShort = 'WA';
                 verdictColor = 'bg-danger';
                 icon = '<i class="fas fa-times"></i>';
             } else if (item.verdict === 'TIME_LIMIT_EXCEEDED') {
-                verdictColor = 'bg-warning text-dark';
-                icon = '<i class="fas fa-stopwatch"></i>';
+                verdictShort = 'TLE';
+                verdictColor = 'bg-warning text-dark'; // TLE 通常用黄色/橙色
+                icon = '<i class="fas fa-clock"></i>';
+            } else if (item.verdict === 'MEMORY_LIMIT_EXCEEDED') {
+                verdictShort = 'MLE';
+                verdictColor = 'bg-info text-dark'; // MLE 通常用青色或深蓝
+                icon = '<i class="fas fa-memory"></i>';
+            } else if (item.verdict === 'RUNTIME_ERROR') {
+                verdictShort = 'RE';
+                verdictColor = 'bg-dark'; // RE 用深色或紫色
+                icon = '<i class="fas fa-bomb"></i>';
             } else if (item.verdict === 'COMPILATION_ERROR') {
-                verdictColor = 'bg-dark';
-                icon = '<i class="fas fa-bug"></i>';
+                verdictShort = 'CE';
+                verdictColor = 'bg-secondary';
+                icon = '<i class="fas fa-code"></i>';
+            } else if (item.verdict === 'CHALLENGED') {
+                verdictShort = 'HACKED';
+                verdictColor = 'bg-danger';
+                icon = '<i class="fas fa-user-secret"></i>';
             }
 
             const html = `
-                <div class="timeline-item item-row" data-search="${item.problemName} ${item.verdict}">
+                <div class="timeline-item">
                     <div class="timeline-icon ${verdictColor}">
                         ${icon}
                     </div>
@@ -282,7 +332,7 @@
                                     ${item.problemName}
                                 </a>
                             </h6>
-                            <span class="badge ${verdictColor} verdict-badge">${item.verdict}</span>
+                            <span class="badge ${verdictColor} verdict-badge">${verdictShort}</span>
                         </div>
                         <div class="timeline-time d-flex justify-content-between mt-2 align-items-center">
                             <span class="text-muted small">
@@ -300,61 +350,41 @@
         });
     }
 
-    function renderPagination(pageData) {
-        const container = $('#pagination-container');
+    function renderPagination(total, totalPages, current) {
+        const info = $('#pageInfo');
+        const container = $('#pagination');
+
+        const startRecord = (current - 1) * currentState.size + 1;
+        const endRecord = Math.min(current * currentState.size, total);
+
+        info.text(`第 ${startRecord}-${endRecord} 条 / 共 ${total} 条`);
         container.empty();
 
-        if (pageData.pages <= 1) return;
+        if (totalPages <= 1) return;
 
-        const current = pageData.current;
-        const total = pageData.pages;
+        // 上一页
+        container.append(`<button class="page-btn" ${current === 1 ? 'disabled' : ''} onclick="changePage(${current - 1})"><i class="fas fa-chevron-left"></i></button>`);
 
-        container.append(`
-            <li class="page-item ${current === 1 ? 'disabled' : ''}">
-                <a class="page-link" href="#" onclick="changePage(${current - 1})">上一页</a>
-            </li>
-        `);
+        // 页码逻辑
+        const renderBtn = (i) => `<button class="page-btn ${i === current ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`;
+        const renderDots = () => `<span style="line-height:28px; padding:0 5px; color:#ccc;">...</span>`;
 
-        let start = Math.max(1, current - 2);
-        let end = Math.min(total, current + 2);
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) container.append(renderBtn(i));
+        } else {
+            container.append(renderBtn(1));
+            if (current > 3) container.append(renderDots());
 
-        if (start > 1) {
-            container.append(`<li class="page-item"><a class="page-link" href="#" onclick="changePage(1)">1</a></li>`);
-            if (start > 2) container.append(`<li class="page-item disabled"><span class="page-link">...</span></li>`);
+            let start = Math.max(2, current - 1);
+            let end = Math.min(totalPages - 1, current + 1);
+            for (let i = start; i <= end; i++) container.append(renderBtn(i));
+
+            if (current < totalPages - 2) container.append(renderDots());
+            container.append(renderBtn(totalPages));
         }
 
-        for (let i = start; i <= end; i++) {
-            container.append(`
-                <li class="page-item ${i === current ? 'active' : ''}">
-                    <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
-                </li>
-            `);
-        }
-
-        if (end < total) {
-            if (end < total - 1) container.append(`<li class="page-item disabled"><span class="page-link">...</span></li>`);
-            container.append(`<li class="page-item"><a class="page-link" href="#" onclick="changePage(${total})">${total}</a></li>`);
-        }
-
-        container.append(`
-            <li class="page-item ${current === total ? 'disabled' : ''}">
-                <a class="page-link" href="#" onclick="changePage(${current + 1})">下一页</a>
-            </li>
-        `);
-
-        container.append(`
-            <li class="page-item disabled ms-2">
-                <span class="page-link border-0 text-muted">共 ${pageData.total} 条</span>
-            </li>
-        `);
-    }
-
-    function filterLocalPage() {
-        const val = $('#searchInput').val().toLowerCase();
-        $('.item-row').each(function() {
-            const text = $(this).data('search').toLowerCase();
-            $(this).toggle(text.indexOf(val) > -1);
-        });
+        // 下一页
+        container.append(`<button class="page-btn" ${current === totalPages ? 'disabled' : ''} onclick="changePage(${current + 1})"><i class="fas fa-chevron-right"></i></button>`);
     }
 
     function formatTime(isoStr) {

@@ -168,5 +168,21 @@
 
     <build>
         <finalName>oj_tracker</finalName>
+        <plugins>
+            <!-- 添加 maven-compiler-plugin 配置 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
+                    <!-- 这一行是关键：保留参数名称 -->
+                    <compilerArgs>
+                        <arg>-parameters</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+        </plugins>
     </build>
 </project>

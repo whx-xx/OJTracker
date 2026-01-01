@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.*;
+import java.time.temporal.TemporalAdjusters;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -42,41 +43,65 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
     private static final ZoneId ZONE = ZoneId.of("Asia/Shanghai");
 
     @Override
-    public List<SubmissionTimelineVO> timeline(Long userId, String platformCode, String range, Integer limit) {
+    public Page<SubmissionTimelineVO> timeline(Long userId, String platformCode, String range, String keyword, int pageNum, int pageSize) {
+        // 1. 基础校验与平台获取
         if (platformCode == null || platformCode.isBlank()) platformCode = "CF";
         Platform p = platformMapper.selectOne(new LambdaQueryWrapper<Platform>().eq(Platform::getCode, platformCode));
-        if (p == null) throw new IllegalArgumentException("平台不存在");
 
-        // 获取 Handle
+        Page<SubmissionTimelineVO> emptyPage = new Page<>(pageNum, pageSize);
+        if (p == null) return emptyPage;
+
+        // 2. 获取用户绑定的 Handle
         UserPlatformAccount account = upaMapper.selectOne(new LambdaQueryWrapper<UserPlatformAccount>()
                 .eq(UserPlatformAccount::getUserId, userId)
                 .eq(UserPlatformAccount::getPlatformId, p.getId()));
-        if (account == null) return Collections.emptyList();
+
+        if (account == null) return emptyPage;
         String handle = account.getIdentifierValue();
 
-        int lim = (limit == null || limit <= 0) ? 50 : Math.min(limit, 200);
-        LocalDate today = LocalDate.now(ZONE);
-        LocalDateTime start, end;
+        // 3. 构建查询条件
+        LambdaQueryWrapper<SubmissionLog> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SubmissionLog::getUserId, userId)
+                .eq(SubmissionLog::getPlatformId, p.getId())
+                .eq(SubmissionLog::getHandle, handle);
 
+        LocalDate today = LocalDate.now(ZONE);
+
+        // --- 时间筛选逻辑 ---
         if ("TODAY".equalsIgnoreCase(range)) {
-            start = today.atStartOfDay();
-            end = today.plusDays(1).atStartOfDay();
-        } else {
+            wrapper.ge(SubmissionLog::getSubmitTime, today.atStartOfDay())
+                    .lt(SubmissionLog::getSubmitTime, today.plusDays(1).atStartOfDay());
+        } else if ("WEEK".equalsIgnoreCase(range)) {
             LocalDate monday = today.with(DayOfWeek.MONDAY);
-            start = monday.atStartOfDay();
-            end = monday.plusDays(7).atStartOfDay();
+            wrapper.ge(SubmissionLog::getSubmitTime, monday.atStartOfDay())
+                    .lt(SubmissionLog::getSubmitTime, monday.plusDays(7).atStartOfDay());
+        } else if ("MONTH".equalsIgnoreCase(range)) {
+            LocalDate firstDayOfMonth = today.with(TemporalAdjusters.firstDayOfMonth());
+            LocalDate firstDayOfNextMonth = today.with(TemporalAdjusters.firstDayOfNextMonth());
+            wrapper.ge(SubmissionLog::getSubmitTime, firstDayOfMonth.atStartOfDay())
+                    .lt(SubmissionLog::getSubmitTime, firstDayOfNextMonth.atStartOfDay());
         }
 
-        Page<SubmissionLog> page = new Page<>(1, lim);
-        submissionLogMapper.selectPage(page, new LambdaQueryWrapper<SubmissionLog>()
-                .eq(SubmissionLog::getUserId, userId)
-                .eq(SubmissionLog::getPlatformId, p.getId())
-                .eq(SubmissionLog::getHandle, handle)
-                .ge(SubmissionLog::getSubmitTime, start)
-                .lt(SubmissionLog::getSubmitTime, end)
-                .orderByDesc(SubmissionLog::getSubmitTime));
+        // --- [新增] 关键词搜索逻辑 ---
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            String k = keyword.trim();
+            // 搜索 ProblemName 或 Verdict 或 ProblemIndex (如 "A", "B")
+            wrapper.and(w -> w.like(SubmissionLog::getProblemName, k)
+                    .or()
+                    .like(SubmissionLog::getProblemIndex, k)
+                    .or()
+                    .like(SubmissionLog::getVerdict, k));
+        }
 
-        return page.getRecords().stream().map(log -> {
+        wrapper.orderByDesc(SubmissionLog::getSubmitTime);
+
+        // 4. 执行物理分页查询
+        Page<SubmissionLog> logPage = new Page<>(pageNum, pageSize);
+        submissionLogMapper.selectPage(logPage, wrapper);
+
+        // 5. 转换为 VO
+        Page<SubmissionTimelineVO> voPage = new Page<>(pageNum, pageSize, logPage.getTotal());
+        List<SubmissionTimelineVO> vos = logPage.getRecords().stream().map(log -> {
             SubmissionTimelineVO vo = new SubmissionTimelineVO();
             vo.setSubmissionId(log.getSubmissionId());
             vo.setContestId(log.getContestId());
@@ -87,7 +112,11 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
             vo.setSubmitTime(log.getSubmitTime());
             return vo;
         }).collect(Collectors.toList());
+
+        voPage.setRecords(vos);
+        return voPage;
     }
+
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -109,7 +138,7 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
             RatingSnapshot last = ratingSnapshotMapper.selectOne(new LambdaQueryWrapper<RatingSnapshot>()
                     .eq(RatingSnapshot::getUserId, userId)
                     .eq(RatingSnapshot::getPlatformId, p.getId())
-                    .eq(RatingSnapshot::getHandle, handle)
+                    .eq(RatingSnapshot::getHandle, handle) // Fix: 增加 handle 过滤
                     .orderByDesc(RatingSnapshot::getSnapshotTime)
                     .last("LIMIT 1"));
             LocalDateTime lastTime = (last != null) ? last.getSnapshotTime() : null;
@@ -129,7 +158,7 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
                 ratingSnapshotMapper.insert(rs);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            e.printStackTrace(); // 忽略网络错误，继续同步提交
         }
 
         // 3. 同步 Submissions
@@ -139,9 +168,14 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
         int totalFetched = 0;
         Set<LocalDate> affectedDays = new HashSet<>();
 
+        // 限制最大同步数量防止超时 (根据 count 参数)
+        int maxCount = (count == null || count <= 0) ? 2000 : count;
+
         while (true) {
             List<CfUserStatusResponse.Submission> subs = cfClient.getUserStatus(handle, from, batchSize);
             if (subs == null || subs.isEmpty()) break;
+
+            // 如果获取的数据超过了需要同步的范围，可以提前 break（根据 id 判断），这里简化为按数量
             totalFetched += subs.size();
 
             for (CfUserStatusResponse.Submission s : subs) {
@@ -166,7 +200,8 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
                             contestId, idx, key, name, url, submitTime);
                 }
             }
-            if (subs.size() < batchSize) break;
+
+            if (totalFetched >= maxCount || subs.size() < batchSize) break;
             from += batchSize;
             try { Thread.sleep(200); } catch (InterruptedException ignored) {}
         }
@@ -176,17 +211,20 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
             LocalDateTime dayStart = day.atStartOfDay();
             LocalDateTime dayEnd = day.plusDays(1).atStartOfDay();
 
+            // 修正：增加 handle 参数
             int solved = solvedProblemMapper.countSolvedInRange(userId, p.getId(), handle, dayStart, dayEnd);
+
             Long submitCnt = submissionLogMapper.selectCount(new LambdaQueryWrapper<SubmissionLog>()
                     .eq(SubmissionLog::getUserId, userId)
                     .eq(SubmissionLog::getPlatformId, p.getId())
-                    .eq(SubmissionLog::getHandle, handle)
+                    .eq(SubmissionLog::getHandle, handle) // Fix: 增加 handle 过滤
                     .ge(SubmissionLog::getSubmitTime, dayStart)
                     .lt(SubmissionLog::getSubmitTime, dayEnd));
+
             Long acceptCnt = submissionLogMapper.selectCount(new LambdaQueryWrapper<SubmissionLog>()
                     .eq(SubmissionLog::getUserId, userId)
                     .eq(SubmissionLog::getPlatformId, p.getId())
-                    .eq(SubmissionLog::getHandle, handle)
+                    .eq(SubmissionLog::getHandle, handle) // Fix: 增加 handle 过滤
                     .eq(SubmissionLog::getVerdict, "OK")
                     .ge(SubmissionLog::getSubmitTime, dayStart)
                     .lt(SubmissionLog::getSubmitTime, dayEnd));

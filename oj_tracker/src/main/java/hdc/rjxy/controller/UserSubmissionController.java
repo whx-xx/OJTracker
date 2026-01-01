@@ -1,5 +1,6 @@
 package hdc.rjxy.controller;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import hdc.rjxy.common.R;
 import hdc.rjxy.pojo.UserSession;
 import hdc.rjxy.pojo.vo.RefreshResultVO;
@@ -23,18 +24,22 @@ public class UserSubmissionController {
         this.userSubmissionService = userSubmissionService;
     }
 
-    @Operation(summary = "获取提交时间线", description = "range=TODAY/WEEK")
+    /**
+     * 获取提交时间线数据 (分页版 + 搜索)
+     */
+    @Operation(summary = "获取提交时间线", description = "range=TODAY/WEEK/MONTH/ALL, keyword=搜索词")
     @GetMapping("/timeline")
-    public R<List<SubmissionTimelineVO>> timeline(
-            @RequestParam(value = "platformCode", defaultValue = "CF") String platformCode,
-            @RequestParam(value = "range", defaultValue = "WEEK") String range,
-            @RequestParam(value = "limit", defaultValue = "50") Integer limit,
+    public R<Page<SubmissionTimelineVO>> timeline(
+            @RequestParam(required = false, defaultValue = "CF") String platform,
+            @RequestParam(required = false, defaultValue = "TODAY") String range,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false, defaultValue = "20") Integer size,
             HttpSession session
     ) {
         UserSession me = (UserSession) session.getAttribute("user");
         if (me == null) return R.fail(401, "未登录");
-
-        return R.ok(userSubmissionService.timeline(me.getId(), platformCode, range, limit));
+        return R.ok(userSubmissionService.timeline(me.getId(), platform, range, keyword, page, size));
     }
 
     @Operation(summary = "手动刷新数据", description = "触发增量同步（耗时操作）")

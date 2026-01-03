@@ -8,8 +8,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Axios -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
@@ -251,7 +251,7 @@
         /* === 内容分栏 === */
         .content-grid {
             display: grid;
-            grid-template-columns: 2fr 1fr;
+            grid-template-columns: 1fr 1fr; /* 改为 1:1，更适合两个图表并排 */
             gap: 20px;
         }
 
@@ -277,60 +277,6 @@
             font-size: 16px;
             font-weight: 600;
             color: var(--text-dark);
-        }
-
-        /* 表格样式 */
-        .table-responsive {
-            overflow-x: auto;
-            flex: 1;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            text-align: left;
-            padding: 10px 5px;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 13px;
-        }
-
-        th {
-            color: var(--text-gray);
-            font-weight: 500;
-            font-size: 12px;
-        }
-
-        td { color: #555; }
-
-        .badge {
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 600;
-            display: inline-block;
-        }
-
-        .badge-success { background: rgba(46, 204, 113, 0.15); color: var(--success-color); }
-        .badge-danger { background: rgba(231, 76, 60, 0.15); color: var(--danger-color); }
-        .badge-warning { background: rgba(241, 196, 15, 0.15); color: #d35400; }
-
-        .problem-link {
-            color: var(--text-dark);
-            font-weight: 500;
-            text-decoration: none;
-            transition: color 0.2s;
-            display: block;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            max-width: 180px;
-        }
-
-        .problem-link:hover {
-            color: var(--primary-color);
         }
 
         @media (max-width: 1000px) {
@@ -426,26 +372,18 @@
             </div>
         </div>
         <div style="position: relative; height: 350px; width: 100%;">
-            <canvas id="ratingChart"></canvas>
+            <!-- ECharts Container: Replaces Canvas -->
+            <div id="ratingChart" style="width: 100%; height: 100%;"></div>
         </div>
     </div>
 
+    <!-- 右侧：Rating 分布柱状图 (ECharts) [修改：移除了原本的表格，替换为柱状图] -->
     <div class="card">
         <div class="card-header">
-            <h2>本周题目</h2>
+            <h2>已解决题目难度分布</h2>
         </div>
-        <div class="table-responsive">
-            <table id="weeklyTable">
-                <thead>
-                <tr>
-                    <th>题目</th>
-                    <th>状态</th>
-                </tr>
-                </thead>
-                <tbody id="weeklyTableBody">
-                <tr><td colspan="2" style="text-align:center; color:#999; padding: 20px;">数据加载中...</td></tr>
-                </tbody>
-            </table>
+        <div style="position: relative; height: 350px; width: 100%;">
+            <div id="ratingDistChart" style="width: 100%; height: 100%;"></div>
         </div>
     </div>
 </div>
@@ -453,22 +391,22 @@
 <script>
     // 定义 Codeforces 风格的 Rating 颜色区间 (背景色带)
     const CF_BANDS = [
-        { min: 0, max: 1199, color: '#f2f2f2' },    // Newbie (Gray)
-        { min: 1200, max: 1399, color: '#e6ffe6' }, // Pupil (Green)
-        { min: 1400, max: 1599, color: '#e6ffff' }, // Specialist (Cyan)
-        { min: 1600, max: 1899, color: '#e6e6ff' }, // Expert (Blue)
-        { min: 1900, max: 2099, color: '#ffe6ff' }, // CM (Violet)
-        { min: 2100, max: 2399, color: '#fff0e6' }, // Master (Orange)
-        { min: 2400, max: 2999, color: '#ffe6e6' }, // GM (Red)
-        { min: 3000, max: 5000, color: '#ffe6e6' }  // LGM (Red)
+        { min: 0, max: 1199, color: '#f2f2f2', name: 'Newbie' },    // Newbie (Gray)
+        { min: 1200, max: 1399, color: '#e6ffe6', name: 'Pupil' }, // Pupil (Green)
+        { min: 1400, max: 1599, color: '#e6ffff', name: 'Specialist' }, // Specialist (Cyan)
+        { min: 1600, max: 1899, color: '#e6e6ff', name: 'Expert' }, // Expert (Blue)
+        { min: 1900, max: 2099, color: '#ffe6ff', name: 'Candidate Master' }, // CM (Violet)
+        { min: 2100, max: 2399, color: '#fff0e6', name: 'Master' }, // Master (Orange)
+        { min: 2400, max: 2999, color: '#ffe6e6', name: 'Grandmaster' }, // GM (Red)
+        { min: 3000, max: 5000, color: '#ffe6e6', name: 'Legendary Grandmaster' }  // LGM (Red)
     ];
 
     document.addEventListener('DOMContentLoaded', () => {
         loadSummary();
-        loadUserProfile(); // 1. 新增：加载用户 Profile 获取 Handle
+        loadUserProfile();
         loadHeatmap();
         loadRatingHistory(5000); // 默认加载全部
-        loadWeeklyProblems();
+        loadRatingDistribution(); // [新增] 加载难度分布图
         initGlobalTooltip();
     });
 
@@ -477,34 +415,15 @@
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(() => {
             loadHeatmap();
+            // Resize ECharts
+            if (window.myRatingChart) {
+                window.myRatingChart.resize();
+            }
+            if (window.myDistChart) {
+                window.myDistChart.resize();
+            }
         }, 300);
     });
-
-    // Chart.js 插件：绘制背景色带
-    const cfBackgroundPlugin = {
-        id: 'cfBackground',
-        beforeDraw: (chart) => {
-            const { ctx, chartArea: { top, bottom, left, right }, scales: { y } } = chart;
-
-            ctx.save();
-            CF_BANDS.forEach(band => {
-                // 获取Y轴像素位置
-                const yMax = Math.min(Math.max(y.getPixelForValue(band.min), top), bottom);
-                const yMin = Math.min(Math.max(y.getPixelForValue(band.max), top), bottom);
-
-                const height = yMax - yMin;
-
-                if (height > 0) {
-                    ctx.fillStyle = band.color;
-                    ctx.fillRect(left, yMin, right - left, height);
-                }
-            });
-            ctx.restore();
-        }
-    };
-
-    // 注册插件
-    Chart.register(cfBackgroundPlugin);
 
     function initGlobalTooltip() {
         const tooltip = document.getElementById('global-tooltip');
@@ -543,14 +462,11 @@
         });
     }
 
-    // 修改：调用 /api/me/platforms 获取绑定列表来查找 Handle
     function loadUserProfile() {
         axios.get('/api/me/platforms')
             .then(res => {
                 if (res.data.code === 200 && Array.isArray(res.data.data)) {
-                    // 查找 platformCode 为 CF 的条目
                     const cfBinding = res.data.data.find(p => p.platformCode === 'CF');
-
                     if (cfBinding && cfBinding.identifierValue) {
                         document.getElementById('welcomeUser').textContent = `你好, ${cfBinding.identifierValue}!`;
                     } else {
@@ -561,7 +477,6 @@
                 }
             })
             .catch(() => {
-                // 接口失败时的兜底
                 document.getElementById('welcomeUser').textContent = `你好, CF Coder!`;
             });
     }
@@ -575,8 +490,6 @@
                     animateValue("valRating", 0, data.ratingEnd || 0, 800);
                     animateValue("valWeeklySolved", 0, data.weeklySolved || 0, 800);
                     animateValue("valActiveDays", 0, data.activeDays || 0, 800);
-
-                    // 2. 修改：移除了这里设置 welcomeUser 的逻辑，交由 loadUserProfile 处理
                 }
             }).catch(console.error);
     }
@@ -657,9 +570,10 @@
         loadRatingHistory(days);
     }
 
-    // 加载 Rating 历史图表 (CF 风格)
+    // 加载 Rating 历史图表 (ECharts 版本)
     function loadRatingHistory(days) {
-        const ctx = document.getElementById('ratingChart').getContext('2d');
+        const chartDom = document.getElementById('ratingChart');
+        if (!chartDom) return;
 
         // 如果没有传 days，默认加载全部
         if (!days) days = 5000;
@@ -668,115 +582,203 @@
             .then(res => {
                 if (res.data.code === 200) {
                     const history = res.data.data || [];
-                    const labels = history.map(item => formatDate(item.time));
+                    const dates = history.map(item => formatDate(item.time));
                     const ratings = history.map(item => item.rating);
                     const metaData = history;
 
                     // 计算 Y 轴范围
-                    const minRating = Math.min(...ratings);
-                    const maxRating = Math.max(...ratings);
+                    const minRating = ratings.length ? Math.min(...ratings) : 1000;
+                    const maxRating = ratings.length ? Math.max(...ratings) : 1500;
                     const yMin = Math.floor(Math.min(minRating, 1100) / 100) * 100;
                     const yMax = Math.ceil(Math.max(maxRating, 1600) / 100) * 100 + 100;
 
-                    if (window.myRatingChart) window.myRatingChart.destroy();
-
-                    window.myRatingChart = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                label: 'Rating',
-                                data: ratings,
-                                borderColor: '#FFC107',
-                                borderWidth: 2,
-                                backgroundColor: 'rgba(255, 255, 255, 0)',
-                                pointBackgroundColor: '#fff',
-                                pointBorderColor: '#FFC107',
-                                pointRadius: 4,
-                                pointHoverRadius: 6,
-                                fill: false,
-                                tension: 0
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            interaction: { mode: 'index', intersect: false },
-                            plugins: {
-                                legend: { display: false },
-                                cfBackground: true,
-                                tooltip: {
-                                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                    titleColor: '#333',
-                                    bodyColor: '#666',
-                                    borderColor: '#ddd',
-                                    borderWidth: 1,
-                                    padding: 10,
-                                    titleFont: { size: 13, weight: 'bold' },
-                                    bodyFont: { size: 12 },
-                                    displayColors: false,
-                                    callbacks: {
-                                        title: function(context) {
-                                            const idx = context[0].dataIndex;
-                                            return metaData[idx].contestName;
-                                        },
-                                        label: function(context) {
-                                            return `Rating: ${context.parsed.y}`;
-                                        },
-                                        afterLabel: function(context) {
-                                            const idx = context.dataIndex;
-                                            const item = metaData[idx];
-                                            const deltaSign = item.delta >= 0 ? '+' : '';
-                                            return [`排名: ${item.rank}`, `变动: ${deltaSign}${item.delta}`];
-                                        }
-                                    }
+                    // 准备 markArea 数据
+                    const markAreaData = [];
+                    CF_BANDS.forEach(band => {
+                        // 只添加在显示范围内的区域，或者简单添加所有区域
+                        markAreaData.push([
+                            {
+                                yAxis: band.min,
+                                itemStyle: {
+                                    color: band.color,
+                                    opacity: 1 // ECharts中可以通过 opacity 控制透明度，这里直接用配置好的颜色
                                 }
                             },
-                            scales: {
-                                x: {
-                                    grid: { display: false },
-                                    ticks: { display: false }
+                            {
+                                yAxis: band.max
+                            }
+                        ]);
+                    });
+
+                    // 初始化或获取 ECharts 实例
+                    let myChart = echarts.getInstanceByDom(chartDom);
+                    if (myChart) {
+                        myChart.dispose(); // 销毁旧实例以防万一
+                    }
+                    myChart = echarts.init(chartDom);
+                    window.myRatingChart = myChart; // 存到全局以便 resize
+
+                    const option = {
+                        grid: {
+                            top: 20,
+                            bottom: 30,
+                            left: 50,
+                            right: 30,
+                            containLabel: false
+                        },
+                        tooltip: {
+                            trigger: 'axis',
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            borderColor: '#ddd',
+                            textStyle: {
+                                color: '#333',
+                                fontSize: 12
+                            },
+                            formatter: function (params) {
+                                // params[0] 是系列数据
+                                if (!params || params.length === 0) return '';
+                                const dataIndex = params[0].dataIndex;
+                                const item = metaData[dataIndex];
+                                const deltaSign = item.delta >= 0 ? '+' : '';
+
+                                return `
+                                    <div style="font-weight: 600; font-size: 13px; margin-bottom: 4px;">${item.contestName}</div>
+                                    <div style="color: #666;">Rating: <span style="font-weight: 600; color: #333;">${item.rating}</span></div>
+                                    <div style="color: #666;">排名: ${item.rank}</div>
+                                    <div style="color: #666;">变动: ${deltaSign}${item.delta}</div>
+                                    <div style="color: #999; font-size: 11px; margin-top: 4px;">${formatDate(item.time)}</div>
+                                `;
+                            }
+                        },
+                        xAxis: {
+                            type: 'category',
+                            boundaryGap: false,
+                            data: dates,
+                            axisLine: { show: false },
+                            axisTick: { show: false },
+                            axisLabel: {
+                                show: false // 如果你想隐藏X轴标签，或者设为 true 显示
+                            }
+                        },
+                        yAxis: {
+                            type: 'value',
+                            min: yMin,
+                            max: yMax,
+                            splitLine: {
+                                lineStyle: {
+                                    type: 'dashed',
+                                    color: 'rgba(0,0,0,0.05)'
+                                }
+                            },
+                            axisLabel: {
+                                color: '#999',
+                                fontSize: 11
+                            }
+                        },
+                        series: [
+                            {
+                                name: 'Rating',
+                                type: 'line',
+                                data: ratings,
+                                smooth: false,
+                                symbol: 'circle',
+                                symbolSize: 6,
+                                itemStyle: {
+                                    color: '#FFFFFF', // 点的内部颜色
+                                    borderColor: '#FFC107', // 点的边框颜色
+                                    borderWidth: 2
                                 },
-                                y: {
-                                    grid: {
-                                        borderDash: [5, 5],
-                                        color: 'rgba(0,0,0,0.05)'
-                                    },
-                                    min: yMin,
-                                    max: yMax
+                                lineStyle: {
+                                    color: '#FFC107',
+                                    width: 2
+                                },
+                                markArea: {
+                                    silent: true, // 鼠标悬停不触发效果
+                                    data: markAreaData
                                 }
                             }
-                        }
-                    });
+                        ]
+                    };
+
+                    myChart.setOption(option);
                 }
             });
     }
 
-    function loadWeeklyProblems() {
-        const tbody = document.getElementById('weeklyTableBody');
-        axios.get('/api/user/problems/week', { params: { platformCode: 'CF' } })
+    // === [新增] ECharts 加载难度分布图 ===
+    function loadRatingDistribution() {
+        const chartDom = document.getElementById('ratingDistChart');
+        if (!chartDom) return;
+
+        let myChart = echarts.getInstanceByDom(chartDom);
+        if (myChart) myChart.dispose();
+        myChart = echarts.init(chartDom);
+        window.myDistChart = myChart;
+        myChart.showLoading({ color: '#4e54c8' });
+
+        axios.get('/api/users/rating-distribution', { params: { platformCode: 'CF' } })
             .then(res => {
+                myChart.hideLoading();
                 if (res.data.code === 200) {
-                    const list = res.data.data || [];
-                    tbody.innerHTML = '';
-                    if (list.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;color:#999;padding:20px;font-size:12px;">本周暂无解题记录</td></tr>';
-                        return;
-                    }
-                    list.forEach(item => {
-                        const row = document.createElement('tr');
-                        let badgeClass = 'badge-warning';
-                        let verdictText = item.verdict || 'UNK';
-                        if (['OK', 'ACCEPTED'].includes(verdictText)) {
-                            badgeClass = 'badge-success'; verdictText = 'AC';
-                        } else if (verdictText.includes('WRONG')) {
-                            badgeClass = 'badge-danger'; verdictText = 'WA';
-                        }
-                        row.innerHTML = `<td><a href="${item.problemUrl}" target="_blank" class="problem-link" title="${item.problemName}">${item.problemIndex}. ${item.problemName}</a></td><td><span class="badge ${badgeClass}">${verdictText}</span></td>`;
-                        tbody.appendChild(row);
-                    });
+                    const dataMap = res.data.data || {};
+                    // 将 map 转为数组并排序
+                    const ratings = Object.keys(dataMap).map(Number).sort((a,b) => a - b);
+                    const counts = ratings.map(r => dataMap[r]);
+
+                    const option = {
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: { type: 'shadow' },
+                            formatter: '{b}: {c} 题'
+                        },
+                        grid: {
+                            left: '3%', right: '4%', bottom: '3%', top: '10%',
+                            containLabel: true
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data: ratings,
+                            axisTick: { alignWithLabel: true },
+                            axisLabel: {
+                                interval: 'auto',
+                                color: '#666'
+                            }
+                        },
+                        yAxis: {
+                            type: 'value',
+                            splitLine: {
+                                lineStyle: { type: 'dashed', color: '#eee' }
+                            }
+                        },
+                        series: [{
+                            name: 'solved',
+                            type: 'bar',
+                            barWidth: '60%',
+                            data: counts.map((val, idx) => ({
+                                value: val,
+                                itemStyle: {
+                                    color: getBarColor(ratings[idx]) // 使用自定义颜色函数
+                                }
+                            }))
+                        }]
+                    };
+                    myChart.setOption(option);
                 }
             });
+    }
+
+    // [新增] 柱状图颜色逻辑 (参考 GreasyFork 脚本)
+    function getBarColor(rating) {
+        if (rating >= 3000) return '#aa0100'; // LGM (Dark Red)
+        if (rating >= 2600) return '#ff3333'; // IGM (Red)
+        if (rating >= 2400) return '#ff7777'; // GM (Light Red)
+        if (rating >= 2300) return '#ffbb55'; // IM (Orange)
+        if (rating >= 2100) return '#ffcc87'; // Master (Light Orange)
+        if (rating >= 1900) return '#ff88ff'; // CM (Violet)
+        if (rating >= 1600) return '#aaaaff'; // Expert (Blue)
+        if (rating >= 1400) return '#76ddbb'; // Specialist (Cyan)
+        if (rating >= 1200) return '#76ff77'; // Pupil (Green)
+        return '#cccccc'; // Newbie (Gray)
     }
 
     window.triggerSync = function() {
@@ -794,7 +796,7 @@
                 if (res.data.code === 200) {
                     const result = res.data.data;
                     Toast.fire({ icon: 'success', title: '同步完成', text: `抓取 ${result.fetched} 条，新增 ${result.inserted} 条记录` });
-                    loadSummary(); loadHeatmap(); loadRatingHistory(); loadWeeklyProblems();
+                    loadSummary(); loadHeatmap(); loadRatingHistory(); loadRatingDistribution();
                 } else {
                     Toast.fire({ icon: 'error', title: '同步失败', text: res.data.msg });
                 }

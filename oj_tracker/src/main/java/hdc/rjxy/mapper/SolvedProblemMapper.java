@@ -8,6 +8,8 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface SolvedProblemMapper extends BaseMapper<SolvedProblem> {
@@ -34,4 +36,16 @@ public interface SolvedProblemMapper extends BaseMapper<SolvedProblem> {
                            @Param("handle") String handle,
                            @Param("start") LocalDateTime start,
                            @Param("end") LocalDateTime end);
+
+    /**
+     * 统计各 Rating 的解题数量
+     * 返回格式示例: [{rating=800, cnt=10}, {rating=900, cnt=5}, ...]
+     */
+    @Select("SELECT rating, COUNT(*) as cnt FROM solved_problem " +
+            "WHERE user_id = #{userId} AND platform_id = #{platformId} " +
+            "AND rating IS NOT NULL " +
+            "GROUP BY rating " +
+            "ORDER BY rating ASC")
+    List<Map<String, Object>> countSolvedByRating(@Param("userId") Long userId,
+                                                  @Param("platformId") Long platformId);
 }

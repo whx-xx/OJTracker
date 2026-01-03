@@ -15,9 +15,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 @Service
 public class UserStatsServiceImpl implements UserStatsService {
@@ -156,5 +154,40 @@ public class UserStatsServiceImpl implements UserStatsService {
         }
 
         return vo;
+    }
+
+    @Override
+    public Map<Integer, Integer> getRatingDistribution(Long userId, String platformCode) {
+        if (userId == null) throw new IllegalArgumentException("userId不能为空");
+        if (platformCode == null || platformCode.isBlank()) platformCode = "CF";
+
+        // 获取平台 ID
+        Platform p = platformMapper.selectOne(new LambdaQueryWrapper<Platform>().eq(Platform::getCode, platformCode));
+        if (p == null) return Collections.emptyMap();
+
+        // 查询数据库
+        List<Map<String, Object>> rawList = solvedProblemMapper.countSolvedByRating(userId, p.getId());
+
+        // 使用 TreeMap 保持 Rating 从小到大排序，方便前端直接渲染 X 轴
+        Map<Integer, Integer> result = new TreeMap<>();
+
+        for (Map<String, Object> map : rawList) {
+            // 注意：MyBatis 返回的 Map key 可能是大写也可能是小写，value 类型也可能不同（Long/Integer/BigDecimal）
+            // 这里统一转 String 再解析，最稳妥
+            Object ratingObj = map.get("rating");
+            Object cntObj = map.get("cnt"); // 对应 SQL 中的别名
+
+            if (ratingObj != null && cntObj != null) {
+                try {
+                    Integer rating = Integer.valueOf(ratingObj.toString());
+                    Integer count = Integer.valueOf(cntObj.toString());
+                    result.put(rating, count);
+                } catch (NumberFormatException e) {
+                    // 忽略异常数据
+                }
+            }
+        }
+
+        return result;
     }
 }

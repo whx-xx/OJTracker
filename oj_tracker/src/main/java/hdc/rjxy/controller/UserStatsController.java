@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @Tag(name = "用户统计", description = "个人主页汇总卡片数据")
 @RestController
@@ -42,5 +43,17 @@ public class UserStatsController {
         if (me == null) return R.fail(401, "未登录");
 
         return R.ok(userStatsService.summary(me.getId(), platformCode, days));
+    }
+
+    @Operation(summary = "获取已解决题目的难度分布", description = "用于 Dashboard 显示题目难度分布柱状图")
+    @GetMapping("/rating-distribution")
+    public R<Map<Integer, Integer>> getRatingDistribution(
+            @RequestParam(value = "platformCode", required = false, defaultValue = "CF") String platformCode,
+            HttpSession session
+    ) {
+        UserSession me = (UserSession) session.getAttribute("user");
+        if (me == null) return R.fail(401, "未登录");
+
+        return R.ok(userStatsService.getRatingDistribution(me.getId(), platformCode));
     }
 }

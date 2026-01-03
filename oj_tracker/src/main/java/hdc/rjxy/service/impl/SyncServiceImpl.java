@@ -354,12 +354,13 @@ public class SyncServiceImpl implements SyncService {
                     LocalDateTime submitTime = Instant.ofEpochSecond(s.getCreationTimeSeconds()).atZone(ZONE_CN).toLocalDateTime();
                     LocalDate day = submitTime.toLocalDate();
 
+                    Integer rating = (s.getProblem() != null) ? s.getProblem().getRating() : null;
                     // 写入 SubmissionLog
                     int ins = submissionLogMapper.insertIgnore(userId, PLATFORM_CF, handle, s.getId(),
                             (s.getProblem()!=null?s.getProblem().getContestId():null),
                             (s.getProblem()!=null?s.getProblem().getIndex():null),
                             (s.getProblem()!=null?s.getProblem().getName():null),
-                            null, s.getVerdict(), submitTime);
+                            null, s.getVerdict(), rating, submitTime);
                     if (ins > 0) newSubmissions++;
 
                     // 写入 SolvedProblem
@@ -367,7 +368,7 @@ public class SyncServiceImpl implements SyncService {
                         String key = s.getProblem().getContestId() + "_" + s.getProblem().getIndex();
                         int insSol = solvedProblemMapper.insertIgnore(userId, PLATFORM_CF, handle,
                                 s.getProblem().getContestId(), s.getProblem().getIndex(), key,
-                                s.getProblem().getName(), null, submitTime);
+                                s.getProblem().getName(), null, rating, submitTime);
                         if (insSol > 0) newSolved++;
                     }
 

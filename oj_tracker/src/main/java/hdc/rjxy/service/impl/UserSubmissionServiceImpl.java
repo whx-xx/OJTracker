@@ -82,7 +82,7 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
                     .lt(SubmissionLog::getSubmitTime, firstDayOfNextMonth.atStartOfDay());
         }
 
-        // --- [新增] 关键词搜索逻辑 ---
+        // --- 关键词搜索逻辑 ---
         if (keyword != null && !keyword.trim().isEmpty()) {
             String k = keyword.trim();
             // 搜索 ProblemName 或 Verdict 或 ProblemIndex (如 "A", "B")
@@ -109,6 +109,7 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
             vo.setProblemName(log.getProblemName());
             vo.setProblemUrl(log.getProblemUrl());
             vo.setVerdict(log.getVerdict());
+            vo.setRating(log.getRating());
             vo.setSubmitTime(log.getSubmitTime());
             return vo;
         }).collect(Collectors.toList());
@@ -187,17 +188,18 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
                 Integer contestId = (s.getProblem() == null) ? null : s.getProblem().getContestId();
                 String idx = (s.getProblem() == null) ? null : s.getProblem().getIndex();
                 String name = (s.getProblem() == null) ? null : s.getProblem().getName();
+                Integer rating = (s.getProblem() == null) ? null : s.getProblem().getRating();
                 String url = (contestId != null && idx != null)
                         ? ("https://codeforces.com/contest/" + contestId + "/problem/" + idx) : null;
 
                 int rows = submissionLogMapper.insertIgnore(userId, p.getId(), handle, s.getId(),
-                        contestId, idx, name, url, s.getVerdict(), submitTime);
+                        contestId, idx, name, url, s.getVerdict(), rating, submitTime);
                 if (rows > 0) inserted++;
 
                 if ("OK".equalsIgnoreCase(s.getVerdict()) && contestId != null && idx != null) {
                     String key = contestId + "_" + idx;
                     solvedProblemMapper.insertIgnore(userId, p.getId(), handle,
-                            contestId, idx, key, name, url, submitTime);
+                            contestId, idx, key, name, url, rating, submitTime);
                 }
             }
 

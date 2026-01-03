@@ -12,8 +12,8 @@ import java.time.LocalDateTime;
 @Mapper
 public interface SolvedProblemMapper extends BaseMapper<SolvedProblem> {
 
-    @Insert("INSERT IGNORE INTO solved_problem(user_id, platform_id, handle, contest_id, problem_index, problem_key, problem_name, problem_url, first_ac_time) " +
-            "VALUES (#{userId}, #{platformId}, #{handle}, #{contestId}, #{problemIndex}, #{problemKey}, #{problemName}, #{problemUrl}, #{firstAcTime})")
+    @Insert("INSERT IGNORE INTO solved_problem(user_id, platform_id, handle, contest_id, problem_index, problem_key, problem_name, problem_url, rating, first_ac_time) " +
+            "VALUES (#{userId}, #{platformId}, #{handle}, #{contestId}, #{problemIndex}, #{problemKey}, #{problemName}, #{problemUrl}, #{rating}, #{firstAcTime})")
     int insertIgnore(@Param("userId") Long userId,
                      @Param("platformId") Long platformId,
                      @Param("handle") String handle,
@@ -22,6 +22,7 @@ public interface SolvedProblemMapper extends BaseMapper<SolvedProblem> {
                      @Param("problemKey") String key,
                      @Param("problemName") String name,
                      @Param("problemUrl") String url,
+                     @Param("rating") Integer rating,
                      @Param("firstAcTime") LocalDateTime time);
 
     @Select("SELECT COUNT(*) FROM solved_problem " +

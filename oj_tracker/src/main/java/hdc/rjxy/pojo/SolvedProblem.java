@@ -22,5 +22,6 @@ public class SolvedProblem {
     private String problemKey; // 如 "1234_A"
     private String problemName;
     private String problemUrl;
+    private Integer rating;
     private LocalDateTime firstAcTime;
 }

@@ -15,8 +15,8 @@ import java.util.List;
 public interface SubmissionLogMapper extends BaseMapper<SubmissionLog> {
 
     // 忽略重复的 submission_id
-    @Insert("INSERT IGNORE INTO submission_log(user_id, platform_id, handle, submission_id, contest_id, problem_index, problem_name, problem_url, verdict, submit_time) " +
-            "VALUES (#{userId}, #{platformId}, #{handle}, #{submissionId}, #{contestId}, #{problemIndex}, #{problemName}, #{problemUrl}, #{verdict}, #{submitTime})")
+    @Insert("INSERT IGNORE INTO submission_log(user_id, platform_id, handle, submission_id, contest_id, problem_index, problem_name, problem_url, verdict, rating, submit_time) " +
+            "VALUES (#{userId}, #{platformId}, #{handle}, #{submissionId}, #{contestId}, #{problemIndex}, #{problemName}, #{problemUrl}, #{verdict}, #{rating}, #{submitTime})")
     int insertIgnore(@Param("userId") Long userId,
                      @Param("platformId") Long platformId,
                      @Param("handle") String handle,
@@ -26,6 +26,7 @@ public interface SubmissionLogMapper extends BaseMapper<SubmissionLog> {
                      @Param("problemName") String problemName,
                      @Param("problemUrl") String problemUrl,
                      @Param("verdict") String verdict,
+                     @Param("rating") Integer rating,
                      @Param("submitTime") LocalDateTime submitTime);
 
     @Select("SELECT contestId, problemIndex, problemName, problemUrl, verdict, submitTime, submissionId " +

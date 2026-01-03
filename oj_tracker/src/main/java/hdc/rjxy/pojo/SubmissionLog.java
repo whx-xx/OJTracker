@@ -23,5 +23,6 @@ public class SubmissionLog {
     private String problemName;
     private String problemUrl;
     private String verdict;
+    private Integer rating;
     private LocalDateTime submitTime;
 }

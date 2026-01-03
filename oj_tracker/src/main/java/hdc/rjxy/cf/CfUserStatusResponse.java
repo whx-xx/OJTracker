@@ -27,5 +27,6 @@ public class CfUserStatusResponse {
         private Integer contestId;
         private String index;
         private String name;
+        private Integer rating;
     }
 }

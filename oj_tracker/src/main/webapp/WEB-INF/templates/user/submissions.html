@@ -79,6 +79,15 @@
         .page-btn:disabled { background-color: #f5f5f5; color: #ccc; cursor: not-allowed; }
 
         .search-input-group input:focus { box-shadow: none; border-color: var(--primary-color); }
+
+        /* === [新增] Rating 颜色样式 (Codeforces 风格) === */
+        .rating-gray { color: #808080; font-weight: bold; }
+        .rating-green { color: #008000; font-weight: bold; }
+        .rating-cyan { color: #03a89e; font-weight: bold; }
+        .rating-blue { color: #0000ff; font-weight: bold; }
+        .rating-violet { color: #a0a; font-weight: bold; }
+        .rating-orange { color: #ff8c00; font-weight: bold; }
+        .rating-red { color: #ff0000; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -319,6 +328,14 @@
                 icon = '<i class="fas fa-user-secret"></i>';
             }
 
+            // [新增] 处理 Rating 显示
+            let ratingHtml = '';
+            if (item.rating) {
+                let rClass = getRatingColorClass(item.rating);
+                // 显示为 *1300 样式
+                ratingHtml = `<span class="${rClass} ms-2 small" title="难度: ${item.rating}" style="font-size: 0.9em; vertical-align: middle;">*${item.rating}</span>`;
+            }
+
             const html = `
                 <div class="timeline-item">
                     <div class="timeline-icon ${verdictColor}">
@@ -331,6 +348,7 @@
                                     <span class="badge bg-light text-dark border me-1 font-monospace">${item.contestId}${item.problemIndex}</span>
                                     ${item.problemName}
                                 </a>
+                                ${ratingHtml}
                             </h6>
                             <span class="badge ${verdictColor} verdict-badge">${verdictShort}</span>
                         </div>
@@ -348,6 +366,18 @@
             `;
             container.append(html);
         });
+    }
+
+    // [新增] Rating 颜色判断函数
+    function getRatingColorClass(rating) {
+        if (!rating) return '';
+        if (rating < 1200) return 'rating-gray';
+        if (rating < 1400) return 'rating-green';
+        if (rating < 1600) return 'rating-cyan';
+        if (rating < 1900) return 'rating-blue';
+        if (rating < 2100) return 'rating-violet';
+        if (rating < 2400) return 'rating-orange';
+        return 'rating-red';
     }
 
     function renderPagination(total, totalPages, current) {

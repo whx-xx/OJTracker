@@ -58,4 +58,39 @@ public interface SubmissionLogMapper extends BaseMapper<SubmissionLog> {
                                              @Param("handle") String handle,
                                              @Param("start") LocalDateTime start,
                                              @Param("end") LocalDateTime end);
+    /**
+     * 统计指定时间范围内该用户的总提交数
+     */
+    @Select("SELECT COUNT(*) FROM submission_log " +
+            "WHERE user_id = #{userId} AND platform_id = #{platformId} " +
+            "AND submit_time >= #{start} AND submit_time <= #{end}")
+    int countByDate(@Param("userId") Long userId,
+                    @Param("platformId") Long platformId,
+                    @Param("start") LocalDateTime start,
+                    @Param("end") LocalDateTime end);
+
+    /**
+     * 统计指定时间范围内该用户的 AC 提交数 (Verdict = 'OK')
+     */
+    @Select("SELECT COUNT(*) FROM submission_log " +
+            "WHERE user_id = #{userId} AND platform_id = #{platformId} " +
+            "AND verdict = 'OK' " +
+            "AND submit_time >= #{start} AND submit_time <= #{end}")
+    int countAcceptByDate(@Param("userId") Long userId,
+                          @Param("platformId") Long platformId,
+                          @Param("start") LocalDateTime start,
+                          @Param("end") LocalDateTime end);
+
+    /**
+     * 统计指定时间范围内该用户的去重 AC 题目数
+     * 根据 contest_id + problem_index 去重
+     */
+    @Select("SELECT COUNT(DISTINCT contest_id, problem_index) FROM submission_log " +
+            "WHERE user_id = #{userId} AND platform_id = #{platformId} " +
+            "AND verdict = 'OK' " +
+            "AND submit_time >= #{start} AND submit_time <= #{end}")
+    int countDistinctSolvedByDate(@Param("userId") Long userId,
+                                  @Param("platformId") Long platformId,
+                                  @Param("start") LocalDateTime start,
+                                  @Param("end") LocalDateTime end);
 }

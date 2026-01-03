@@ -392,9 +392,25 @@ public class SyncServiceImpl implements SyncService {
 
             if (minDayForDaily != null) {
                 for (LocalDate d = minDayForDaily; !d.isAfter(today); d = d.plusDays(1)) {
+                    // 定义当天的开始和结束时间
+                    LocalDateTime dayStart = d.atStartOfDay();
+                    LocalDateTime dayEnd = d.plusDays(1).atStartOfDay().minusSeconds(1);
+
+                    // 1. 查询当天的提交总数 (需要你在 SubmissionLogMapper 中加一个 count 方法)
+                    // select count(*) from submission_log where user_id=? and platform=1 and submission_time between ? and ?
+                    int realSubmitCnt = submissionLogMapper.countByDate(userId, PLATFORM_CF, dayStart, dayEnd);
+
+                    // 2. 查询当天的 AC 数
+                    // select count(*) from submission_log where ... and verdict='OK' ...
+                    int realAcceptCnt = submissionLogMapper.countAcceptByDate(userId, PLATFORM_CF, dayStart, dayEnd);
+
+                    // 3. 查询当天的去重 AC 题目数 (或者复用你之前的 SolvedProblem 逻辑，但按天统计比较麻烦，这里简化处理)
+                    // select count(distinct contest_id, index_id) from submission_log where ... and verdict='OK' ...
+                    int realSolvedCnt = submissionLogMapper.countDistinctSolvedByDate(userId, PLATFORM_CF, dayStart, dayEnd);
+
+                    // 4. 使用查出来的真实数据更新
                     dailyActivityMapper.upsert(userId, PLATFORM_CF, handle, d,
-                            submitCnt.getOrDefault(d, 0), acceptCnt.getOrDefault(d, 0),
-                            solvedSet.getOrDefault(d, Collections.emptySet()).size());
+                            realSubmitCnt, realAcceptCnt, realSolvedCnt);
                 }
             }
 

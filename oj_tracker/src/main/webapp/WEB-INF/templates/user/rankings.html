@@ -486,7 +486,9 @@
                 rankHtml = `<div class="rank-badge">3</div>`;
             }
 
-            const avatar = `https://ui-avatars.com/api/?name=${item.nickname || 'User'}&background=random&color=fff&size=64`;
+            // 修改这里：优先使用后端返回的头像，如果没有则使用生成的默认头像
+            const avatar = item.avatar || `https://ui-avatars.com/api/?name=${item.nickname || 'User'}&background=random&color=fff&size=64`;
+
             const ratingClass = getRatingColorClass(item.rating);
 
             const displayName = item.nickname || 'Unknown';

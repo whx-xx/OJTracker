@@ -24,6 +24,7 @@ public interface UserMapper extends BaseMapper<User> {
             "  u.id AS userId, " +
             "  u.student_no AS studentNo, " +
             "  u.nickname AS nickname, " +
+            "  u.avatar AS avatar, " +
             "  rs.rating AS rating, " +
             "  rs.snapshot_time AS snapshotTime, " +
             "  rs.handle AS handle " +

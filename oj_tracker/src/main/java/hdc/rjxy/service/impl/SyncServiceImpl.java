@@ -6,7 +6,6 @@ import hdc.rjxy.cf.CfClientException;
 import hdc.rjxy.cf.CfUserRatingResponse;
 import hdc.rjxy.cf.CfUserStatusResponse;
 import hdc.rjxy.cf.CodeforcesClient;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import hdc.rjxy.mapper.*;
 import hdc.rjxy.pojo.*;
 import hdc.rjxy.pojo.vo.*;
@@ -19,37 +18,19 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.*;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-// @RequiredArgsConstructor 注解会自动为类中
-// 所有被 final 修饰的字段（以及被 @NonNull 标记的字段）生成一个包含这些参数的构造函数。
-/*
-相比字段注入（@Autowired on fields）的优势
-这种写法（private final + @RequiredArgsConstructor）主要有以下几个核心优势：
-1. 保证不可变性 (Immutability)：
-依赖字段被声明为 final，这意味着它们在初始化后不能被修改。这有助于保证组件的状态安全，符合多线程编程的最佳实践。
-字段注入（Field Injection）通常要求字段不能是 final，或者是通过反射强制赋值，这破坏了不可变性。
-2. 空指针安全 (Null Safety)：
-由于字段是 final 的，Java 编译器会强制要求在构造函数中必须对其赋值。这意味着当 SyncServiceImpl 被实例化时，所有的依赖都必须就位，避免了出现 Bean 部分初始化（Partially initialized）导致在使用时报 NullPointerException 的风险。
-更易于单元测试 (Testability)：
-在编写单元测试时（不启动 Spring 容器），你可以直接通过 new SyncServiceImpl(mockMapper1, mockMapper2, ...) 的方式手动实例化对象并注入 Mock 对象。
-如果是字段注入，你往往需要使用反射工具或 @InjectMocks 等框架魔法才能把 Mock 对象塞进去，测试代码会变得复杂且难以脱离框架运行。
-3. 避免循环依赖 (Circular Dependencies)：
-构造器注入无法解决循环依赖问题（A 依赖 B，B 依赖 A）。如果存在循环依赖，Spring 会在应用启动时直接抛出异常，迫使开发者在设计阶段就发现并解决这个问题（通常意味着代码结构需要重构）。
-字段注入可能会掩盖循环依赖，直到运行时才可能暴露问题。
-4. 代码简洁：
-不需要在每个字段上都写一行 @Autowired。
-不需要手动编写冗长的构造函数代码，Lombok 自动完成了。
-*/
 public class SyncServiceImpl implements SyncService {
 
     private final SyncJobLogMapper syncJobLogMapper;
     private final SyncUserLogMapper syncUserLogMapper;
     private final UserPlatformAccountMapper upaMapper;
-    private final UserMapper userMapper; // 用于关联查询用户名/handle
+    private final UserMapper userMapper;
     private final CodeforcesClient cfClient;
     private final RatingSnapshotMapper ratingSnapshotMapper;
     private final DailyActivityMapper dailyActivityMapper;
@@ -58,6 +39,9 @@ public class SyncServiceImpl implements SyncService {
 
     private static final Long PLATFORM_CF = 1L;
     private static final ZoneId ZONE_CN = ZoneId.of("Asia/Shanghai");
+
+    // 解析详情字符串的正则: "newSub=10, newSolved=5"
+    private static final Pattern DETAIL_PATTERN = Pattern.compile("newSub=(\\d+), newSolved=(\\d+)");
 
     // ================= 管理端查询接口 =================
 
@@ -74,10 +58,7 @@ public class SyncServiceImpl implements SyncService {
         syncJobLogMapper.selectPage(p, wrapper);
 
         // 2. 转换 VO 分页
-        // 创建一个新的 Page 对象用于返回 VO，复制分页元数据（total, pages等）
         Page<SyncJobLogVO> voPage = new Page<>(p.getCurrent(), p.getSize(), p.getTotal());
-
-        // 转换记录列表
         List<SyncJobLogVO> vos = p.getRecords().stream()
                 .map(this::toVO)
                 .collect(Collectors.toList());
@@ -91,14 +72,15 @@ public class SyncServiceImpl implements SyncService {
         SyncJobLog job = syncJobLogMapper.selectById(jobId);
         if (job == null) throw new IllegalArgumentException("Job not found");
 
-        // 查询失败的用户日志
-        // 这里需要关联 user_platform_account 获取 handle，或者关联 user 表
-        // 为简单起见，我们先查 Log，再手动填 Handle
+        // 1. 处理失败列表
+        // 排除 SUCCESS 和 SKIP 状态
         List<SyncUserLog> failLogs = syncUserLogMapper.selectList(new LambdaQueryWrapper<SyncUserLog>()
                 .eq(SyncUserLog::getJobId, jobId)
-                .ne(SyncUserLog::getStatus, "SUCCESS"));
+                .ne(SyncUserLog::getStatus, "SUCCESS")
+                .ne(SyncUserLog::getStatus, "SKIP"));
 
         List<SyncUserFailVO> failVOs = new ArrayList<>();
+
         for (SyncUserLog log : failLogs) {
             SyncUserFailVO vo = new SyncUserFailVO();
             BeanUtils.copyProperties(log, vo);
@@ -110,14 +92,69 @@ public class SyncServiceImpl implements SyncService {
             if (upa != null) {
                 vo.setHandle(upa.getIdentifierValue());
             }
-            // 简单设置错误描述，实际可查字典
             vo.setErrorCodeDesc(log.getErrorCode());
             failVOs.add(vo);
         }
 
+        // 2. 处理变更列表 (成功且有数据变化的记录)
+        List<SyncUserChangeVO> changeList = new ArrayList<>();
+
+        List<SyncUserLog> successLogs = syncUserLogMapper.selectList(new LambdaQueryWrapper<SyncUserLog>()
+                .eq(SyncUserLog::getJobId, jobId)
+                .eq(SyncUserLog::getStatus, "SUCCESS"));
+
+        List<SyncUserChangeVO> tempChanges = new ArrayList<>();
+        Set<Long> successUserIds = new HashSet<>();
+
+        for (SyncUserLog l : successLogs) {
+            // 注意：因为没有 details 字段，成功时的统计数据存储在 errorMessage 字段中
+            String info = l.getErrorMessage();
+            if (info == null || info.isEmpty()) continue;
+
+            // 正则解析 "newSub=10, newSolved=5"
+            Matcher m = DETAIL_PATTERN.matcher(info);
+            if (m.find()) {
+                try {
+                    int newSub = Integer.parseInt(m.group(1));
+                    int newSolved = Integer.parseInt(m.group(2));
+
+                    // 只有当有新提交或新解决时才加入列表
+                    if (newSub > 0 || newSolved > 0) {
+                        SyncUserChangeVO vo = new SyncUserChangeVO();
+                        vo.setUserId(l.getUserId());
+                        vo.setNewSub(newSub);
+                        vo.setNewSolved(newSolved);
+                        vo.setRawDetails(info); // 这里使用 info (即 errorMessage)
+
+                        tempChanges.add(vo);
+                        successUserIds.add(l.getUserId());
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+
+        // 批量查询变更用户的 Handle
+        Map<Long, String> handleMap = new HashMap<>();
+        if (!successUserIds.isEmpty()) {
+            List<UserPlatformAccount> upas = upaMapper.selectList(new LambdaQueryWrapper<UserPlatformAccount>()
+                    .in(UserPlatformAccount::getUserId, successUserIds)
+                    .eq(UserPlatformAccount::getPlatformId, PLATFORM_CF));
+            for (UserPlatformAccount upa : upas) {
+                handleMap.put(upa.getUserId(), upa.getIdentifierValue());
+            }
+        }
+
+        // 填充变更列表 Handle
+        for (SyncUserChangeVO vo : tempChanges) {
+            vo.setHandle(handleMap.getOrDefault(vo.getUserId(), "ID:" + vo.getUserId()));
+            changeList.add(vo);
+        }
+
+        // 3. 组装结果
         SyncJobDetailVO res = new SyncJobDetailVO();
         res.setJob(toVO(job));
         res.setFailList(failVOs);
+        res.setChangeList(changeList);
         return res;
     }
 
@@ -147,13 +184,12 @@ public class SyncServiceImpl implements SyncService {
         return vo;
     }
 
-    // ================= 核心调度逻辑 (重构后) =================
+    // ================= 核心调度逻辑 =================
 
     @Override
-    // 移除@Transactional，防止长事务占用数据库连接
     public Long runCfRatingSync(String triggerSource) {
         LocalDateTime start = LocalDateTime.now();
-        Long jobId = createJob("RATING_SYNC", triggerSource, start); // 这是一个短事务，很快
+        Long jobId = createJob("RATING_SYNC", triggerSource, start);
 
         List<UserPlatformAccount> accounts = listAllCfAccounts();
 
@@ -161,7 +197,6 @@ public class SyncServiceImpl implements SyncService {
         int success = 0, fail = 0, skip = 0;
 
         for (UserPlatformAccount account : accounts) {
-            // 循环内处理单个用户，即使某个用户失败，也不影响其他人，也不回滚已完成的人
             String res = processSingleUserRating(jobId, account.getUserId(), account.getIdentifierValue());
             if ("SUCCESS".equals(res)) success++;
             else if ("SKIP".equals(res)) skip++;
@@ -223,7 +258,6 @@ public class SyncServiceImpl implements SyncService {
 
         for (SyncUserLog failLog : fails) {
             Long userId = failLog.getUserId();
-            // 重新查 Handle
             UserPlatformAccount upa = upaMapper.selectOne(new LambdaQueryWrapper<UserPlatformAccount>()
                     .eq(UserPlatformAccount::getUserId, userId)
                     .eq(UserPlatformAccount::getPlatformId, PLATFORM_CF));
@@ -234,7 +268,7 @@ public class SyncServiceImpl implements SyncService {
                 if ("RATING_SYNC".equals(jobType)) {
                     status = processSingleUserRating(newJobId, userId, handle);
                 } else if ("DAILY_SYNC".equals(jobType)) {
-                    status = processSingleUserDaily(newJobId, userId, handle, 3); // 重跑默认回溯3天
+                    status = processSingleUserDaily(newJobId, userId, handle, 3);
                 }
             } else {
                 logUserResult(newJobId, userId, "SKIP", "NO_HANDLE", "Handle missing during rerun");
@@ -251,13 +285,10 @@ public class SyncServiceImpl implements SyncService {
         return newJobId;
     }
 
-    // ================= 单个用户处理逻辑 (抽取) =================
+    // ================= 单个用户处理逻辑 =================
 
-    // 注意：这个方法内部混合了 网络请求 和 数据库操作。
-    // 理想状态是：先 fetch 数据，再调用一个 @Transactional 的 save 方法。
     private String processSingleUserRating(Long jobId, Long userId, String handle) {
         try {
-            // 1. 读库（快）
             RatingSnapshot lastSnapshot = ratingSnapshotMapper.selectOne(new LambdaQueryWrapper<RatingSnapshot>()
                     .eq(RatingSnapshot::getUserId, userId)
                     .eq(RatingSnapshot::getPlatformId, PLATFORM_CF)
@@ -265,13 +296,8 @@ public class SyncServiceImpl implements SyncService {
                     .last("LIMIT 1"));
 
             LocalDateTime lastTime = (lastSnapshot == null) ? null : lastSnapshot.getSnapshotTime();
-
-            // 2. 网络请求（慢！核心阻塞点）—— 此时没有开启事务，不会卡死数据库
             List<CfUserRatingResponse.Item> items = cfClient.getUserRating(handle);
 
-            // 3. 写入数据库
-            // 如果需要保证"要么全插入，要么全不插入"，可以将这部分提取为一个单独的 Service 方法加 @Transactional
-            // 但考虑到这里是追加日志，即便挂了，下次再跑也能补上，直接循环插入也可。
             int inserted = 0;
             for (CfUserRatingResponse.Item it : items) {
                 LocalDateTime t = Instant.ofEpochSecond(it.getRatingUpdateTimeSeconds())
@@ -280,13 +306,13 @@ public class SyncServiceImpl implements SyncService {
 
                 RatingSnapshot snapshot = new RatingSnapshot();
                 snapshot.setUserId(userId);
-                snapshot.setPlatformId(PLATFORM_CF);       // 必填：平台ID
-                snapshot.setHandle(handle);                // 必填：Handle
-                snapshot.setContestName(it.getContestName()); // 比赛名称
-                snapshot.setContestRank(it.getRank());     // 排名
-                snapshot.setSnapshotTime(t);               // 必填：快照时间
-                snapshot.setRating(it.getNewRating());     // 必填：Rating
-                ratingSnapshotMapper.insert(snapshot); // 这里的单条 insert 是自动 commit 的
+                snapshot.setPlatformId(PLATFORM_CF);
+                snapshot.setHandle(handle);
+                snapshot.setContestName(it.getContestName());
+                snapshot.setContestRank(it.getRank());
+                snapshot.setSnapshotTime(t);
+                snapshot.setRating(it.getNewRating());
+                ratingSnapshotMapper.insert(snapshot);
                 inserted++;
             }
 
@@ -294,13 +320,13 @@ public class SyncServiceImpl implements SyncService {
                 logUserResult(jobId, userId, "SKIP", "RATING_UNCHANGED", "无新增比赛");
                 return "SKIP";
             } else {
-                logUserResult(jobId, userId, "SUCCESS", null, "新增 " + inserted + " 条");
+                // 成功时将统计数据写入 errorMessage 字段
+                logUserResult(jobId, userId, "SUCCESS", null, "newSub=0, newSolved=0, ratingChanges=" + inserted);
                 return "SUCCESS";
             }
         } catch (Exception e) {
-            log.error("Daily sync fail user={}", userId, e);
+            log.error("Rating sync fail user={}", userId, e);
             logUserResult(jobId, userId, "FAIL", "UNKNOWN", e.getMessage());
-
             return "FAIL";
         }
     }
@@ -308,7 +334,6 @@ public class SyncServiceImpl implements SyncService {
     private String processSingleUserDaily(Long jobId, Long userId, String handle, int incDays) {
         LocalDate today = LocalDate.now(ZONE_CN);
         try {
-            // 1. 获取用户当前的活动记录范围（用于后续统计更新判断）
             DailyActivity lastActivity = dailyActivityMapper.selectOne(new LambdaQueryWrapper<DailyActivity>()
                     .eq(DailyActivity::getUserId, userId)
                     .eq(DailyActivity::getPlatformId, PLATFORM_CF)
@@ -316,8 +341,6 @@ public class SyncServiceImpl implements SyncService {
                     .last("LIMIT 1"));
 
             boolean firstSync = (lastActivity == null);
-
-            // 2. 获取本地数据库中该用户最新的提交ID (断点续传的关键)
             Long lastMaxId = null;
             SubmissionLog maxLog = submissionLogMapper.selectOne(new LambdaQueryWrapper<SubmissionLog>()
                     .select(SubmissionLog::getSubmissionId)
@@ -327,26 +350,17 @@ public class SyncServiceImpl implements SyncService {
                     .last("LIMIT 1"));
             if (maxLog != null) lastMaxId = maxLog.getSubmissionId();
 
-            // 如果本地没有记录，则标记 needFull = true
             boolean needFull = (lastMaxId == null);
-
-            // 3. 开始分页抓取
             int from = 1;
-            // [优化策略] 探针式抓取：如果是增量更新，先试探性抓取 10 条。
-            // 如果这 10 条里包含了旧数据，说明更新量很小，迅速结束，避免下载大包。
-            // 如果这 10 条全是新的，说明更新量大，后续循环自动切换为 2000 条。
             int count = needFull ? 2000 : 10;
-
             int newSubmissions = 0, newSolved = 0;
-            // 用于记录全量同步时最早的提交日期，以便全量初始化 DailyActivity
             LocalDate firstSubmitDateInThisBatch = null;
 
             while (true) {
-                // API 请求
                 List<CfUserStatusResponse.Submission> subs = cfClient.getUserStatus(handle, from, count);
 
                 if (subs == null || subs.isEmpty()) break;
-                if (from > 1000000) { // 安全阈值
+                if (from > 1000000) {
                     log.warn("User {} submissions exceed limit 1,000,000, stop syncing.", userId);
                     break;
                 }
@@ -355,7 +369,6 @@ public class SyncServiceImpl implements SyncService {
                 for (CfUserStatusResponse.Submission s : subs) {
                     if (s.getId() == null || s.getCreationTimeSeconds() == null) continue;
 
-                    // [核心逻辑] 增量同步检查：遇到旧数据立即停止
                     if (!needFull && s.getId() <= lastMaxId) {
                         shouldStop = true;
                         break;
@@ -364,7 +377,6 @@ public class SyncServiceImpl implements SyncService {
                     LocalDateTime submitTime = Instant.ofEpochSecond(s.getCreationTimeSeconds()).atZone(ZONE_CN).toLocalDateTime();
                     LocalDate day = submitTime.toLocalDate();
 
-                    // 记录本次抓取到的最早日期 (用于首次同步的统计范围)
                     if (firstSubmitDateInThisBatch == null || day.isBefore(firstSubmitDateInThisBatch)) {
                         firstSubmitDateInThisBatch = day;
                     }
@@ -376,12 +388,10 @@ public class SyncServiceImpl implements SyncService {
                     String url = (contestId != null && idx != null)
                             ? ("https://codeforces.com/contest/" + contestId + "/problem/" + idx) : null;
 
-                    // 数据入库
                     int ins = submissionLogMapper.insertIgnore(userId, PLATFORM_CF, handle, s.getId(),
                             contestId, idx, name, url, s.getVerdict(), rating, submitTime);
                     if (ins > 0) newSubmissions++;
 
-                    // 记录 AC
                     if ("OK".equalsIgnoreCase(s.getVerdict()) && s.getProblem() != null && s.getProblem().getContestId() != null) {
                         String key = s.getProblem().getContestId() + "_" + s.getProblem().getIndex();
                         int insSol = solvedProblemMapper.insertIgnore(userId, PLATFORM_CF, handle,
@@ -391,25 +401,15 @@ public class SyncServiceImpl implements SyncService {
                 }
 
                 if (shouldStop) break;
-
                 from += count;
-                // [优化策略] 如果第一页没停（说明更新量超过了初始 count），后续直接拉满 2000 条
                 if (count < 2000) count = 2000;
             }
 
-            // 4. 确定每日统计数据的重算范围
             LocalDate minDayForDaily = null;
-
             if (firstSync) {
-                // 如果是首次同步，范围从抓取到的最早提交日期开始
                 minDayForDaily = firstSubmitDateInThisBatch;
             } else {
-                // 如果是增量同步，默认只检查最近 incDays (通常3天)
                 minDayForDaily = today.minusDays(incDays - 1L);
-
-                // [性能关键优化]
-                // 只有当确实抓到了新数据 (newSub > 0) 时，才尝试去“填补”从上次活跃时间到现在的历史空缺。
-                // 否则（无新提交），只检查最近3天，防止遍历数年历史导致耗时过长。
                 if (newSubmissions > 0 && lastActivity != null) {
                     LocalDate lastDay = lastActivity.getDay();
                     if (lastDay.minusDays(1).isBefore(minDayForDaily)) {
@@ -418,11 +418,8 @@ public class SyncServiceImpl implements SyncService {
                 }
             }
 
-            // 5. 执行聚合更新 (DailyActivity)
             if (minDayForDaily != null) {
-                // 避免 minDayForDaily 晚于 today (虽然逻辑上不太可能，但为了安全)
                 if (minDayForDaily.isAfter(today)) minDayForDaily = today;
-
                 for (LocalDate d = minDayForDaily; !d.isAfter(today); d = d.plusDays(1)) {
                     LocalDateTime dayStart = d.atStartOfDay();
                     LocalDateTime dayEnd = d.plusDays(1).atStartOfDay().minusSeconds(1);
@@ -436,6 +433,7 @@ public class SyncServiceImpl implements SyncService {
                 }
             }
 
+            // 成功时将统计数据写入 errorMessage 字段
             logUserResult(jobId, userId, "SUCCESS", null, "newSub=" + newSubmissions + ", newSolved=" + newSolved);
             return "SUCCESS";
 
@@ -487,15 +485,28 @@ public class SyncServiceImpl implements SyncService {
         uLog.setPlatformId(PLATFORM_CF);
         uLog.setStatus(status);
         uLog.setErrorCode(errCode);
+
+        // 无论成功还是失败，都将 msg 写入 errorMessage 字段
+        // 成功时 msg 包含 newSub=X, newSolved=Y
+        // 失败时 msg 包含 异常堆栈或错误描述
         uLog.setErrorMessage(msg != null && msg.length() > 500 ? msg.substring(0, 500) : msg);
+
         uLog.setFetchedAt(LocalDateTime.now());
         syncUserLogMapper.insert(uLog);
     }
 
-    private SyncJobLogVO toVO(SyncJobLog po) {
-        if (po == null) return null;
+    private SyncJobLogVO toVO(SyncJobLog log) {
+        if (log == null) return null;
         SyncJobLogVO vo = new SyncJobLogVO();
-        BeanUtils.copyProperties(po, vo);
+        vo.setId(log.getId());
+        vo.setJobType(log.getJobType());
+        vo.setStatus(log.getStatus());
+        vo.setStartTime(log.getStartTime());
+        vo.setEndTime(log.getEndTime());
+        vo.setDurationMs(log.getDurationMs());
+        vo.setSuccessCount(log.getSuccessCount());
+        vo.setFailCount(log.getFailCount());
+        vo.setTriggerSource(log.getTriggerSource());
         return vo;
     }
 

@@ -13,6 +13,7 @@
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
 
         :root {
             --primary-color: #4e54c8;
@@ -27,10 +28,10 @@
             --border-color: #e2e8f0;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', 'Noto Sans SC', sans-serif; }
         body { background-color: var(--bg-color); padding: 20px; color: var(--text-dark); overflow-y: auto; }
 
-        /* === 顶部概览 Grid (回归经典样式) === */
+        /* === 顶部概览 Grid === */
         .overview-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -66,7 +67,7 @@
             font-size: 16px;
             font-weight: 600;
             color: var(--text-dark);
-            font-family: 'Courier New', monospace; /* 时间用等宽字体更好看 */
+            font-family: 'Courier New', monospace;
         }
 
         .status-icon {
@@ -158,13 +159,14 @@
         .badge-running { background: rgba(52, 152, 219, 0.15); color: #3498db; }
 
         .type-tag {
-            font-family: 'Courier New', monospace;
+            font-family: 'Noto Sans SC', sans-serif; /* 使用中文字体 */
             background: #f1f5f9;
-            padding: 2px 6px;
+            padding: 3px 8px;
             border-radius: 4px;
-            font-weight: 600;
+            font-weight: 500;
             font-size: 12px;
-            color: var(--text-dark);
+            color: var(--primary-color);
+            background: rgba(78, 84, 200, 0.1);
         }
 
         /* === 统一分页样式 === */
@@ -197,25 +199,45 @@
         }
         .modal-overlay.show { display: flex; opacity: 1; }
         .custom-modal {
-            background: white; width: 600px; max-width: 90%;
+            background: white; width: 650px; max-width: 95%;
             border-radius: 12px; padding: 25px;
             transform: translateY(20px); transition: transform 0.3s;
             box-shadow: 0 15px 30px rgba(0,0,0,0.2);
-            max-height: 80vh; display: flex; flex-direction: column;
+            max-height: 85vh; display: flex; flex-direction: column;
         }
         .modal-overlay.show .custom-modal { transform: translateY(0); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .modal-header h3 { font-size: 18px; font-weight: 600; margin: 0; }
         .close-modal { background: none; border: none; font-size: 20px; cursor: pointer; color: #999; }
 
-        .fail-list { flex: 1; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 10px; background: #fcfcfc; }
-        .fail-item {
-            padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: flex-start;
+        /* 列表容器通用样式 */
+        .list-container {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 10px;
+            background: #fcfcfc;
+            min-height: 100px; /* 给一个最小高度 */
+            max-height: 250px; /* 限制每个列表的最大高度 */
+            margin-bottom: 10px;
         }
-        .fail-item:last-child { border-bottom: none; }
-        .fail-user { font-weight: 600; font-size: 13px; color: var(--text-dark); }
-        .fail-reason { font-size: 12px; color: var(--danger-color); margin-top: 2px; }
-        .fail-suggest { font-size: 11px; color: var(--text-gray); margin-top: 2px; }
+
+        .list-item {
+            padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;
+        }
+        .list-item:last-child { border-bottom: none; }
+
+        .item-main { font-weight: 600; font-size: 13px; color: var(--text-dark); display: flex; align-items: center; gap: 8px;}
+        .item-sub { font-size: 11px; color: var(--text-gray); margin-top: 2px; }
+        .item-end { text-align: right; font-size: 12px; }
+
+        /* 数据变化 Badge */
+        .stat-badge {
+            background: #eef2ff; color: #4e54c8;
+            padding: 2px 6px; border-radius: 4px; font-size: 11px; font-family: monospace;
+            margin-left: 5px;
+        }
 
         @media (max-width: 800px) {
             .overview-grid { grid-template-columns: 1fr; }
@@ -224,7 +246,7 @@
 </head>
 <body>
 
-<!-- 第一行：概览卡片 (回归经典 3 卡片布局) -->
+<!-- 第一行：概览卡片 -->
 <div class="overview-grid">
     <!-- 自动调度状态 -->
     <div class="status-card">
@@ -276,7 +298,6 @@
         <i class="fas fa-chart-line"></i> Rating Sync (积分)
     </button>
 
-    <!-- 修改部分：移除 margin-left:auto 和 text-align:right，改为默认左对齐，并增加一点左边距 -->
     <div style="margin-left: 10px; font-size:12px; color:var(--text-gray);">
         <div style="margin-bottom: 3px;">
             <i class="fas fa-clock" style="color:var(--primary-color); margin-right:4px;"></i>
@@ -332,21 +353,29 @@
             <button class="close-modal" onclick="closeModal('detailModal')">&times;</button>
         </div>
 
-        <div style="margin-bottom: 15px; font-size: 13px; color: var(--text-gray);">
+        <div style="margin-bottom: 15px; font-size: 13px; color: var(--text-gray); display:flex; gap: 15px; align-items:center;">
             <span id="modalJobType" class="type-tag"></span>
-            <span style="margin-left: 10px;">状态: <span id="modalJobStatus"></span></span>
-            <span style="margin-left: 10px;">时间: <span id="modalJobTime"></span></span>
+            <span id="modalJobStatusBadge"></span>
+            <span><i class="far fa-clock"></i> <span id="modalJobTime"></span></span>
         </div>
 
-        <div style="margin-bottom: 10px; font-weight: 600; font-size: 13px;">
-            失败列表 (<span id="failCount" style="color:var(--danger-color)">0</span>)
+        <!-- 失败列表 -->
+        <div style="margin-bottom: 5px; font-weight: 600; font-size: 13px; display:flex; justify-content:space-between;">
+            <span>失败列表 (<span id="failCount" style="color:var(--danger-color)">0</span>)</span>
         </div>
-
-        <div class="fail-list" id="failListContainer">
+        <div class="list-container" id="failListContainer">
             <!-- JS 填充 -->
         </div>
 
-        <div class="modal-footer" style="margin-top: 20px; text-align: right;">
+        <!-- 变化列表 (新增) -->
+        <div style="margin-top: 10px; margin-bottom: 5px; font-weight: 600; font-size: 13px;">
+            更新列表 (成功且有数据变动: <span id="changeCount" style="color:var(--success-color)">0</span>)
+        </div>
+        <div class="list-container" id="changeListContainer">
+            <!-- JS 填充 -->
+        </div>
+
+        <div class="modal-footer" style="margin-top: 15px; text-align: right;">
             <button class="btn btn-outline" style="display:inline-flex;" onclick="closeModal('detailModal')">关闭</button>
             <button id="btnRerun" class="btn btn-primary" style="display:none; margin-left: 10px;" onclick="doRerun()">
                 <i class="fas fa-hammer"></i> 重试失败用户
@@ -360,11 +389,23 @@
     const pageSize = 10;
     let currentJobId = null;
 
+    // 任务类型映射
+    const JOB_TYPE_MAP = {
+        'DAILY_SYNC': '每日同步 (题目)',
+        'RATING_SYNC': 'Rating同步 (积分)',
+        'MANUAL': '手动同步'
+    };
+
     document.addEventListener('DOMContentLoaded', () => {
         loadOverview();
         loadJobs(1);
         checkSchedulerStatus();
     });
+
+    // 格式化类型显示
+    function formatJobType(type) {
+        return JOB_TYPE_MAP[type] || type;
+    }
 
     // 1. 概览信息
     function loadOverview() {
@@ -410,7 +451,7 @@
     function runSync(type) {
         Swal.fire({
             title: '确认触发?',
-            text: `即将启动 ${type} 任务，这将在后台运行。`,
+            text: `即将启动 ${formatJobType(type)} 任务，这将在后台运行。`,
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#4e54c8',
@@ -432,8 +473,6 @@
     // 3. 任务列表
     function loadJobs(page) {
         currentPage = page;
-        const tbody = document.getElementById('jobTableBody');
-
         axios.get('/api/admin/sync/jobs', { params: { page: page, pageSize: pageSize } }).then(res => {
             if(res.data.code === 200) {
                 const data = res.data.data;
@@ -461,7 +500,7 @@
             const tr = document.createElement('tr');
             tr.innerHTML = `
                     <td>#${job.id}</td>
-                    <td><span class="type-tag">${job.jobType}</span></td>
+                    <td><span class="type-tag">${formatJobType(job.jobType)}</span></td>
                     <td>${statusBadge}</td>
                     <td style="color:#7f8c8d; font-size:12px;">${formatDuration(job.durationMs)}</td>
                     <td>
@@ -484,10 +523,13 @@
     function viewDetail(jobId) {
         currentJobId = jobId;
         const modal = document.getElementById('detailModal');
-        const listContainer = document.getElementById('failListContainer');
+        const failContainer = document.getElementById('failListContainer');
+        const changeContainer = document.getElementById('changeListContainer');
         const btnRerun = document.getElementById('btnRerun');
 
-        listContainer.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">加载中...</div>';
+        // Loading state
+        failContainer.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">加载中...</div>';
+        changeContainer.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">加载中...</div>';
         modal.classList.add('show');
 
         axios.get(`/api/admin/sync/jobs/${jobId}`).then(res => {
@@ -496,31 +538,61 @@
                 const job = detail.job;
 
                 document.getElementById('modalJobId').textContent = job.id;
-                document.getElementById('modalJobType').textContent = job.jobType;
-                document.getElementById('modalJobStatus').textContent = job.status;
+                document.getElementById('modalJobType').textContent = formatJobType(job.jobType);
+                document.getElementById('modalJobStatusBadge').innerHTML = job.status === 'SUCCESS' ?
+                    '<span class="badge badge-success">成功</span>' : '<span class="badge badge-fail">'+job.status+'</span>';
                 document.getElementById('modalJobTime').textContent = formatTime(job.startTime);
 
+                // 处理失败列表
                 const fails = detail.failList || [];
                 document.getElementById('failCount').textContent = fails.length;
-
                 if (fails.length > 0) {
                     let html = '';
                     fails.forEach(f => {
                         html += `
-                                <div class="fail-item">
+                                <div class="list-item">
                                     <div>
-                                        <div class="fail-user">用户 ID: ${f.userId} (${f.handle})</div>
-                                        <div class="fail-suggest">${f.suggestAction}</div>
+                                        <div class="item-main">
+                                            <i class="fas fa-user-times" style="color:var(--danger-color)"></i>
+                                            ${f.handle}
+                                        </div>
+                                        <div class="item-sub">${f.suggestAction}</div>
                                     </div>
-                                    <div class="fail-reason">${f.errorMessage}</div>
+                                    <div class="item-end" style="color:var(--danger-color)">${f.errorMessage}</div>
                                 </div>
                             `;
                     });
-                    listContainer.innerHTML = html;
-                    btnRerun.style.display = 'inline-flex'; // 显示重跑按钮
+                    failContainer.innerHTML = html;
+                    btnRerun.style.display = 'inline-flex';
                 } else {
-                    listContainer.innerHTML = '<div style="text-align:center; padding:20px; color:var(--success-color);">无失败记录，完美运行！</div>';
+                    failContainer.innerHTML = '<div style="text-align:center; padding:15px; font-size:12px; color:#ccc;">无失败记录</div>';
                     btnRerun.style.display = 'none';
+                }
+
+                // 处理变更列表 (Success & Changed)
+                const changes = detail.changeList || [];
+                document.getElementById('changeCount').textContent = changes.length;
+                if (changes.length > 0) {
+                    let html = '';
+                    changes.forEach(c => {
+                        html += `
+                                <div class="list-item">
+                                    <div>
+                                        <div class="item-main">
+                                            <i class="fas fa-user-check" style="color:var(--success-color)"></i>
+                                            ${c.handle}
+                                        </div>
+                                    </div>
+                                    <div class="item-end">
+                                        ${c.newSub > 0 ? `<span class="stat-badge">+${c.newSub} 提交</span>` : ''}
+                                        ${c.newSolved > 0 ? `<span class="stat-badge" style="background:#e8f8f0; color:#2ecc71;">+${c.newSolved} AC</span>` : ''}
+                                    </div>
+                                </div>
+                            `;
+                    });
+                    changeContainer.innerHTML = html;
+                } else {
+                    changeContainer.innerHTML = '<div style="text-align:center; padding:15px; font-size:12px; color:#ccc;">本次同步无数据变动</div>';
                 }
             }
         });

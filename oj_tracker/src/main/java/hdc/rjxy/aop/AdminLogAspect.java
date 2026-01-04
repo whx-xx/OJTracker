@@ -4,6 +4,7 @@ import hdc.rjxy.mapper.UserMapper;
 import hdc.rjxy.pojo.AdminOpLog;
 import hdc.rjxy.pojo.User;
 import hdc.rjxy.pojo.UserSession;
+import hdc.rjxy.pojo.dto.ChangePasswordReq;
 import hdc.rjxy.pojo.dto.UpdateNicknameReq;
 import hdc.rjxy.pojo.dto.UpdateStatusReq;
 import hdc.rjxy.service.AdminOpLogService;
@@ -162,6 +163,10 @@ public class AdminLogAspect {
     private String resolveDetailRemark(ProceedingJoinPoint point, String oldData) {
         try {
             MethodSignature signature = (MethodSignature) point.getSignature();
+            String methodName = signature.getName();
+            if ("resetPassword".equals(methodName)) {
+                return "动作: 重置为默认密码";
+            }
             Parameter[] parameters = signature.getMethod().getParameters();
             Object[] args = point.getArgs();
 
@@ -185,7 +190,6 @@ public class AdminLogAspect {
                     }
                 }
 
-                // 1. 处理 UpdateStatusReq
                 if (arg instanceof UpdateStatusReq) {
                     UpdateStatusReq req = (UpdateStatusReq) arg;
                     if (req.getStatus() != null) {
@@ -193,14 +197,12 @@ public class AdminLogAspect {
                     }
                 }
 
-                // 2. 处理 UpdateNicknameReq (新增)
                 if (arg instanceof UpdateNicknameReq) {
                     UpdateNicknameReq req = (UpdateNicknameReq) arg;
                     String oldStr = (oldData == null) ? "未知" : oldData;
                     return "原昵称: " + oldStr + " -> 新昵称: " + req.getNickname();
                 }
 
-                // 3. 处理 Sync 任务
                 if ("jobType".equals(paramName) && arg instanceof String) {
                     sb.append("类型: ").append(arg);
                 }

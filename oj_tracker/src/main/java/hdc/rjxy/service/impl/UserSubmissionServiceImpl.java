@@ -118,7 +118,6 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
         return voPage;
     }
 
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public RefreshResultVO refreshLight(Long userId, String platformCode, Integer count) {
@@ -139,7 +138,7 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
             RatingSnapshot last = ratingSnapshotMapper.selectOne(new LambdaQueryWrapper<RatingSnapshot>()
                     .eq(RatingSnapshot::getUserId, userId)
                     .eq(RatingSnapshot::getPlatformId, p.getId())
-                    .eq(RatingSnapshot::getHandle, handle) // Fix: 增加 handle 过滤
+                    .eq(RatingSnapshot::getHandle, handle)
                     .orderByDesc(RatingSnapshot::getSnapshotTime)
                     .last("LIMIT 1"));
             LocalDateTime lastTime = (last != null) ? last.getSnapshotTime() : null;
@@ -162,24 +161,44 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
             e.printStackTrace(); // 忽略网络错误，继续同步提交
         }
 
-        // 3. 同步 Submissions
-        int batchSize = 1000;
+        // 3. 同步 Submissions (优化版)
+
+        // 获取本地已有的最新提交ID，用于断点判断
+        Long lastMaxId = null;
+        SubmissionLog maxLog = submissionLogMapper.selectOne(new LambdaQueryWrapper<SubmissionLog>()
+                .select(SubmissionLog::getSubmissionId)
+                .eq(SubmissionLog::getUserId, userId)
+                .eq(SubmissionLog::getPlatformId, p.getId())
+                .eq(SubmissionLog::getHandle, handle)
+                .orderByDesc(SubmissionLog::getSubmissionId)
+                .last("LIMIT 1"));
+        if (maxLog != null) lastMaxId = maxLog.getSubmissionId();
+
+        // 如果没有本地记录，说明是首次全量同步，不应该受 count 参数的小限制（除非 count 是强制指定的小值）
+        // 这里逻辑设定：如果 count <= 0 或 null，且是首次同步，则视为无限；如果 count > 0，则视为用户强制限制。
+        boolean unlimited = (count == null || count <= 0);
+        int limit = unlimited ? 1000000 : count; // 默认上限 100万，防止死循环
+
+        int batchSize = 2000; // CF 推荐的大页抓取
         int from = 1;
         int inserted = 0;
         int totalFetched = 0;
         Set<LocalDate> affectedDays = new HashSet<>();
 
-        // 限制最大同步数量防止超时 (根据 count 参数)
-        int maxCount = (count == null || count <= 0) ? 2000 : count;
-
         while (true) {
             List<CfUserStatusResponse.Submission> subs = cfClient.getUserStatus(handle, from, batchSize);
             if (subs == null || subs.isEmpty()) break;
 
-            // 如果获取的数据超过了需要同步的范围，可以提前 break（根据 id 判断），这里简化为按数量
-            totalFetched += subs.size();
+            boolean shouldStop = false;
 
             for (CfUserStatusResponse.Submission s : subs) {
+                // [优化] 增量同步核心逻辑：一旦遇到比本地最新ID更旧的记录，直接停止处理后续数据
+                // 只有在非强制全量重跑（unlimited）或者正常增量更新时生效
+                if (lastMaxId != null && s.getId() <= lastMaxId) {
+                    shouldStop = true;
+                    break;
+                }
+
                 Long sec = s.getCreationTimeSeconds();
                 if (sec == null) continue;
                 LocalDateTime submitTime = Instant.ofEpochSecond(sec).atZone(ZONE).toLocalDateTime();
@@ -192,6 +211,7 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
                 String url = (contestId != null && idx != null)
                         ? ("https://codeforces.com/contest/" + contestId + "/problem/" + idx) : null;
 
+                // 使用 insertIgnore 避免主键冲突
                 int rows = submissionLogMapper.insertIgnore(userId, p.getId(), handle, s.getId(),
                         contestId, idx, name, url, s.getVerdict(), rating, submitTime);
                 if (rows > 0) inserted++;
@@ -203,30 +223,39 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
                 }
             }
 
-            if (totalFetched >= maxCount || subs.size() < batchSize) break;
+            totalFetched += subs.size();
+
+            // 停止条件 1: 触发增量断点
+            if (shouldStop) break;
+            // 停止条件 2: 超过了用户指定的最大抓取数
+            if (totalFetched >= limit) break;
+            // 停止条件 3: API 返回数据不足一页，说明已经到底了
+            if (subs.size() < batchSize) break;
+
             from += batchSize;
             try { Thread.sleep(200); } catch (InterruptedException ignored) {}
         }
 
         // 4. 重算热力图
+        // 注意：如果是首次全量同步，affectedDays 可能非常多（数千天），这里循环查询可能会稍慢。
+        // 但考虑到是单用户操作，通常可以接受。如果需要极致优化，可以改写为批量 SQL。
         for (LocalDate day : affectedDays) {
             LocalDateTime dayStart = day.atStartOfDay();
             LocalDateTime dayEnd = day.plusDays(1).atStartOfDay();
 
-            // 修正：增加 handle 参数
             int solved = solvedProblemMapper.countSolvedInRange(userId, p.getId(), handle, dayStart, dayEnd);
 
             Long submitCnt = submissionLogMapper.selectCount(new LambdaQueryWrapper<SubmissionLog>()
                     .eq(SubmissionLog::getUserId, userId)
                     .eq(SubmissionLog::getPlatformId, p.getId())
-                    .eq(SubmissionLog::getHandle, handle) // Fix: 增加 handle 过滤
+                    .eq(SubmissionLog::getHandle, handle)
                     .ge(SubmissionLog::getSubmitTime, dayStart)
                     .lt(SubmissionLog::getSubmitTime, dayEnd));
 
             Long acceptCnt = submissionLogMapper.selectCount(new LambdaQueryWrapper<SubmissionLog>()
                     .eq(SubmissionLog::getUserId, userId)
                     .eq(SubmissionLog::getPlatformId, p.getId())
-                    .eq(SubmissionLog::getHandle, handle) // Fix: 增加 handle 过滤
+                    .eq(SubmissionLog::getHandle, handle)
                     .eq(SubmissionLog::getVerdict, "OK")
                     .ge(SubmissionLog::getSubmitTime, dayStart)
                     .lt(SubmissionLog::getSubmitTime, dayEnd));
@@ -240,4 +269,5 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
         vo.setInserted(inserted);
         return vo;
     }
+
 }

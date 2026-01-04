@@ -280,9 +280,12 @@ public class SyncServiceImpl implements SyncService {
 
                 RatingSnapshot snapshot = new RatingSnapshot();
                 snapshot.setUserId(userId);
-                // ... setters ...
-                snapshot.setRating(it.getNewRating());
-                // ...
+                snapshot.setPlatformId(PLATFORM_CF);       // 必填：平台ID
+                snapshot.setHandle(handle);                // 必填：Handle
+                snapshot.setContestName(it.getContestName()); // 比赛名称
+                snapshot.setContestRank(it.getRank());     // 排名
+                snapshot.setSnapshotTime(t);               // 必填：快照时间
+                snapshot.setRating(it.getNewRating());     // 必填：Rating
                 ratingSnapshotMapper.insert(snapshot); // 这里的单条 insert 是自动 commit 的
                 inserted++;
             }
@@ -295,7 +298,9 @@ public class SyncServiceImpl implements SyncService {
                 return "SUCCESS";
             }
         } catch (Exception e) {
-            // ... 异常处理保持不变 ...
+            log.error("Daily sync fail user={}", userId, e);
+            logUserResult(jobId, userId, "FAIL", "UNKNOWN", e.getMessage());
+
             return "FAIL";
         }
     }
@@ -303,6 +308,7 @@ public class SyncServiceImpl implements SyncService {
     private String processSingleUserDaily(Long jobId, Long userId, String handle, int incDays) {
         LocalDate today = LocalDate.now(ZONE_CN);
         try {
+            // 1. 获取用户当前的活动记录范围（用于后续统计更新判断）
             DailyActivity lastActivity = dailyActivityMapper.selectOne(new LambdaQueryWrapper<DailyActivity>()
                     .eq(DailyActivity::getUserId, userId)
                     .eq(DailyActivity::getPlatformId, PLATFORM_CF)
@@ -310,21 +316,8 @@ public class SyncServiceImpl implements SyncService {
                     .last("LIMIT 1"));
 
             boolean firstSync = (lastActivity == null);
-            LocalDate minDayForDaily;
-            if (firstSync) {
-                minDayForDaily = null;
-            } else {
-                minDayForDaily = today.minusDays(incDays - 1L);
-                LocalDate lastDay = lastActivity.getDay();
-                if (lastDay.minusDays(1).isBefore(minDayForDaily)) {
-                    minDayForDaily = lastDay.minusDays(1);
-                }
-            }
 
-            Map<LocalDate, Integer> submitCnt = new HashMap<>();
-            Map<LocalDate, Integer> acceptCnt = new HashMap<>();
-            Map<LocalDate, Set<String>> solvedSet = new HashMap<>();
-
+            // 2. 获取本地数据库中该用户最新的提交ID (断点续传的关键)
             Long lastMaxId = null;
             SubmissionLog maxLog = submissionLogMapper.selectOne(new LambdaQueryWrapper<SubmissionLog>()
                     .select(SubmissionLog::getSubmissionId)
@@ -333,19 +326,36 @@ public class SyncServiceImpl implements SyncService {
                     .orderByDesc(SubmissionLog::getSubmissionId)
                     .last("LIMIT 1"));
             if (maxLog != null) lastMaxId = maxLog.getSubmissionId();
+
+            // 如果本地没有记录，则标记 needFull = true
             boolean needFull = (lastMaxId == null);
 
+            // 3. 开始分页抓取
             int from = 1;
+            // [优化策略] 探针式抓取：如果是增量更新，先试探性抓取 10 条。
+            // 如果这 10 条里包含了旧数据，说明更新量很小，迅速结束，避免下载大包。
+            // 如果这 10 条全是新的，说明更新量大，后续循环自动切换为 2000 条。
+            int count = needFull ? 2000 : 10;
+
             int newSubmissions = 0, newSolved = 0;
+            // 用于记录全量同步时最早的提交日期，以便全量初始化 DailyActivity
+            LocalDate firstSubmitDateInThisBatch = null;
 
             while (true) {
-                List<CfUserStatusResponse.Submission> subs = cfClient.getUserStatus(handle, from, 1000);
+                // API 请求
+                List<CfUserStatusResponse.Submission> subs = cfClient.getUserStatus(handle, from, count);
+
                 if (subs == null || subs.isEmpty()) break;
-                if (from > 10000) break; // 防止死循环
+                if (from > 1000000) { // 安全阈值
+                    log.warn("User {} submissions exceed limit 1,000,000, stop syncing.", userId);
+                    break;
+                }
 
                 boolean shouldStop = false;
                 for (CfUserStatusResponse.Submission s : subs) {
                     if (s.getId() == null || s.getCreationTimeSeconds() == null) continue;
+
+                    // [核心逻辑] 增量同步检查：遇到旧数据立即停止
                     if (!needFull && s.getId() <= lastMaxId) {
                         shouldStop = true;
                         break;
@@ -354,62 +364,73 @@ public class SyncServiceImpl implements SyncService {
                     LocalDateTime submitTime = Instant.ofEpochSecond(s.getCreationTimeSeconds()).atZone(ZONE_CN).toLocalDateTime();
                     LocalDate day = submitTime.toLocalDate();
 
+                    // 记录本次抓取到的最早日期 (用于首次同步的统计范围)
+                    if (firstSubmitDateInThisBatch == null || day.isBefore(firstSubmitDateInThisBatch)) {
+                        firstSubmitDateInThisBatch = day;
+                    }
+
                     Integer rating = (s.getProblem() != null) ? s.getProblem().getRating() : null;
-                    // 写入 SubmissionLog
+                    Integer contestId = (s.getProblem() == null) ? null : s.getProblem().getContestId();
+                    String idx = (s.getProblem() == null) ? null : s.getProblem().getIndex();
+                    String name = (s.getProblem() == null) ? null : s.getProblem().getName();
+                    String url = (contestId != null && idx != null)
+                            ? ("https://codeforces.com/contest/" + contestId + "/problem/" + idx) : null;
+
+                    // 数据入库
                     int ins = submissionLogMapper.insertIgnore(userId, PLATFORM_CF, handle, s.getId(),
-                            (s.getProblem()!=null?s.getProblem().getContestId():null),
-                            (s.getProblem()!=null?s.getProblem().getIndex():null),
-                            (s.getProblem()!=null?s.getProblem().getName():null),
-                            null, s.getVerdict(), rating, submitTime);
+                            contestId, idx, name, url, s.getVerdict(), rating, submitTime);
                     if (ins > 0) newSubmissions++;
 
-                    // 写入 SolvedProblem
+                    // 记录 AC
                     if ("OK".equalsIgnoreCase(s.getVerdict()) && s.getProblem() != null && s.getProblem().getContestId() != null) {
                         String key = s.getProblem().getContestId() + "_" + s.getProblem().getIndex();
                         int insSol = solvedProblemMapper.insertIgnore(userId, PLATFORM_CF, handle,
-                                s.getProblem().getContestId(), s.getProblem().getIndex(), key,
-                                s.getProblem().getName(), null, rating, submitTime);
+                                contestId, idx, key, name, url, rating, submitTime);
                         if (insSol > 0) newSolved++;
                     }
-
-                    // 聚合
-                    if (!firstSync) {
-                        if (day.isBefore(minDayForDaily) || day.isAfter(today)) continue;
-                    } else {
-                        if (minDayForDaily == null || day.isBefore(minDayForDaily)) minDayForDaily = day;
-                    }
-                    submitCnt.put(day, submitCnt.getOrDefault(day, 0) + 1);
-                    if ("OK".equalsIgnoreCase(s.getVerdict())) {
-                        acceptCnt.put(day, acceptCnt.getOrDefault(day, 0) + 1);
-                        if (s.getProblem() != null) {
-                            String k = s.getProblem().getContestId() + "_" + s.getProblem().getIndex();
-                            solvedSet.computeIfAbsent(day, d -> new HashSet<>()).add(k);
-                        }
-                    }
                 }
+
                 if (shouldStop) break;
-                from += 1000;
+
+                from += count;
+                // [优化策略] 如果第一页没停（说明更新量超过了初始 count），后续直接拉满 2000 条
+                if (count < 2000) count = 2000;
             }
 
+            // 4. 确定每日统计数据的重算范围
+            LocalDate minDayForDaily = null;
+
+            if (firstSync) {
+                // 如果是首次同步，范围从抓取到的最早提交日期开始
+                minDayForDaily = firstSubmitDateInThisBatch;
+            } else {
+                // 如果是增量同步，默认只检查最近 incDays (通常3天)
+                minDayForDaily = today.minusDays(incDays - 1L);
+
+                // [性能关键优化]
+                // 只有当确实抓到了新数据 (newSub > 0) 时，才尝试去“填补”从上次活跃时间到现在的历史空缺。
+                // 否则（无新提交），只检查最近3天，防止遍历数年历史导致耗时过长。
+                if (newSubmissions > 0 && lastActivity != null) {
+                    LocalDate lastDay = lastActivity.getDay();
+                    if (lastDay.minusDays(1).isBefore(minDayForDaily)) {
+                        minDayForDaily = lastDay.minusDays(1);
+                    }
+                }
+            }
+
+            // 5. 执行聚合更新 (DailyActivity)
             if (minDayForDaily != null) {
+                // 避免 minDayForDaily 晚于 today (虽然逻辑上不太可能，但为了安全)
+                if (minDayForDaily.isAfter(today)) minDayForDaily = today;
+
                 for (LocalDate d = minDayForDaily; !d.isAfter(today); d = d.plusDays(1)) {
-                    // 定义当天的开始和结束时间
                     LocalDateTime dayStart = d.atStartOfDay();
                     LocalDateTime dayEnd = d.plusDays(1).atStartOfDay().minusSeconds(1);
 
-                    // 1. 查询当天的提交总数 (需要你在 SubmissionLogMapper 中加一个 count 方法)
-                    // select count(*) from submission_log where user_id=? and platform=1 and submission_time between ? and ?
                     int realSubmitCnt = submissionLogMapper.countByDate(userId, PLATFORM_CF, dayStart, dayEnd);
-
-                    // 2. 查询当天的 AC 数
-                    // select count(*) from submission_log where ... and verdict='OK' ...
                     int realAcceptCnt = submissionLogMapper.countAcceptByDate(userId, PLATFORM_CF, dayStart, dayEnd);
-
-                    // 3. 查询当天的去重 AC 题目数 (或者复用你之前的 SolvedProblem 逻辑，但按天统计比较麻烦，这里简化处理)
-                    // select count(distinct contest_id, index_id) from submission_log where ... and verdict='OK' ...
                     int realSolvedCnt = submissionLogMapper.countDistinctSolvedByDate(userId, PLATFORM_CF, dayStart, dayEnd);
 
-                    // 4. 使用查出来的真实数据更新
                     dailyActivityMapper.upsert(userId, PLATFORM_CF, handle, d,
                             realSubmitCnt, realAcceptCnt, realSolvedCnt);
                 }

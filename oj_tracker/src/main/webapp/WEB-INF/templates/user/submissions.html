@@ -4,132 +4,84 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>提交记录</title>
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <style>
-        :root {
-            --primary-color: #4e54c8;
-            --secondary-color: #8f94fb;
-            --text-light: #7f8c8d;
-            --text-dark: #34495e;
-            --border-color: #e2e8f0;
-            --bg-color: #f1f5f9;
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4e54c8',
+                        secondary: '#8f94fb',
+                        dark: '#1e293b', // Slate-800
+                        graytext: '#64748b', // Slate-500
+                        bg: '#f8fafc', // Slate-50
+                    },
+                    fontFamily: {
+                        poppins: ['Poppins', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', "Liberation Mono", "Courier New", 'monospace'],
+                    }
+                }
+            }
         }
-
-        body {
-            background-color: var(--bg-color);
-            padding: 20px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        /* 时间轴样式 */
-        .timeline { position: relative; padding: 10px 0; }
-        .timeline-item { position: relative; padding-left: 40px; margin-bottom: 15px; }
-        .timeline-item::before { content: ''; position: absolute; left: 15px; top: 0; bottom: -15px; width: 2px; background-color: #e9ecef; }
-        .timeline-item:last-child::before { display: none; }
-        .timeline-icon { position: absolute; left: 0; top: 0; width: 32px; height: 32px; border-radius: 50%; text-align: center; line-height: 32px; color: #fff; font-size: 14px; z-index: 1; }
-        .timeline-content { background: #fff; border: 1px solid #e9ecef; border-radius: 4px; padding: 12px 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: transform 0.2s; }
-        .timeline-content:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .verdict-badge { font-size: 0.75rem; padding: 3px 8px; border-radius: 10px; font-weight: 600; min-width: 40px; display: inline-block; text-align: center; }
-
-        .toolbar-container {
-            background: #fff;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
-        }
-
-        /* === 分页样式 === */
-        .pagination-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 25px;
-            background: #fff;
-            border-top: 1px solid #f0f0f0;
-        }
-
-        .pagination-info { font-size: 13px; color: var(--text-light); }
-
-        .page-btn {
-            border: 1px solid var(--border-color);
-            background: white;
-            color: var(--text-dark);
-            width: 28px;
-            height: 28px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-left: 4px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            text-decoration: none;
-        }
-
-        .page-btn:hover:not(:disabled) { border-color: var(--primary-color); color: var(--primary-color); }
-        .page-btn.active { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
-        .page-btn:disabled { background-color: #f5f5f5; color: #ccc; cursor: not-allowed; }
-
-        .search-input-group input:focus { box-shadow: none; border-color: var(--primary-color); }
-
-        /* === [新增] Rating 颜色样式 (Codeforces 风格) === */
-        .rating-gray { color: #808080; font-weight: bold; }
-        .rating-green { color: #008000; font-weight: bold; }
-        .rating-cyan { color: #03a89e; font-weight: bold; }
-        .rating-blue { color: #0000ff; font-weight: bold; }
-        .rating-violet { color: #a0a; font-weight: bold; }
-        .rating-orange { color: #ff8c00; font-weight: bold; }
-        .rating-red { color: #ff0000; font-weight: bold; }
-    </style>
+    </script>
 </head>
-<body>
+<body class="bg-bg text-dark font-poppins min-h-screen p-4 md:p-8 overflow-y-auto">
 
-<div class="container-fluid">
+<div class="max-w-5xl mx-auto space-y-6">
+
     <!-- 顶部操作栏 -->
-    <div class="toolbar-container d-flex justify-content-between align-items-center flex-wrap gap-3">
-        <div class="btn-group">
-            <button type="button" class="btn btn-outline-secondary filter-btn active" data-range="TODAY" onclick="changeRange('TODAY')">今日</button>
-            <button type="button" class="btn btn-outline-secondary filter-btn" data-range="WEEK" onclick="changeRange('WEEK')">本周</button>
-            <button type="button" class="btn btn-outline-secondary filter-btn" data-range="MONTH" onclick="changeRange('MONTH')">本月</button>
-            <button type="button" class="btn btn-outline-secondary filter-btn" data-range="ALL" onclick="changeRange('ALL')">全部</button>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-col md:flex-row justify-between items-center gap-4">
+        <!-- 筛选按钮组 -->
+        <div class="flex p-1 bg-slate-100 rounded-xl w-full md:w-auto">
+            <button type="button" class="filter-btn flex-1 md:flex-none px-4 py-2 text-sm font-medium rounded-lg transition-all text-slate-500 hover:text-dark focus:outline-none bg-white text-primary shadow-sm" data-range="TODAY" onclick="changeRange('TODAY')">今日</button>
+            <button type="button" class="filter-btn flex-1 md:flex-none px-4 py-2 text-sm font-medium rounded-lg transition-all text-slate-500 hover:text-dark focus:outline-none" data-range="WEEK" onclick="changeRange('WEEK')">本周</button>
+            <button type="button" class="filter-btn flex-1 md:flex-none px-4 py-2 text-sm font-medium rounded-lg transition-all text-slate-500 hover:text-dark focus:outline-none" data-range="MONTH" onclick="changeRange('MONTH')">本月</button>
+            <button type="button" class="filter-btn flex-1 md:flex-none px-4 py-2 text-sm font-medium rounded-lg transition-all text-slate-500 hover:text-dark focus:outline-none" data-range="ALL" onclick="changeRange('ALL')">全部</button>
         </div>
 
-        <div class="d-flex gap-2 align-items-center">
-            <div class="input-group search-input-group" style="width: 250px;">
-                <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                <input type="text" id="searchInput" class="form-control border-start-0" placeholder="搜索题目..." onkeyup="handleSearchDebounced()">
+        <!-- 搜索与同步 -->
+        <div class="flex gap-3 w-full md:w-auto">
+            <div class="relative w-full md:w-64 group">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors"></i>
+                <input type="text" id="searchInput" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all placeholder-slate-400" placeholder="搜索题目..." onkeyup="handleSearchDebounced()">
             </div>
-            <button type="button" class="btn btn-primary" onclick="refreshData()" style="background-color: var(--primary-color); border-color: var(--primary-color);">
-                <i class="fas fa-sync-alt"></i> 同步
+            <button type="button" class="bg-primary hover:bg-primary/90 text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm shadow-indigo-200 transition-all active:scale-95 flex items-center gap-2 whitespace-nowrap" onclick="refreshData()">
+                <i class="fas fa-sync-alt"></i> <span class="hidden sm:inline">同步</span>
             </button>
         </div>
     </div>
 
     <!-- 内容区域 -->
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body p-0">
-            <div id="timeline-container" class="timeline p-4">
-                <!-- JS 动态填充 -->
+    <div class="relative">
+        <!-- 时间轴容器 -->
+        <div id="timeline-container" class="space-y-6 pl-4 md:pl-0">
+            <!-- JS 动态填充 -->
+            <div class="text-center py-16 text-graytext">
+                <div class="flex flex-col items-center gap-3">
+                    <i class="fas fa-spinner fa-spin text-2xl text-primary/50"></i>
+                    <span>加载记录中...</span>
+                </div>
             </div>
         </div>
+
         <!-- 分页容器 -->
-        <div class="pagination-container" id="paginationContainer" style="display:none;">
-            <div class="pagination-info" id="pageInfo"></div>
-            <div id="pagination" style="display:flex;"></div>
+        <div class="mt-8 bg-white rounded-xl border border-slate-200 p-4 flex flex-col sm:flex-row justify-between items-center gap-4" id="paginationContainer" style="display:none;">
+            <div class="text-xs text-graytext font-medium" id="pageInfo"></div>
+            <div class="flex items-center gap-1" id="pagination"></div>
         </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
     // 全局状态
@@ -166,8 +118,9 @@
     // --- 业务逻辑 ---
 
     function changeRange(range) {
-        $('.filter-btn').removeClass('active btn-secondary').addClass('btn-outline-secondary');
-        $(`.filter-btn[data-range="${range}"]`).removeClass('btn-outline-secondary').addClass('active btn-secondary');
+        // Tailwind 样式切换逻辑
+        $('.filter-btn').removeClass('bg-white text-primary shadow-sm').addClass('text-slate-500 hover:text-dark');
+        $(`.filter-btn[data-range="${range}"]`).removeClass('text-slate-500 hover:text-dark').addClass('bg-white text-primary shadow-sm');
 
         currentState.range = range;
         currentState.page = 1;
@@ -193,11 +146,19 @@
         const container = $('#timeline-container');
         const pagination = $('#paginationContainer');
 
-        container.html('<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">加载中...</p></div>');
+        container.html(`
+            <div class="text-center py-16 text-graytext">
+                <div class="flex flex-col items-center gap-3">
+                    <i class="fas fa-spinner fa-spin text-2xl text-primary/50"></i>
+                    <span>加载记录中...</span>
+                </div>
+            </div>
+        `);
         pagination.hide();
 
         const keyword = $('#searchInput').val().trim();
 
+        // 使用 jQuery ajax
         $.get(`/api/user/submissions/timeline`, {
             platform: 'CF',
             range: currentState.range,
@@ -210,14 +171,14 @@
                 const pageData = res.data;
                 renderTimeline(pageData.records);
                 renderPagination(pageData.total, pageData.pages, pageData.current);
-                pagination.show();
+                pagination.css('display', 'flex'); // Tailwind 下恢复 flex
             } else {
-                container.html(`<div class="text-center py-5 text-danger">${res.msg}</div>`);
+                container.html(`<div class="text-center py-16 text-red-500">${res.msg}</div>`);
                 showToast(res.msg, 'error');
             }
         }).fail(function() {
             currentState.loading = false;
-            container.html('<div class="text-center py-5 text-danger">网络请求失败</div>');
+            container.html('<div class="text-center py-16 text-red-500">网络请求失败</div>');
             showToast("无法连接到服务器", 'error');
         });
     }
@@ -231,13 +192,13 @@
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#4e54c8',
-            cancelButtonColor: '#95a5a6',
+            cancelButtonColor: '#94a3b8',
             confirmButtonText: '确定同步',
             cancelButtonText: '取消'
         }).then((result) => {
             if (result.isConfirmed) {
                 const originalHtml = btn.html();
-                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> 同步中...');
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> <span class="hidden sm:inline">同步中...</span>');
 
                 $.post('/api/user/submissions/refresh?count=100', function(res) {
                     if(res.code === 200) {
@@ -264,7 +225,6 @@
         });
     }
 
-    // 重点修改：状态映射逻辑
     function renderTimeline(list) {
         const container = $('#timeline-container');
         container.empty();
@@ -282,102 +242,136 @@
             }
 
             container.html(`
-                <div class="text-center py-5">
-                    <i class="fas fa-inbox fa-3x text-muted mb-3 opacity-25"></i>
-                    <p class="text-muted">${emptyText}</p>
+                <div class="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-dashed border-slate-200">
+                    <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4 text-slate-300">
+                        <i class="fas fa-inbox text-2xl"></i>
+                    </div>
+                    <p class="text-slate-500 font-medium">${emptyText}</p>
                 </div>
             `);
             return;
         }
 
         list.forEach(item => {
-            // 默认值
+            // 状态逻辑
             let verdictShort = item.verdict;
-            let verdictColor = 'bg-secondary';
+            let verdictClass = 'bg-slate-100 text-slate-500 border-slate-200';
+            let iconClass = 'bg-slate-200 text-slate-500';
             let icon = '<i class="fas fa-question"></i>';
 
-            // 映射 Codeforces Verdict 到标准 OJ 术语
-            // 注意：API 返回的通常是大写带下划线的字符串
             if (item.verdict === 'OK') {
                 verdictShort = 'AC';
-                verdictColor = 'bg-success';
+                verdictClass = 'bg-emerald-50 text-emerald-600 border-emerald-100';
+                iconClass = 'bg-emerald-500 text-white shadow-lg shadow-emerald-200';
                 icon = '<i class="fas fa-check"></i>';
             } else if (item.verdict === 'WRONG_ANSWER') {
                 verdictShort = 'WA';
-                verdictColor = 'bg-danger';
+                verdictClass = 'bg-red-50 text-red-600 border-red-100';
+                iconClass = 'bg-red-500 text-white shadow-lg shadow-red-200';
                 icon = '<i class="fas fa-times"></i>';
             } else if (item.verdict === 'TIME_LIMIT_EXCEEDED') {
                 verdictShort = 'TLE';
-                verdictColor = 'bg-warning text-dark'; // TLE 通常用黄色/橙色
+                verdictClass = 'bg-amber-50 text-amber-600 border-amber-100';
+                iconClass = 'bg-amber-500 text-white shadow-lg shadow-amber-200';
                 icon = '<i class="fas fa-clock"></i>';
             } else if (item.verdict === 'MEMORY_LIMIT_EXCEEDED') {
                 verdictShort = 'MLE';
-                verdictColor = 'bg-info text-dark'; // MLE 通常用青色或深蓝
+                verdictClass = 'bg-blue-50 text-blue-600 border-blue-100';
+                iconClass = 'bg-blue-500 text-white shadow-lg shadow-blue-200';
                 icon = '<i class="fas fa-memory"></i>';
             } else if (item.verdict === 'RUNTIME_ERROR') {
                 verdictShort = 'RE';
-                verdictColor = 'bg-dark'; // RE 用深色或紫色
+                verdictClass = 'bg-purple-50 text-purple-600 border-purple-100';
+                iconClass = 'bg-purple-500 text-white shadow-lg shadow-purple-200';
                 icon = '<i class="fas fa-bomb"></i>';
             } else if (item.verdict === 'COMPILATION_ERROR') {
                 verdictShort = 'CE';
-                verdictColor = 'bg-secondary';
+                verdictClass = 'bg-slate-100 text-slate-600 border-slate-200';
+                iconClass = 'bg-slate-500 text-white shadow-lg shadow-slate-200';
                 icon = '<i class="fas fa-code"></i>';
             } else if (item.verdict === 'CHALLENGED') {
                 verdictShort = 'HACKED';
-                verdictColor = 'bg-danger';
+                verdictClass = 'bg-orange-50 text-orange-600 border-orange-100';
+                iconClass = 'bg-orange-500 text-white shadow-lg shadow-orange-200';
                 icon = '<i class="fas fa-user-secret"></i>';
             }
 
-            // [新增] 处理 Rating 显示
+            // Rating 显示
             let ratingHtml = '';
             if (item.rating) {
                 let rClass = getRatingColorClass(item.rating);
-                // 显示为 *1300 样式
-                ratingHtml = `<span class="${rClass} ms-2 small" title="难度: ${item.rating}" style="font-size: 0.9em; vertical-align: middle;">*${item.rating}</span>`;
+                ratingHtml = `<span class="${rClass} text-xs font-bold border border-current px-1.5 rounded bg-opacity-10 opacity-80" title="难度: ${item.rating}">*${item.rating}</span>`;
             }
 
+            // 格式化时间
+            const timeObj = new Date(item.submitTime);
+            const dateStr = timeObj.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+            const timeStr = timeObj.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+            // 生成 HTML (Tailwind 布局)
             const html = `
-                <div class="timeline-item">
-                    <div class="timeline-icon ${verdictColor}">
-                        ${icon}
-                    </div>
-                    <div class="timeline-content">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <h6 class="mb-0 text-truncate" style="max-width: 70%;">
-                                <a href="${item.problemUrl}" target="_blank" class="text-decoration-none fw-bold text-dark">
-                                    <span class="badge bg-light text-dark border me-1 font-monospace">${item.contestId}${item.problemIndex}</span>
-                                    ${item.problemName}
-                                </a>
-                                ${ratingHtml}
-                            </h6>
-                            <span class="badge ${verdictColor} verdict-badge">${verdictShort}</span>
-                        </div>
-                        <div class="timeline-time d-flex justify-content-between mt-2 align-items-center">
-                            <span class="text-muted small">
-                                <i class="far fa-clock me-1"></i>${formatTime(item.submitTime)}
-                            </span>
-                            <a href="https://codeforces.com/contest/${item.contestId}/submission/${item.submissionId}"
-                               target="_blank" class="btn btn-sm btn-light border py-0 px-2 text-muted" style="font-size: 12px;">
-                               #${item.submissionId} <i class="fas fa-external-link-alt ms-1"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
+                <div class="relative pl-8 md:pl-0 flex group">
+                    <!-- 左侧时间 (大屏显示) -->
+            <div class="hidden md:flex flex-col items-end pr-8 w-24 pt-3 shrink-0 text-right">
+            <span class="text-sm font-bold text-dark font-mono">${timeStr}</span>
+            <span class="text-xs text-graytext font-medium">${dateStr}</span>
+            </div>
+
+                <!-- 中间轴线 -->
+            <div class="absolute left-0 md:left-24 top-0 bottom-0 w-px bg-slate-200 group-last:bottom-auto group-last:h-6 md:ml-[15px] ml-[15px]"></div>
+
+                <!-- 节点图标 -->
+            <div class="absolute left-0 md:left-24 top-3 w-8 h-8 rounded-full flex items-center justify-center text-xs z-10 ${iconClass}">
+            ${icon}
+            </div>
+
+                <!-- 右侧卡片 -->
+            <div class="ml-6 md:ml-12 flex-1 bg-white rounded-xl border border-slate-100 shadow-sm p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1 hover:border-indigo-100">
+            <div class="flex justify-between items-start mb-2">
+            <div class="flex items-center gap-2 flex-wrap">
+            <span class="bg-slate-100 text-slate-600 text-xs font-mono px-2 py-0.5 rounded border border-slate-200">
+            ${item.contestId}${item.problemIndex}
+            </span>
+            <a href="${item.problemUrl}" target="_blank" class="text-sm font-bold text-dark hover:text-primary transition-colors line-clamp-1">
+            ${item.problemName}
+            </a>
+            ${ratingHtml}
+            </div>
+            <span class="text-[10px] font-bold px-2 py-1 rounded-full border uppercase tracking-wider whitespace-nowrap ${verdictClass}">
+            ${verdictShort}
+            </span>
+            </div>
+
+            <div class="flex justify-between items-end border-t border-slate-50 pt-2 mt-2">
+            <div class="flex items-center gap-3 text-xs text-graytext">
+                <!-- 移动端显示时间 -->
+            <span class="md:hidden flex items-center gap-1">
+            <i class="far fa-clock"></i> ${dateStr} ${timeStr}
+            </span>
+
+            <a href="https://codeforces.com/contest/${item.contestId}/submission/${item.submissionId}" target="_blank" class="flex items-center gap-1 hover:text-primary transition-colors">
+            <span>#${item.submissionId}</span>
+            <i class="fas fa-external-link-alt text-[10px]"></i>
+            </a>
+            </div>
+            </div>
+            </div>
+            </div>
             `;
             container.append(html);
         });
     }
 
-    // [新增] Rating 颜色判断函数
+    // Codeforces 风格颜色 (Tailwind Class)
     function getRatingColorClass(rating) {
         if (!rating) return '';
-        if (rating < 1200) return 'rating-gray';
-        if (rating < 1400) return 'rating-green';
-        if (rating < 1600) return 'rating-cyan';
-        if (rating < 1900) return 'rating-blue';
-        if (rating < 2100) return 'rating-violet';
-        if (rating < 2400) return 'rating-orange';
-        return 'rating-red';
+        if (rating < 1200) return 'text-slate-400';
+        if (rating < 1400) return 'text-green-600';
+        if (rating < 1600) return 'text-cyan-600';
+        if (rating < 1900) return 'text-blue-600';
+        if (rating < 2100) return 'text-purple-600';
+        if (rating < 2400) return 'text-orange-500';
+        return 'text-red-600';
     }
 
     function renderPagination(total, totalPages, current) {
@@ -387,17 +381,22 @@
         const startRecord = (current - 1) * currentState.size + 1;
         const endRecord = Math.min(current * currentState.size, total);
 
-        info.text(`第 ${startRecord}-${endRecord} 条 / 共 ${total} 条`);
+        info.text(`显示 ${startRecord}-${endRecord} 条 / 共 ${total} 条`);
         container.empty();
 
         if (totalPages <= 1) return;
 
+        const btnClass = "w-8 h-8 flex items-center justify-center rounded-lg border text-xs font-medium transition-all";
+        const activeClass = "bg-primary border-primary text-white shadow-md shadow-primary/30";
+        const normalClass = "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-primary";
+        const disabledClass = "bg-slate-50 border-slate-200 text-slate-300 cursor-not-allowed";
+
         // 上一页
-        container.append(`<button class="page-btn" ${current === 1 ? 'disabled' : ''} onclick="changePage(${current - 1})"><i class="fas fa-chevron-left"></i></button>`);
+        container.append(`<button class="${btnClass} ${current === 1 ? disabledClass : normalClass}" ${current === 1 ? 'disabled' : ''} onclick="changePage(${current - 1})"><i class="fas fa-chevron-left"></i></button>`);
 
         // 页码逻辑
-        const renderBtn = (i) => `<button class="page-btn ${i === current ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`;
-        const renderDots = () => `<span style="line-height:28px; padding:0 5px; color:#ccc;">...</span>`;
+        const renderBtn = (i) => `<button class="${btnClass} ${i === current ? activeClass : normalClass}" onclick="changePage(${i})">${i}</button>`;
+        const renderDots = () => `<span class="w-8 h-8 flex items-center justify-center text-slate-300 text-xs">...</span>`;
 
         if (totalPages <= 7) {
             for (let i = 1; i <= totalPages; i++) container.append(renderBtn(i));
@@ -414,13 +413,7 @@
         }
 
         // 下一页
-        container.append(`<button class="page-btn" ${current === totalPages ? 'disabled' : ''} onclick="changePage(${current + 1})"><i class="fas fa-chevron-right"></i></button>`);
-    }
-
-    function formatTime(isoStr) {
-        if (!isoStr) return '';
-        const date = new Date(isoStr);
-        return date.toLocaleString('zh-CN', { hour12: false });
+        container.append(`<button class="${btnClass} ${current === totalPages ? disabledClass : normalClass}" ${current === totalPages ? 'disabled' : ''} onclick="changePage(${current + 1})"><i class="fas fa-chevron-right"></i></button>`);
     }
 </script>
 

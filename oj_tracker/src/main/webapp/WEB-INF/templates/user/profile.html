@@ -10,403 +10,189 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
-
-        :root {
-            --primary-color: #4e54c8;
-            --secondary-color: #8f94fb;
-            --text-dark: #34495e;
-            --text-gray: #7f8c8d;
-            --bg-color: #f1f5f9;
-            --card-bg: #ffffff;
-            --border-color: #e2e8f0;
-            --danger-color: #e74c3c;
-            --success-color: #2ecc71;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            padding: 20px;
-            color: var(--text-dark);
-            overflow-y: auto;
-        }
-
-        /* === 布局网格 === */
-        .profile-grid {
-            display: grid;
-            grid-template-columns: 350px 1fr;
-            gap: 25px;
-            margin-top: 10px;
-        }
-
-        /* === 通用卡片样式 === */
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
-            padding: 30px;
-            border: 1px solid rgba(0,0,0,0.03);
-            margin-bottom: 25px;
-            height: fit-content;
-        }
-
-        .card-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        /* === 左侧：个人资料卡片 === */
-        .profile-card {
-            text-align: center;
-        }
-
-        .avatar-wrapper {
-            position: relative;
-            width: 120px;
-            height: 120px;
-            margin: 0 auto 15px;
-        }
-
-        .avatar-img {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 4px solid rgba(143, 148, 251, 0.2);
-            padding: 3px;
-        }
-
-        .avatar-upload-btn {
-            position: absolute;
-            bottom: 5px;
-            right: 5px;
-            background: var(--primary-color);
-            color: white;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            border: 2px solid white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-
-        .avatar-upload-btn:hover {
-            transform: scale(1.1);
-            background-color: var(--secondary-color);
-        }
-
-        .user-name {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: var(--text-dark);
-        }
-
-        .user-role {
-            font-size: 12px;
-            background: rgba(78, 84, 200, 0.1);
-            color: var(--primary-color);
-            padding: 4px 12px;
-            border-radius: 15px;
-            display: inline-block;
-            margin-bottom: 25px;
-            font-weight: 500;
-        }
-
-        /* 优化的信息列表样式 */
-        .info-list {
-            text-align: left;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .info-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 15px;
-            background-color: #f8fafc;
-            border-radius: 10px;
-            transition: all 0.2s;
-            border: 1px solid transparent;
-        }
-
-        .info-item:hover {
-            background-color: #fff;
-            border-color: var(--border-color);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-        }
-
-        .info-label {
-            color: var(--text-gray);
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .info-label i {
-            color: var(--primary-color);
-            width: 16px;
-            text-align: center;
-            opacity: 0.8;
-        }
-
-        .info-value {
-            font-weight: 500;
-            font-size: 14px;
-            color: var(--text-dark);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .edit-icon {
-            font-size: 12px;
-            color: #ccc;
-            cursor: pointer;
-            transition: color 0.2s;
-            padding: 4px;
-        }
-
-        .edit-icon:hover {
-            color: var(--primary-color);
-        }
-
-        /* === 右侧：账号绑定卡片 === */
-        .platform-list {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .platform-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 15px;
-            background: #f8fafc;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            transition: all 0.3s;
-        }
-
-        .platform-item:hover {
-            border-color: var(--secondary-color);
-            background: #fff;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-
-        .platform-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .platform-icon {
-            width: 40px;
-            height: 40px;
-            background: white;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-
-        .platform-icon img {
-            width: 24px;
-            height: 24px;
-        }
-
-        .platform-details h4 {
-            font-size: 14px;
-            margin-bottom: 2px;
-        }
-
-        .platform-details p {
-            font-size: 12px;
-            color: var(--text-gray);
-        }
-
-        .btn-add-platform {
-            width: 100%;
-            padding: 12px;
-            /* 修复：移除了无效的 background: dashed; */
-            border: 2px dashed var(--border-color);
-            color: var(--text-gray);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: transparent;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            font-weight: 500;
-        }
-
-        .btn-add-platform:hover {
-            border-color: var(--primary-color);
-            color: var(--primary-color);
-            background: rgba(78, 84, 200, 0.05);
-        }
-
-        /* === 右侧：密码修改表单 === */
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 13px;
-            color: var(--text-gray);
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 10px 15px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 14px;
-            transition: all 0.3s;
-            outline: none;
-        }
-
-        .form-control:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(78, 84, 200, 0.1);
-        }
-
-        .btn-primary {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 10px 25px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.3s;
-            width: 100%;
-        }
-
-        .btn-primary:hover {
-            background: #3f2b96;
-            transform: translateY(-1px);
-        }
-
-        @media (max-width: 900px) {
-            .profile-grid {
-                grid-template-columns: 1fr;
-            }
-            .profile-card {
-                margin-bottom: 0;
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4e54c8',
+                        secondary: '#8f94fb',
+                        dark: '#0f172a', // Slate-900
+                        graytext: '#64748b', // Slate-500
+                        bg: '#f1f5f9', // Slate-100
+                        success: '#10b981', // Emerald-500
+                        danger: '#ef4444', // Red-500
+                    },
+                    fontFamily: {
+                        poppins: ['Poppins', 'sans-serif'],
+                    }
+                }
             }
         }
-    </style>
+    </script>
 </head>
-<body>
+<body class="bg-bg text-slate-800 font-poppins min-h-screen p-4 md:p-8">
 
-<div class="profile-grid">
-    <!-- 左侧：个人资料 -->
-    <div class="card profile-card">
-        <div class="avatar-wrapper">
-            <img id="avatarImg" src="" alt="Avatar" class="avatar-img">
-            <label for="avatarInput" class="avatar-upload-btn" title="更换头像">
-                <i class="fas fa-camera"></i>
-            </label>
-            <input type="file" id="avatarInput" accept="image/*" style="display: none;" onchange="uploadAvatar()">
-        </div>
+<div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-        <h3 class="user-name" id="displayUsername">Loading...</h3>
-        <span class="user-role" id="displayRole">User</span>
-
-        <div class="info-list">
-            <div class="info-item">
-                    <span class="info-label">
-                        <i class="fas fa-id-card"></i> 学号
-                    </span>
-                <span class="info-value" id="infoStudentNo">--</span>
+    <!-- 左侧：固定个人信息卡 (占据 4/12) -->
+    <!-- 优化：
+         1. lg:sticky: 仅在大屏开启粘性定位
+         2. lg:top-8: 固定时距离顶部 2rem (与 padding 一致)
+         3. h-fit: 确保卡片高度适应内容，不会被拉伸，从而让 sticky 生效
+    -->
+    <div class="lg:col-span-4 xl:col-span-3">
+        <div class="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden lg:sticky lg:top-8 h-fit z-10">
+            <!-- 卡片顶部背景 -->
+            <div class="h-28 bg-gradient-to-br from-primary to-secondary relative">
+                <div class="absolute inset-0 bg-black/10"></div>
+                <!-- 装饰圆圈 -->
+                <div class="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
+                <div class="absolute top-10 -left-10 w-24 h-24 bg-white/10 rounded-full blur-lg"></div>
             </div>
-            <div class="info-item">
-                    <span class="info-label">
-                        <i class="fas fa-user-tag"></i> 昵称
-                    </span>
-                <div class="info-value">
-                    <span id="infoNickname">--</span>
-                    <i class="fas fa-pen edit-icon" onclick="toggleNicknameEdit()" title="修改昵称"></i>
+
+            <div class="px-6 pb-8 relative">
+                <!-- 头像 (上浮) -->
+                <div class="relative -mt-14 mb-4 flex justify-center">
+                    <div class="relative group">
+                        <div class="w-28 h-28 rounded-full p-1 bg-white shadow-xl">
+                            <img id="avatarImg" src="" alt="Avatar" class="w-full h-full rounded-full object-cover border border-slate-100">
+                        </div>
+                        <label for="avatarInput" class="absolute bottom-1 right-1 bg-dark text-white w-8 h-8 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:bg-primary transition-all duration-300 ring-4 ring-white z-10 hover:scale-110" title="更换头像">
+                            <i class="fas fa-camera text-xs"></i>
+                        </label>
+                        <input type="file" id="avatarInput" accept="image/*" class="hidden" onchange="uploadAvatar()">
+                    </div>
+                </div>
+
+                <!-- 姓名与角色 -->
+                <div class="text-center mb-8">
+                    <h2 class="text-xl font-bold text-dark mb-1" id="displayUsername">Loading...</h2>
+                    <span class="inline-block px-3 py-1 rounded-full bg-slate-100 text-primary text-xs font-semibold border border-slate-200" id="displayRole">User</span>
+                </div>
+
+                <!-- 信息列表 -->
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs">
+                                <i class="fas fa-id-card"></i>
+                            </div>
+                            <span class="text-xs font-medium text-slate-500">学号</span>
+                        </div>
+                        <span class="text-sm font-semibold text-slate-700 font-mono" id="infoStudentNo">--</span>
+                    </div>
+
+                    <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 group cursor-pointer hover:bg-white hover:shadow-sm transition-all" onclick="toggleNicknameEdit()">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs">
+                                <i class="fas fa-user-tag"></i>
+                            </div>
+                            <span class="text-xs font-medium text-slate-500">昵称</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-semibold text-slate-700" id="infoNickname">--</span>
+                            <i class="fas fa-pen text-[10px] text-slate-300 group-hover:text-primary transition-colors"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+                    <p class="text-xs text-slate-400">Member since 2026</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 右侧容器 -->
-    <div class="right-column">
+    <!-- 右侧：功能区域 (占据 8/12) -->
+    <div class="lg:col-span-8 xl:col-span-9 space-y-8">
 
-        <!-- 平台账号绑定 -->
-        <div class="card">
-            <div class="card-title">
-                <span>平台账号绑定</span>
-                <i class="fas fa-link" style="color: var(--text-gray);"></i>
-            </div>
-            <div class="platform-list" id="platformList">
-                <!-- JS 填充 -->
-                <div style="text-align:center;color:#999;padding:10px;">加载中...</div>
-            </div>
-            <div style="margin-top: 15px;">
-                <button class="btn-add-platform" onclick="openBindModal()">
-                    <i class="fas fa-plus"></i> 绑定新账号 (Codeforces)
+        <!-- 平台绑定板块 -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-100">
+                <div>
+                    <h3 class="text-lg font-bold text-dark flex items-center gap-2">
+                        <span class="w-1 h-6 bg-primary rounded-full"></span>
+                        平台账号绑定
+                    </h3>
+                    <p class="text-sm text-slate-500 mt-1 ml-3">关联您的 OJ 账号以同步解题数据</p>
+                </div>
+                <button class="px-5 py-2.5 bg-dark text-white text-sm font-medium rounded-lg shadow-md hover:bg-primary transition-all flex items-center gap-2 active:scale-95" onclick="openBindModal()">
+                    <i class="fas fa-plus"></i> 绑定新账号
                 </button>
-                <!-- 新增：覆盖提示 -->
-                <p style="color: #999; font-size: 12px; margin-top: 12px; text-align: center;">
-                    <i class="fas fa-info-circle"></i> 提示：如需更换绑定的账号，请直接重新绑定，新账号将自动覆盖旧账号。
-                </p>
             </div>
-        </div>
 
-        <!-- 安全设置 -->
-        <div class="card">
-            <div class="card-title">
-                <span>安全设置</span>
-                <i class="fas fa-shield-alt" style="color: var(--text-gray);"></i>
+            <!-- 平台列表 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="platformList">
+                <div class="md:col-span-2 text-center py-10">
+                    <i class="fas fa-spinner fa-spin text-primary text-2xl"></i>
+                </div>
             </div>
-            <form id="passwordForm" onsubmit="changePassword(event)">
-                <div class="form-group">
-                    <label>当前密码</label>
-                    <input type="password" id="oldPass" class="form-control" placeholder="请输入当前使用的密码" required>
+
+            <p class="text-xs text-slate-400 mt-4 flex items-center gap-1">
+                <i class="fas fa-info-circle"></i> 提示：绑定新账号将直接覆盖当前同平台的旧账号。
+            </p>
+        </section>
+
+        <!-- 安全设置板块 -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
+            <div class="mb-6 pb-6 border-b border-slate-100">
+                <h3 class="text-lg font-bold text-dark flex items-center gap-2">
+                    <span class="w-1 h-6 bg-emerald-500 rounded-full"></span>
+                    安全设置
+                </h3>
+                <p class="text-sm text-slate-500 mt-1 ml-3">修改登录密码，建议定期更换以保护账户安全</p>
+            </div>
+
+            <form id="passwordForm" onsubmit="changePassword(event)" class="max-w-2xl">
+                <div class="space-y-5">
+                    <!-- 当前密码 -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">当前密码</label>
+                        <div class="relative group">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
+                                <i class="fas fa-lock"></i>
+                            </div>
+                            <input type="password" id="oldPass" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all placeholder-slate-400" placeholder="请输入当前使用的密码" required>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <!-- 新密码 -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">新密码</label>
+                            <div class="relative group">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
+                                    <i class="fas fa-key"></i>
+                                </div>
+                                <input type="password" id="newPass" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all placeholder-slate-400" placeholder="设置新密码" required>
+                            </div>
+                        </div>
+
+                        <!-- 确认密码 -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">确认新密码</label>
+                            <div class="relative group">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <input type="password" id="confirmPass" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all placeholder-slate-400" placeholder="再次输入新密码" required>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>新密码</label>
-                    <input type="password" id="newPass" class="form-control" placeholder="设置新密码" required>
+
+                <div class="mt-8">
+                    <button type="submit" class="px-8 py-3 bg-slate-800 hover:bg-primary text-white font-medium rounded-xl shadow-lg shadow-slate-200 hover:shadow-xl transition-all duration-300 transform active:scale-[0.98] flex items-center gap-2">
+                        <i class="fas fa-save"></i> 保存修改
+                    </button>
                 </div>
-                <div class="form-group">
-                    <label>确认新密码</label>
-                    <input type="password" id="confirmPass" class="form-control" placeholder="再次输入新密码" required>
-                </div>
-                <button type="submit" class="btn-primary">保存修改</button>
             </form>
-        </div>
+        </section>
 
     </div>
 </div>
@@ -417,6 +203,7 @@
         loadMyPlatforms();
     });
 
+    // 加载用户信息 (接口: /api/me)
     function loadUserProfile() {
         axios.get('/api/me')
             .then(res => {
@@ -434,6 +221,7 @@
             .catch(console.error);
     }
 
+    // 加载平台列表 (接口: /api/me/platforms)
     function loadMyPlatforms() {
         const container = document.getElementById('platformList');
         axios.get('/api/me/platforms')
@@ -443,7 +231,15 @@
                     container.innerHTML = '';
 
                     if(list.length === 0) {
-                        container.innerHTML = '<div style="text-align:center;color:#999;font-size:13px;padding:10px;">暂无绑定账号</div>';
+                        // 使用 Tailwind 样式
+                        container.innerHTML = `
+                            <div class="md:col-span-2 flex flex-col items-center justify-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                                <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3 text-slate-300">
+                                    <i class="fas fa-link-slash text-xl"></i>
+                                </div>
+                                <p class="text-slate-500 text-sm font-medium">暂无绑定账号</p>
+                            </div>
+                        `;
                         return;
                     }
 
@@ -451,17 +247,27 @@
                         const iconUrl = 'https://cdn.iconscout.com/icon/free/png-256/free-code-forces-3628695-3029920.png';
 
                         const div = document.createElement('div');
-                        div.className = 'platform-item';
-                        // 修改：移除了 button class="btn-unbind"
+                        // 卡片样式
+                        div.className = 'flex items-center p-4 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300 group relative overflow-hidden';
+
+                        // 装饰背景角标
+                        const bgDeco = `<div class="absolute -right-4 -top-4 w-16 h-16 bg-gradient-to-br from-slate-50 to-slate-100 rounded-full opacity-50 group-hover:bg-primary/5 transition-colors"></div>`;
+
                         div.innerHTML = `
-                                <div class="platform-info">
-                                    <div class="platform-icon">
-                                        <img src="${iconUrl}" alt="CF">
+                                ${bgDeco}
+                                <div class="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center p-2 shrink-0 border border-slate-100 mr-4 z-10">
+                                    <img src="${iconUrl}" alt="CF" class="w-full h-full object-contain">
+                                </div>
+                                <div class="flex-1 min-w-0 z-10">
+                                    <div class="flex justify-between items-start">
+                                        <h4 class="text-sm font-bold text-slate-700 leading-tight truncate">${item.platformCode || 'Codeforces'}</h4>
+                                        <span class="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 flex items-center gap-1">
+                                            <i class="fas fa-check-circle"></i> 已绑定
+                                        </span>
                                     </div>
-                                    <div class="platform-details">
-                                        <h4>${item.platformCode || 'Codeforces'}</h4>
-                                        <p>Handle: <strong>${item.identifierValue}</strong></p>
-                                    </div>
+                                    <p class="text-xs text-slate-500 mt-1 truncate">
+                                        Handle: <span class="font-medium text-slate-700 font-mono bg-slate-100 px-1 rounded">${item.identifierValue}</span>
+                                    </p>
                                 </div>
                             `;
                         container.appendChild(div);
@@ -470,6 +276,7 @@
             });
     }
 
+    // 修改昵称
     function toggleNicknameEdit() {
         const span = document.getElementById('infoNickname');
         const currentName = span.textContent;
@@ -482,6 +289,9 @@
             confirmButtonText: '保存',
             cancelButtonText: '取消',
             confirmButtonColor: '#4e54c8',
+            customClass: {
+                confirmButton: 'bg-primary',
+            },
             inputValidator: (value) => {
                 if (!value) {
                     return '昵称不能为空!';
@@ -492,7 +302,7 @@
                 axios.post('/api/me/nickname', { nickname: result.value })
                     .then(res => {
                         if(res.data.code === 200) {
-                            Swal.fire('成功', '昵称已更新', 'success');
+                            Swal.fire({ icon: 'success', title: '昵称已更新', timer: 1500, showConfirmButton: false });
                             loadUserProfile();
                         } else {
                             Swal.fire('失败', res.data.msg, 'error');
@@ -502,6 +312,7 @@
         });
     }
 
+    // 修改密码 (三框验证)
     function changePassword(e) {
         e.preventDefault();
         const oldPassword = document.getElementById('oldPass').value;
@@ -509,7 +320,7 @@
         const confirmPassword = document.getElementById('confirmPass').value;
 
         if (newPassword !== confirmPassword) {
-            Swal.fire('错误', '两次输入的新密码不一致', 'error');
+            Swal.fire({ icon: 'error', title: '两次输入的新密码不一致', timer: 1500, showConfirmButton: false });
             return;
         }
 
@@ -524,6 +335,7 @@
                     text: '密码已更新，请使用新密码重新登录',
                     icon: 'success',
                     confirmButtonText: '重新登录',
+                    confirmButtonColor: '#4e54c8',
                     allowOutsideClick: false
                 }).then(() => {
                     axios.post('/api/auth/logout').finally(() => {
@@ -538,11 +350,18 @@
         });
     }
 
+    // 绑定账号 (逻辑保持覆盖更新)
     function openBindModal() {
         Swal.fire({
             title: '绑定 Codeforces 账号',
             html: `
-                    <input id="swal-input1" class="swal2-input" placeholder="请输入你的 Handle (用户名)">
+                    <div class="text-left bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4">
+                        <p class="text-xs text-blue-600 flex items-start gap-2">
+                            <i class="fas fa-info-circle mt-0.5"></i>
+                            <span>输入新的 Handle 将直接覆盖旧的绑定账号。请确保 Handle 输入正确。</span>
+                        </p>
+                    </div>
+                    <input id="swal-input1" class="swal2-input !m-0 !w-full" placeholder="请输入你的 Handle (用户名)">
                 `,
             focusConfirm: false,
             showCancelButton: true,
@@ -556,39 +375,47 @@
             if (result.isConfirmed && result.value) {
                 const handle = result.value;
 
+                // 1. 获取当前列表
                 axios.get('/api/me/platforms').then(res => {
                     let currentItems = [];
                     if(res.data.code === 200 && res.data.data) {
-                        // 修改：过滤掉旧的 CF 绑定，实现"覆盖"效果
+                        // 过滤掉旧的 CF 绑定，实现"覆盖"效果
                         currentItems = res.data.data
                             .filter(p => p.platformCode !== 'CF')
                             .map(p => ({
-                                platformId: p.platformId || 1,
+                                platformId: p.platformId || 1, // 假设 1 是 CF 的 ID
                                 identifierType: 'USERNAME',
                                 identifierValue: p.identifierValue
                             }));
                     }
 
-                    // 添加新的绑定
+                    // 2. 添加新的绑定
                     currentItems.push({
                         platformId: 1,
                         identifierType: 'USERNAME',
                         identifierValue: handle
                     });
 
+                    // 3. 提交更新
                     return axios.post('/api/me/platforms', { items: currentItems });
                 }).then(res => {
                     if(res.data.code === 200) {
-                        Swal.fire('成功', '绑定请求已提交', 'success');
+                        Swal.fire({ icon: 'success', title: '绑定请求已提交', timer: 1500, showConfirmButton: false });
                         loadMyPlatforms();
+                        // 触发后端刷新 (可选)
+                        // axios.post('/api/user/submissions/refresh?platformCode=CF');
                     } else {
                         Swal.fire('失败', res.data.msg, 'error');
                     }
+                }).catch(err => {
+                    Swal.fire('错误', '请求处理失败', 'error');
+                    console.error(err);
                 });
             }
         });
     }
 
+    // 上传头像
     function uploadAvatar() {
         const fileInput = document.getElementById('avatarInput');
         if (fileInput.files.length === 0) return;
@@ -609,6 +436,10 @@
                 Toast.fire({ icon: 'success', title: '头像更新成功' });
                 const newUrl = res.data.data;
                 document.getElementById('avatarImg').src = newUrl;
+                // 尝试更新父级 Layout 头像
+                if(window.parent && window.parent.document.getElementById('userAvatar')) {
+                    window.parent.document.getElementById('userAvatar').src = newUrl;
+                }
             } else {
                 Toast.fire({ icon: 'error', title: res.data.msg });
             }

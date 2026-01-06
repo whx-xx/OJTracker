@@ -8,367 +8,107 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Axios -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
-
-        :root {
-            --primary-color: #4e54c8;
-            --secondary-color: #8f94fb;
-            --text-dark: #34495e;
-            --text-gray: #7f8c8d;
-            --bg-color: #f1f5f9;
-            --card-bg: #ffffff;
-            --border-color: #e2e8f0;
-            --gold: #f1c40f;
-            --silver: #bdc3c7;
-            --bronze: #d35400;
-            --my-rank-bg: #34495e;
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4e54c8',
+                        secondary: '#8f94fb',
+                        dark: '#1e293b', // Slate-800
+                        graytext: '#64748b', // Slate-500
+                        bg: '#f8fafc', // Slate-50
+                    },
+                    fontFamily: {
+                        poppins: ['Poppins', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', "Liberation Mono", "Courier New", 'monospace'],
+                    }
+                }
+            }
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            padding: 20px;
-            padding-bottom: 80px;
-            color: var(--text-dark);
-            overflow-y: auto;
-        }
-
-        /* === 搜索栏 === */
-        .toolbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .search-wrapper {
-            position: relative;
-            width: 100%;
-            max-width: 300px;
-        }
-
-        .search-wrapper i {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-gray);
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 10px 15px 10px 40px;
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            background: white;
-            outline: none;
-            transition: all 0.3s;
-            font-size: 14px;
-        }
-
-        .search-input:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(78, 84, 200, 0.1);
-        }
-
-        /* === 排行榜卡片 === */
-        .ranking-card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
-            overflow: hidden;
-            border: 1px solid rgba(0,0,0,0.03);
-            display: flex;
-            flex-direction: column;
-            min-height: 500px;
-        }
-
-        .table-responsive {
-            overflow-x: auto;
-            width: 100%;
-            flex: 1;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed; /* 关键：固定布局算法，配合百分比宽度使用 */
-        }
-
-        thead {
-            background-color: #f8fafc;
-            border-bottom: 2px solid var(--border-color);
-        }
-
-        th {
-            text-align: center; /* 默认居中 */
-            padding: 12px 20px;
-            font-weight: 600;
-            color: var(--text-gray);
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            white-space: nowrap; /* 防止表头换行 */
-        }
-
-        td {
-            text-align: center; /* 默认居中 */
-            padding: 12px 20px;
-            border-bottom: 1px solid var(--border-color);
-            font-size: 14px;
-            vertical-align: middle;
-            color: var(--text-dark);
-            white-space: nowrap; /* 防止内容换行 */
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        /* 列宽优化 (合计100%或自适应) */
-        .col-rank { width: 80px; text-align: center; }
-        .col-user { width: 30%; text-align: left; } /* 改为左对齐 */
-        .col-handle { width: 20%; text-align: left; } /* 改为左对齐 */
-        .col-rating { width: 15%; text-align: center; }
-        .col-time { width: auto; text-align: center; }
-
-        /* 排名样式 */
-        .rank-badge {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto;
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        .rank-1 .rank-badge { background: var(--gold); color: white; box-shadow: 0 2px 5px rgba(241, 196, 15, 0.4); }
-        .rank-2 .rank-badge { background: var(--silver); color: white; }
-        .rank-3 .rank-badge { background: var(--bronze); color: white; }
-
-        tr.rank-1 { background-color: rgba(241, 196, 15, 0.05); }
-        tr.rank-2 { background-color: rgba(189, 195, 199, 0.08); }
-        tr.rank-3 { background-color: rgba(211, 84, 0, 0.05); }
-
-        /* 用户信息 */
-        .user-info-cell {
-            display: flex;
-            align-items: center;
-            justify-content: flex-start; /* 改为左对齐 */
-            gap: 12px;
-            text-align: left;
-        }
-
-        .user-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 1px solid #eee;
-            flex-shrink: 0; /* 防止头像被挤扁 */
-        }
-
-        .user-details {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            line-height: 1.3;
-            overflow: hidden;
-        }
-
-        /* Handle 样式 */
-        .handle-text {
-            font-family: 'Courier New', Courier, monospace;
-            font-weight: 600;
-            font-size: 14px;
-            color: var(--primary-color);
-        }
-
-        .user-nickname {
-            font-weight: 600;
-            font-size: 14px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .user-student-no {
-            font-size: 12px;
-            color: var(--text-gray);
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        /* 积分列 */
-        .rating-cell {
-            font-weight: 700;
-            font-size: 15px;
-            font-family: 'Courier New', monospace;
-        }
-
-        .rate-gray { color: #808080; }
-        .rate-green { color: #008000; }
-        .rate-cyan { color: #03a89e; }
-        .rate-blue { color: #0000ff; }
-        .rate-violet { color: #aa00aa; }
-        .rate-orange { color: #ff8c00; }
-        .rate-red { color: #ff0000; }
-
-        .time-cell {
-            color: var(--text-gray); /* 加深颜色，原为 #ccc */
-            font-size: 12px; /* 稍微调大 */
-            font-weight: 500;
-        }
-
-        /* === 分页 === */
-        .pagination-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 25px;
-            background: #fff;
-            border-top: 1px solid #f0f0f0;
-        }
-
-        .page-btn {
-            border: 1px solid var(--border-color);
-            background: white;
-            color: var(--text-dark);
-            width: 28px;
-            height: 28px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-left: 4px;
-        }
-
-        .page-btn.active {
-            background-color: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
-        }
-
-        /* === 底部“我的排名”悬浮栏 === */
-        .my-rank-bar {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            background: var(--my-rank-bg);
-            color: white;
-            border-radius: 12px;
-            padding: 10px 25px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-            display: none;
-            align-items: center;
-            justify-content: space-between;
-            z-index: 100;
-            transform: translateY(100px);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .my-rank-bar.show {
-            transform: translateY(0);
-        }
-
-        .my-rank-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .my-rank-info {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .my-rank-badge {
-            background: rgba(255,255,255,0.2);
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .my-rank-val {
-            font-weight: bold;
-            font-size: 16px;
-            color: #f1c40f;
-        }
-
-        /* 移动端适配 */
-        @media (max-width: 768px) {
-            th, td { padding: 10px; }
-            .user-student-no, .time-cell { display: none; }
-            .col-user { width: auto; max-width: 120px; }
-            .col-handle { width: auto; max-width: 100px; }
-            .col-rating { width: auto; }
-            .my-rank-bar { bottom: 10px; left: 10px; right: 10px; padding: 10px 15px; }
-        }
-    </style>
+    </script>
 </head>
-<body>
+<body class="bg-bg text-dark font-poppins min-h-screen p-4 md:p-8 pb-24 overflow-y-auto relative">
 
-<div class="toolbar">
-    <div class="search-wrapper">
-        <i class="fas fa-search"></i>
-        <input type="text" class="search-input" id="searchInput" placeholder="搜索昵称 / Handle / 学号..." onkeyup="handleSearch()">
+<div class="max-w-6xl mx-auto space-y-6">
+
+    <!-- 工具栏：标题与搜索 -->
+    <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-dark flex items-center gap-2">
+                <i class="fas fa-trophy text-yellow-500"></i> 团队积分榜
+            </h1>
+            <p class="text-sm text-graytext mt-1">实时追踪团队成员 Codeforces 竞技积分</p>
+        </div>
+
+        <div class="relative w-full sm:w-80 group">
+            <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors"></i>
+            <input type="text" id="searchInput" onkeyup="handleSearch()"
+                   placeholder="搜索昵称 / Handle / 学号..."
+                   class="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-full text-sm shadow-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all placeholder-gray-400">
+        </div>
     </div>
+
+    <!-- 排行榜卡片 -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[500px]">
+        <!-- 表格容器 (响应式滚动) -->
+        <div class="overflow-x-auto w-full">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                <tr class="bg-slate-50/80 border-b border-slate-100 text-xs font-semibold text-graytext uppercase tracking-wider">
+                    <th class="px-6 py-4 text-center w-20">排名</th>
+                    <th class="px-6 py-4 w-1/3 min-w-[200px]">选手信息</th>
+                    <th class="px-6 py-4 w-1/4 min-w-[150px]">Handle</th>
+                    <th class="px-6 py-4 text-center w-24">积分</th>
+                    <th class="px-6 py-4 text-center hidden md:table-cell w-32">同步时间</th>
+                </tr>
+                </thead>
+                <tbody id="rankingBody" class="divide-y divide-slate-50">
+                <tr>
+                    <td colspan="5" class="px-6 py-16 text-center text-graytext">
+                        <div class="flex flex-col items-center gap-3">
+                            <i class="fas fa-spinner fa-spin text-2xl text-primary/50"></i>
+                            <span>数据加载中...</span>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分页 -->
+        <div class="mt-auto border-t border-slate-100 p-4 bg-white flex flex-col sm:flex-row justify-between items-center gap-4" id="paginationContainer" style="display:none;">
+            <div class="text-xs text-graytext font-medium" id="pageInfo"></div>
+            <div class="flex items-center gap-1" id="pagination"></div>
+        </div>
+    </div>
+
 </div>
 
-<div class="ranking-card">
-    <div class="table-responsive">
-        <table>
-            <thead>
-            <tr>
-                <th class="col-rank">排名</th>
-                <th class="col-user">选手信息</th>
-                <th class="col-handle">Handle</th>
-                <th class="col-rating">积分</th>
-                <th class="col-time">同步时间</th>
-            </tr>
-            </thead>
-            <tbody id="rankingBody">
-            <tr>
-                <td colspan="5" style="text-align:center; padding: 40px; color: #999;">
-                    <i class="fas fa-spinner fa-spin" style="margin-right: 10px;"></i> 数据加载中...
-                </td>
-            </tr>
-            </tbody>
-        </table>
+<!-- 底部悬浮：我的排名 -->
+<div id="myRankBar" class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-3xl bg-slate-800 text-white rounded-full shadow-2xl p-2 pr-6 pl-2 flex justify-between items-center z-50 transition-all duration-500 translate-y-[150%] opacity-0 backdrop-blur-md bg-opacity-95 border border-white/10">
+    <div class="flex items-center gap-4">
+        <div class="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-white/20 overflow-hidden shadow-md shrink-0">
+            <img id="myAvatar" src="" class="w-full h-full object-cover">
+        </div>
+        <div class="flex flex-col">
+            <span class="text-[10px] text-white/50 font-bold uppercase tracking-wider">我的排名</span>
+            <span class="text-sm md:text-base font-bold text-white truncate max-w-[120px]" id="myName">User</span>
+        </div>
     </div>
 
-    <div class="pagination-container" id="paginationContainer" style="display:none;">
-        <div style="font-size: 12px; color: #888;" id="pageInfo"></div>
-        <div id="pagination" style="display:flex;"></div>
-    </div>
-</div>
-
-<div class="my-rank-bar" id="myRankBar">
-    <div class="my-rank-left">
-        <div class="user-avatar" style="border:2px solid white; width:40px; height:40px; overflow:hidden; border-radius:50%;">
-            <img id="myAvatar" src="" style="width:100%; height:100%; object-fit:cover;">
+    <div class="flex items-center gap-4 md:gap-8">
+        <div class="text-right">
+            <div class="text-[10px] text-white/50 font-bold">RATING</div>
+            <div class="text-sm md:text-lg font-bold text-yellow-400 font-mono" id="myRating">--</div>
         </div>
-        <div class="my-rank-info">
-            <span style="font-size: 14px; font-weight: 600;">我的排名</span>
-            <span style="font-size: 12px; opacity: 0.8;" id="myName">User</span>
+        <div class="bg-white/10 px-3 py-1 md:px-4 md:py-1.5 rounded-full text-xs md:text-sm font-bold text-white border border-white/10 shadow-inner" id="myRankNum">
+            --
         </div>
-    </div>
-    <div style="display: flex; align-items: center; gap: 20px;">
-        <div style="text-align: right;">
-            <div style="font-size: 10px; opacity: 0.7;">RATING</div>
-            <div class="my-rank-val" id="myRating">--</div>
-        </div>
-        <div class="my-rank-badge" id="myRankNum">--</div>
     </div>
 </div>
 
@@ -397,7 +137,16 @@
 
     function loadRankings(platformCode) {
         const tbody = document.getElementById('rankingBody');
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 40px; color: #999;"><i class="fas fa-spinner fa-spin"></i> 加载中...</td></tr>`;
+        // Tailwind Loading 样式
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="px-6 py-16 text-center text-graytext">
+                    <div class="flex flex-col items-center gap-3">
+                        <i class="fas fa-spinner fa-spin text-2xl text-primary/50"></i>
+                        <span>数据加载中...</span>
+                    </div>
+                </td>
+            </tr>`;
 
         axios.get('/api/team/rankings', { params: { platformCode: platformCode } })
             .then(res => {
@@ -419,11 +168,11 @@
                         changePage(1);
                     }
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 30px; color: var(--danger-color);">获取失败: ${res.data.msg}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-red-500">获取失败: ${res.data.msg}</td></tr>`;
                 }
             })
             .catch(err => {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 30px; color: #999;">暂无数据或网络错误</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-gray-400">暂无数据或网络错误</td></tr>`;
             });
     }
 
@@ -472,50 +221,61 @@
 
         list.forEach((item) => {
             const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-50 last:border-none group";
+
             const rank = item.originalRank;
 
-            let rankHtml = `<span style="color:#999; font-weight:500;">${rank}</span>`;
-            if (rank === 1) {
-                tr.classList.add('rank-1');
-                rankHtml = `<div class="rank-badge"><i class="fas fa-crown"></i></div>`;
-            } else if (rank === 2) {
-                tr.classList.add('rank-2');
-                rankHtml = `<div class="rank-badge">2</div>`;
-            } else if (rank === 3) {
-                tr.classList.add('rank-3');
-                rankHtml = `<div class="rank-badge">3</div>`;
+            // 排名徽章逻辑
+            let rankHtml = `<span class="text-slate-400 font-bold font-mono text-sm">${rank}</span>`;
+
+            // 前三名高亮样式
+            let rowBgClass = '';
+            if (rank <= 3) {
+                const badgeStyle = {
+                    1: 'bg-yellow-400 text-white shadow-lg shadow-yellow-200 ring-4 ring-yellow-50',
+                    2: 'bg-slate-300 text-white shadow-lg shadow-slate-200 ring-4 ring-slate-50',
+                    3: 'bg-orange-400 text-white shadow-lg shadow-orange-200 ring-4 ring-orange-50'
+                };
+                const icon = rank === 1 ? '<i class="fas fa-crown text-[10px]"></i>' : rank;
+                rankHtml = `<div class="w-7 h-7 rounded-full flex items-center justify-center mx-auto ${badgeStyle[rank]} font-bold text-xs transform group-hover:scale-110 transition-transform">${icon}</div>`;
+
+                // 给前三名的行加一点点背景色
+                if(rank === 1) tr.classList.add('bg-yellow-50/30');
             }
 
-            // 修改这里：优先使用后端返回的头像，如果没有则使用生成的默认头像
             const avatar = item.avatar || `https://ui-avatars.com/api/?name=${item.nickname || 'User'}&background=random&color=fff&size=64`;
-
             const ratingClass = getRatingColorClass(item.rating);
-
             const displayName = item.nickname || 'Unknown';
             const displayId = item.studentNo || 'No ID';
             const handleDisplay = item.handle ? item.handle : '--';
 
             tr.innerHTML = `
-                    <td class="col-rank rank-cell">${rankHtml}</td>
-                    <td class="col-user">
-                        <div class="user-info-cell">
-                            <img src="${avatar}" class="user-avatar" alt="av">
-                            <div class="user-details">
-                                <span class="user-nickname ${ratingClass}">${displayName}</span>
-                                <span class="user-student-no">
-                                    <i class="fas fa-id-card" style="font-size:10px;"></i> ${displayId}
+                    <td class="px-6 py-4 text-center align-middle">${rankHtml}</td>
+
+                    <td class="px-6 py-4 align-middle">
+                        <div class="flex items-center gap-4">
+                            <img src="${avatar}" class="w-10 h-10 rounded-full object-cover border border-slate-100 shadow-sm shrink-0 bg-white">
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-sm font-bold text-dark truncate max-w-[140px] ${ratingClass}">${displayName}</span>
+                                <span class="text-xs text-graytext flex items-center gap-1.5 md:flex hidden">
+                                    <i class="fas fa-id-card text-[10px] opacity-70"></i> ${displayId}
                                 </span>
                             </div>
                         </div>
                     </td>
-                    <td class="col-handle">
-                        <span class="handle-text">${handleDisplay !== '--' ? '@' + handleDisplay : '--'}</span>
+
+                    <td class="px-6 py-4 align-middle">
+                        <span class="font-mono font-semibold text-sm ${handleDisplay !== '--' ? 'text-primary bg-primary/5 px-2 py-0.5 rounded' : 'text-gray-300'}">
+                            ${handleDisplay !== '--' ? '@' + handleDisplay : '--'}
+                        </span>
                     </td>
-                    <td class="col-rating">
-                        <span class="rating-cell ${ratingClass}">${item.rating}</span>
+
+                    <td class="px-6 py-4 text-center align-middle">
+                        <span class="font-mono font-bold text-sm ${ratingClass}">${item.rating}</span>
                     </td>
-                    <td class="col-time time-cell">
-                        ${formatTimeAgo(item.snapshotTime)}
+
+                    <td class="px-6 py-4 text-center align-middle hidden md:table-cell">
+                        <span class="text-xs text-gray-400 font-medium">${formatTimeAgo(item.snapshotTime)}</span>
                     </td>
                 `;
             tbody.appendChild(tr);
@@ -536,13 +296,14 @@
             document.getElementById('myRating').textContent = myEntry.rating;
             document.getElementById('myRankNum').textContent = `#${myEntry.originalRank}`;
 
-            bar.style.display = 'flex';
-            setTimeout(() => bar.classList.add('show'), 100);
+            // 显示并播放入场动画
+            bar.classList.remove('translate-y-[150%]', 'opacity-0');
+            bar.classList.add('translate-y-0', 'opacity-100');
         }
     }
 
     function showEmpty() {
-        document.getElementById('rankingBody').innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 40px; color: #999;">未找到匹配的用户</td></tr>`;
+        document.getElementById('rankingBody').innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-gray-400">未找到匹配的用户</td></tr>`;
         document.getElementById('paginationContainer').style.display = 'none';
     }
 
@@ -553,42 +314,50 @@
         const startRecord = (currentPage - 1) * pageSize + 1;
         const endRecord = Math.min(currentPage * pageSize, total);
 
-        info.textContent = `第 ${startRecord}-${endRecord} 条 / 共 ${total} 条`;
+        info.textContent = `显示 ${startRecord}-${endRecord} 条 / 共 ${total} 条`;
 
         let html = '';
-        html += `<button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="changePage(${currentPage - 1})"><i class="fas fa-chevron-left"></i></button>`;
+        const btnClass = "w-8 h-8 flex items-center justify-center rounded-lg border text-xs font-medium transition-all ml-1";
+        const activeClass = "bg-primary border-primary text-white shadow-md shadow-primary/30";
+        const normalClass = "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-primary";
+        const disabledClass = "bg-slate-50 border-slate-200 text-slate-300 cursor-not-allowed";
+
+        // 上一页
+        html += `<button class="${btnClass} ${currentPage === 1 ? disabledClass : normalClass}" ${currentPage === 1 ? 'disabled' : ''} onclick="changePage(${currentPage - 1})"><i class="fas fa-chevron-left"></i></button>`;
+
+        // 页码生成逻辑
+        const renderPageBtn = (i) => `<button class="${btnClass} ${i === currentPage ? activeClass : normalClass}" onclick="changePage(${i})">${i}</button>`;
+        const dots = `<span class="w-8 h-8 flex items-center justify-center text-slate-300 text-xs">...</span>`;
 
         if (totalPages <= 7) {
-            for (let i = 1; i <= totalPages; i++) html += pageBtn(i);
+            for (let i = 1; i <= totalPages; i++) html += renderPageBtn(i);
         } else {
-            html += pageBtn(1);
-            if (currentPage > 3) html += `<span style="line-height:28px; padding:0 5px; color:#ccc;">...</span>`;
+            html += renderPageBtn(1);
+            if (currentPage > 3) html += dots;
 
             let start = Math.max(2, currentPage - 1);
             let end = Math.min(totalPages - 1, currentPage + 1);
-            for (let i = start; i <= end; i++) html += pageBtn(i);
+            for (let i = start; i <= end; i++) html += renderPageBtn(i);
 
-            if (currentPage < totalPages - 2) html += `<span style="line-height:28px; padding:0 5px; color:#ccc;">...</span>`;
-            html += pageBtn(totalPages);
+            if (currentPage < totalPages - 2) html += dots;
+            html += renderPageBtn(totalPages);
         }
 
-        html += `<button class="page-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="changePage(${currentPage + 1})"><i class="fas fa-chevron-right"></i></button>`;
+        // 下一页
+        html += `<button class="${btnClass} ${currentPage === totalPages ? disabledClass : normalClass}" ${currentPage === totalPages ? 'disabled' : ''} onclick="changePage(${currentPage + 1})"><i class="fas fa-chevron-right"></i></button>`;
 
         container.innerHTML = html;
     }
 
-    function pageBtn(i) {
-        return `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`;
-    }
-
+    // Codeforces 风格颜色类 (Tailwind)
     function getRatingColorClass(rating) {
-        if (rating < 1200) return 'rate-gray';
-        if (rating < 1400) return 'rate-green';
-        if (rating < 1600) return 'rate-cyan';
-        if (rating < 1900) return 'rate-blue';
-        if (rating < 2100) return 'rate-violet';
-        if (rating < 2400) return 'rate-orange';
-        return 'rate-red';
+        if (rating < 1200) return 'text-gray-400'; // Newbie
+        if (rating < 1400) return 'text-green-600'; // Pupil
+        if (rating < 1600) return 'text-cyan-600'; // Specialist
+        if (rating < 1900) return 'text-blue-600'; // Expert
+        if (rating < 2100) return 'text-purple-600'; // Candidate Master
+        if (rating < 2400) return 'text-orange-500'; // Master
+        return 'text-red-600'; // Grandmaster+
     }
 
     function formatTimeAgo(isoStr) {

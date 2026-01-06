@@ -24,4 +24,6 @@ public class SolvedProblem {
     private String problemUrl;
     private Integer rating;
     private LocalDateTime firstAcTime;
+
+    private String tags;
 }

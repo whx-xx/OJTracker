@@ -24,23 +24,23 @@ public class UserSubmissionController {
         this.userSubmissionService = userSubmissionService;
     }
 
-    /**
-     * 获取提交时间线数据 (分页版 + 搜索)
-     */
-    @Operation(summary = "获取提交时间线", description = "range=TODAY/WEEK/MONTH/ALL, keyword=搜索词")
+    @Operation(summary = "获取提交时间轴")
     @GetMapping("/timeline")
     public R<Page<SubmissionTimelineVO>> timeline(
-            @RequestParam(required = false, defaultValue = "CF") String platform,
-            @RequestParam(required = false, defaultValue = "TODAY") String range,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false, defaultValue = "1") Integer page,
-            @RequestParam(required = false, defaultValue = "20") Integer size,
-            HttpSession session
-    ) {
+            @RequestParam(value = "platform", defaultValue = "CF") String platformCode,
+            @RequestParam(value = "range", defaultValue = "TODAY") String range,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size,
+            HttpSession session) {
+
         UserSession me = (UserSession) session.getAttribute("user");
         if (me == null) return R.fail(401, "未登录");
-        return R.ok(userSubmissionService.timeline(me.getId(), platform, range, keyword, page, size));
+
+        // 直接调用 Service，keyword 现在支持搜索标签
+        return R.ok(userSubmissionService.timeline(me.getId(), platformCode, range, keyword, page, size));
     }
+
 
     @Operation(summary = "手动刷新数据", description = "触发增量同步（耗时操作）")
     @PostMapping("/refresh")

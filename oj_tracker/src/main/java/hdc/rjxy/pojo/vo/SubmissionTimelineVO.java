@@ -15,4 +15,7 @@ public class SubmissionTimelineVO {
     private String verdict;          // OK, WRONG_ANSWER, etc.
     private Integer rating;
     private LocalDateTime submitTime;
+
+    private Long solvedProblemId;
+    private String tags;
 }

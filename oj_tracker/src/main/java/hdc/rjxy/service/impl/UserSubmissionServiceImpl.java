@@ -48,74 +48,51 @@ public class UserSubmissionServiceImpl implements UserSubmissionService {
         if (platformCode == null || platformCode.isBlank()) platformCode = "CF";
         Platform p = platformMapper.selectOne(new LambdaQueryWrapper<Platform>().eq(Platform::getCode, platformCode));
 
-        Page<SubmissionTimelineVO> emptyPage = new Page<>(pageNum, pageSize);
-        if (p == null) return emptyPage;
+        // 准备一个空的分页对象，如果校验失败直接返回空
+        Page<SubmissionTimelineVO> resultPage = new Page<>(pageNum, pageSize);
+        if (p == null) return resultPage;
 
         // 2. 获取用户绑定的 Handle
         UserPlatformAccount account = upaMapper.selectOne(new LambdaQueryWrapper<UserPlatformAccount>()
                 .eq(UserPlatformAccount::getUserId, userId)
                 .eq(UserPlatformAccount::getPlatformId, p.getId()));
 
-        if (account == null) return emptyPage;
+        if (account == null) return resultPage;
         String handle = account.getIdentifierValue();
 
-        // 3. 构建查询条件
-        LambdaQueryWrapper<SubmissionLog> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(SubmissionLog::getUserId, userId)
-                .eq(SubmissionLog::getPlatformId, p.getId())
-                .eq(SubmissionLog::getHandle, handle);
-
+        // 3. 计算时间范围
         LocalDate today = LocalDate.now(ZONE);
+        LocalDateTime start = null;
+        LocalDateTime end = null;
 
-        // --- 时间筛选逻辑 ---
         if ("TODAY".equalsIgnoreCase(range)) {
-            wrapper.ge(SubmissionLog::getSubmitTime, today.atStartOfDay())
-                    .lt(SubmissionLog::getSubmitTime, today.plusDays(1).atStartOfDay());
+            start = today.atStartOfDay();
+            end = today.plusDays(1).atStartOfDay();
         } else if ("WEEK".equalsIgnoreCase(range)) {
             LocalDate monday = today.with(DayOfWeek.MONDAY);
-            wrapper.ge(SubmissionLog::getSubmitTime, monday.atStartOfDay())
-                    .lt(SubmissionLog::getSubmitTime, monday.plusDays(7).atStartOfDay());
+            start = monday.atStartOfDay();
+            end = monday.plusDays(7).atStartOfDay();
         } else if ("MONTH".equalsIgnoreCase(range)) {
             LocalDate firstDayOfMonth = today.with(TemporalAdjusters.firstDayOfMonth());
             LocalDate firstDayOfNextMonth = today.with(TemporalAdjusters.firstDayOfNextMonth());
-            wrapper.ge(SubmissionLog::getSubmitTime, firstDayOfMonth.atStartOfDay())
-                    .lt(SubmissionLog::getSubmitTime, firstDayOfNextMonth.atStartOfDay());
+            start = firstDayOfMonth.atStartOfDay();
+            end = firstDayOfNextMonth.atStartOfDay();
         }
 
-        // --- 关键词搜索逻辑 ---
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            String k = keyword.trim();
-            // 搜索 ProblemName 或 Verdict 或 ProblemIndex (如 "A", "B")
-            wrapper.and(w -> w.like(SubmissionLog::getProblemName, k)
-                    .or()
-                    .like(SubmissionLog::getProblemIndex, k)
-                    .or()
-                    .like(SubmissionLog::getVerdict, k));
-        }
+        // 4. 处理关键词 (空字符串转 null，方便 SQL 判断)
+        String searchKey = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
 
-        wrapper.orderByDesc(SubmissionLog::getSubmitTime);
-
-        // 4. 执行物理分页查询
-        Page<SubmissionLog> logPage = new Page<>(pageNum, pageSize);
-        submissionLogMapper.selectPage(logPage, wrapper);
-
-        // 5. 转换为 VO
-        Page<SubmissionTimelineVO> voPage = new Page<>(pageNum, pageSize, logPage.getTotal());
-        List<SubmissionTimelineVO> vos = logPage.getRecords().stream().map(log -> {
-            SubmissionTimelineVO vo = new SubmissionTimelineVO();
-            vo.setSubmissionId(log.getSubmissionId());
-            vo.setContestId(log.getContestId());
-            vo.setProblemIndex(log.getProblemIndex());
-            vo.setProblemName(log.getProblemName());
-            vo.setProblemUrl(log.getProblemUrl());
-            vo.setVerdict(log.getVerdict());
-            vo.setRating(log.getRating());
-            vo.setSubmitTime(log.getSubmitTime());
-            return vo;
-        }).collect(Collectors.toList());
-
-        voPage.setRecords(vos);
-        return voPage;
+        // 5. 执行自定义查询 (Mapper 中使用 LEFT JOIN 关联 solved_problem 表获取 tags)
+        // selectTimelineWithTags 返回的是 IPage，直接强转即可
+        return (Page<SubmissionTimelineVO>) submissionLogMapper.selectTimelineWithTags(
+                resultPage,
+                userId,
+                p.getId(),
+                handle,
+                start,
+                end,
+                searchKey
+        );
     }
 
     @Override

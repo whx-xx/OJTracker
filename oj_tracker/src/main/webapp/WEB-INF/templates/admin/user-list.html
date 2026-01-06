@@ -10,441 +10,190 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4e54c8',
+                        secondary: '#8f94fb',
+                        success: '#10b981', // Emerald-500
+                        danger: '#ef4444', // Red-500
+                        warning: '#f59e0b', // Amber-500
+                        info: '#3b82f6', // Blue-500
+                        dark: '#0f172a', // Slate-900
+                        graytext: '#64748b', // Slate-500
+                        bg: '#f1f5f9', // Slate-100
+                    },
+                    fontFamily: {
+                        poppins: ['Poppins', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', "Liberation Mono", "Courier New", 'monospace'],
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
-
-        :root {
-            --primary-color: #4e54c8;
-            --secondary-color: #8f94fb;
-            --success-color: #2ecc71;
-            --danger-color: #e74c3c;
-            --warning-color: #f1c40f;
-            --text-dark: #34495e;
-            --text-light: #7f8c8d;
-            --bg-color: #f1f5f9;
-            --card-bg: #ffffff;
-            --border-color: #e2e8f0;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            padding: 20px;
-            color: var(--text-dark);
-            overflow-y: auto;
-        }
-
-        /* === 顶部工具栏 (筛选+搜索) === */
-        .toolbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-
-        .filter-group {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            flex: 1;
-        }
-
-        /* 下拉框样式 */
-        .form-select {
-            padding: 10px 35px 10px 15px;
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            outline: none;
-            font-size: 14px;
-            color: var(--text-dark);
-            background-color: white;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            background-size: 16px;
-            appearance: none; /* 移除默认箭头 */
-            cursor: pointer;
-            min-width: 140px;
-            transition: all 0.3s;
-        }
-
-        .form-select:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(78, 84, 200, 0.1);
-        }
-
-        /* 搜索框样式 */
-        .search-wrapper {
-            position: relative;
-            width: 100%;
-            max-width: 300px;
-        }
-
-        .search-wrapper i {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-light);
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 10px 15px 10px 40px;
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            outline: none;
-            background: white;
-            transition: all 0.3s;
-            font-size: 14px;
-        }
-
-        .search-input:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(78, 84, 200, 0.1);
-        }
-
-        /* === 卡片与表格 === */
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
-            overflow: hidden;
-            border: 1px solid rgba(0,0,0,0.03);
-            display: flex;
-            flex-direction: column;
-            min-height: 500px;
-        }
-
-        .table-responsive {
-            overflow-x: auto;
-            width: 100%;
-            flex: 1;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        thead {
-            background-color: #f8fafc;
-            border-bottom: 2px solid var(--border-color);
-        }
-
-        th {
-            text-align: left;
-            padding: 15px 20px;
-            font-weight: 600;
-            color: var(--text-light);
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            white-space: nowrap;
-        }
-
-        td {
-            padding: 15px 20px;
-            border-bottom: 1px solid var(--border-color);
-            font-size: 14px;
-            vertical-align: middle;
-            color: var(--text-dark);
-        }
-
-        tbody tr:hover {
-            background-color: #fcfcfc;
-        }
-
-        /* 用户信息列 */
-        .user-cell {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .user-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 1px solid #eee;
-        }
-
-        .user-details div {
-            line-height: 1.2;
-        }
-
-        .user-nick {
-            font-weight: 500;
-            color: var(--text-dark);
-        }
-
-        .user-no {
-            font-size: 12px;
-            color: var(--text-light);
-        }
-
-        /* 状态标签 */
-        .status-badge {
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 500;
-            display: inline-block;
-        }
-
-        .status-active { background: rgba(46, 204, 113, 0.15); color: var(--success-color); }
-        .status-banned { background: rgba(231, 76, 60, 0.15); color: var(--danger-color); }
-
-        /* 操作按钮组 */
-        .action-buttons {
-            display: flex;
-            gap: 8px;
-            justify-content: flex-end;
-        }
-
-        .btn-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            color: white;
-        }
-
-        .btn-edit { background-color: var(--secondary-color); }
-        .btn-edit:hover { background-color: var(--primary-color); }
-
-        .btn-key { background-color: var(--warning-color); }
-        .btn-key:hover { background-color: #d35400; }
-
-        .btn-ban { background-color: var(--danger-color); }
-        .btn-ban:hover { background-color: #c0392b; }
-
-        .btn-unban { background-color: var(--success-color); }
-        .btn-unban:hover { background-color: #27ae60; }
-
-        /* === 分页组件 (与 Rankings 一致) === */
-        .pagination-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 25px;
-            background: #fff;
-            border-top: 1px solid #f0f0f0;
-        }
-
-        .pagination-info {
-            font-size: 13px;
-            color: var(--text-light);
-        }
-
-        .page-btn {
-            border: 1px solid var(--border-color);
-            background: white;
-            color: var(--text-dark);
-            width: 28px;
-            height: 28px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-left: 4px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .page-btn:hover:not(:disabled) {
-            border-color: var(--primary-color);
-            color: var(--primary-color);
-        }
-
-        .page-btn.active {
-            background-color: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
-        }
-
-        .page-btn:disabled {
-            background-color: #f5f5f5;
-            color: #ccc;
-            cursor: not-allowed;
-        }
-
-        /* === 模态框样式 === */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
-            z-index: 1000;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .modal-overlay.show {
-            display: flex;
-            opacity: 1;
-        }
-
-        .custom-modal {
-            background: white;
-            width: 400px;
-            border-radius: 12px;
-            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
-            padding: 25px;
-            transform: translateY(20px);
-            transition: transform 0.3s ease;
-        }
-
-        .modal-overlay.show .custom-modal {
-            transform: translateY(0);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .modal-header h3 { font-size: 18px; font-weight: 600; margin: 0; }
-
-        .close-modal {
-            background: none;
-            border: none;
-            font-size: 20px;
-            cursor: pointer;
-            color: #999;
-        }
-
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-dark); }
-        .form-group input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            outline: none;
-        }
-        .form-group input:focus { border-color: var(--primary-color); }
-
-        .modal-footer {
-            margin-top: 25px;
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
-
-        .btn-cancel {
-            background: #f1f5f9;
-            color: #666;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        .btn-confirm {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-        }
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
-<body>
+<body class="bg-bg text-dark font-poppins min-h-screen p-4 md:p-6 overflow-y-auto">
 
-<!-- 顶部筛选工具栏 -->
-<div class="toolbar">
-    <div class="filter-group">
-        <!-- 状态筛选 -->
-        <select id="statusSelect" class="form-select" onchange="handleSearch()">
-            <option value="">所有状态</option>
-            <option value="1">正常</option>
-            <option value="0">封禁</option>
-        </select>
+<div class="max-w-7xl mx-auto space-y-6">
 
-        <!-- 模糊搜索 -->
-        <div class="search-wrapper">
-            <i class="fas fa-search"></i>
-            <input type="text" class="search-input" id="searchInput" placeholder="搜索学号或昵称..." onkeyup="handleSearchDebounced()">
+    <!-- 顶部工具栏 -->
+    <div class="bg-white rounded-xl shadow-soft border border-slate-200 p-4 flex flex-col md:flex-row justify-between items-center gap-4">
+        <!-- 左侧：标题与统计 -->
+        <div class="flex items-center gap-4 w-full md:w-auto">
+            <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                <i class="fas fa-users"></i>
+            </div>
+            <div>
+                <!-- 已移除重复的标题 -->
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span class="text-sm font-medium text-slate-600" id="totalCountBadge">加载中...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：筛选与搜索 -->
+        <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            <!-- 状态筛选 -->
+            <div class="relative min-w-[140px]">
+                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                    <i class="fas fa-filter text-xs"></i>
+                </div>
+                <select id="statusSelect" onchange="handleSearch()" class="appearance-none bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary block w-full pl-9 pr-8 py-2.5 outline-none cursor-pointer hover:bg-white transition-all shadow-sm">
+                    <option value="">所有状态</option>
+                    <option value="1">正常</option>
+                    <option value="0">封禁</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                    <i class="fas fa-chevron-down text-[10px]"></i>
+                </div>
+            </div>
+
+            <!-- 搜索框 -->
+            <div class="relative w-full sm:w-64 group">
+                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 group-focus-within:text-primary transition-colors">
+                    <i class="fas fa-search"></i>
+                </div>
+                <input type="text" id="searchInput"
+                       class="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-dark placeholder-slate-400 focus:outline-none focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm"
+                       placeholder="搜索学号或昵称..."
+                       onkeyup="handleSearchDebounced()">
+            </div>
         </div>
     </div>
-</div>
 
-<!-- 表格卡片 -->
-<div class="card">
-    <div class="table-responsive">
-        <table>
-            <thead>
-            <tr>
-                <th>ID</th>
-                <th>用户信息</th>
-                <th>角色</th>
-                <th>状态</th>
-                <th>注册时间</th>
-                <th style="text-align: right;">操作</th>
-            </tr>
-            </thead>
-            <tbody id="tableBody">
-            <tr><td colspan="6" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-spinner fa-spin"></i> 加载中...</td></tr>
-            </tbody>
-        </table>
+    <!-- 表格区域 -->
+    <div class="bg-white rounded-xl shadow-soft border border-slate-200 overflow-hidden flex flex-col min-h-[500px]">
+        <div class="overflow-x-auto w-full flex-1">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-sm">
+                <tr class="text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                    <th class="px-6 py-4 w-20">ID</th>
+                    <th class="px-6 py-4 min-w-[240px]">用户信息 (User Info)</th>
+                    <th class="px-6 py-4 w-32">角色</th>
+                    <th class="px-6 py-4 w-32">状态</th>
+                    <th class="px-6 py-4 w-40">注册时间</th>
+                    <th class="px-6 py-4 text-center w-48">操作</th>
+                </tr>
+                </thead>
+                <tbody id="tableBody" class="divide-y divide-slate-100 bg-white">
+                <tr>
+                    <td colspan="6" class="px-6 py-20 text-center text-graytext">
+                        <div class="flex flex-col items-center gap-3 animate-pulse">
+                            <i class="fas fa-circle-notch fa-spin text-2xl text-primary/30"></i>
+                            <span class="text-sm">数据加载中...</span>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分页组件 -->
+        <div class="mt-auto border-t border-slate-100 px-6 py-4 bg-white flex flex-col sm:flex-row justify-between items-center gap-4" id="paginationContainer" style="display:none;">
+            <div class="text-xs text-slate-400 font-medium" id="pageInfo"></div>
+            <div class="flex items-center gap-1.5" id="pagination"></div>
+        </div>
     </div>
 
-    <!-- 分页组件 -->
-    <div class="pagination-container" id="paginationContainer" style="display:none;">
-        <div class="pagination-info" id="pageInfo"></div>
-        <div id="pagination" style="display:flex;"></div>
-    </div>
 </div>
 
 <!-- === 编辑弹窗 === -->
-<div class="modal-overlay" id="editModal">
-    <div class="custom-modal">
-        <div class="modal-header">
-            <h3 id="modalTitle">编辑用户</h3>
-            <button class="close-modal" onclick="closeModal('editModal')">&times;</button>
-        </div>
-        <div class="modal-body">
-            <form id="editForm">
-                <input type="hidden" id="editUserId">
-                <div class="form-group">
-                    <label>学号</label>
-                    <input type="text" id="editStudentNo" disabled style="background:#f5f5f5; cursor:not-allowed;">
+<div id="editModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <!-- 背景遮罩 -->
+    <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity opacity-0" id="modalBackdrop" onclick="closeModal('editModal')"></div>
+
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <!-- Modal Panel -->
+            <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 w-full max-w-md scale-95 opacity-0" id="modalPanel">
+
+                <!-- Header -->
+                <div class="bg-white px-6 py-5 border-b border-slate-100 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                            <i class="fas fa-user-edit text-xs"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-800">编辑用户</h3>
+                    </div>
+                    <button type="button" class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full w-8 h-8 flex items-center justify-center transition-all" onclick="closeModal('editModal')">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
-                <div class="form-group">
-                    <label>昵称</label>
-                    <input type="text" id="editNickname" placeholder="请输入新昵称">
+
+                <!-- Body -->
+                <div class="px-6 py-6 bg-slate-50/50">
+                    <form id="editForm" class="space-y-5">
+                        <input type="hidden" id="editUserId">
+
+                        <!-- 学号 (Read-only) -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wide">学号 / Student No.</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                    <i class="fas fa-id-card"></i>
+                                </div>
+                                <input type="text" id="editStudentNo" disabled
+                                       class="w-full pl-10 pr-3 py-2.5 bg-slate-100 border border-slate-200 rounded-lg text-sm text-slate-500 cursor-not-allowed font-mono shadow-sm">
+                            </div>
+                        </div>
+
+                        <!-- 昵称 -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wide">昵称 / Nickname</label>
+                            <div class="relative group">
+                                <div class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 group-focus-within:text-primary transition-colors">
+                                    <i class="fas fa-user-tag"></i>
+                                </div>
+                                <input type="text" id="editNickname" placeholder="请输入新昵称"
+                                       class="w-full pl-10 pr-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all shadow-sm">
+                            </div>
+                        </div>
+                    </form>
                 </div>
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button class="btn-cancel" onclick="closeModal('editModal')">取消</button>
-            <button class="btn-confirm" onclick="submitEdit()">保存修改</button>
+
+                <!-- Footer -->
+                <div class="bg-white px-6 py-4 flex flex-row-reverse gap-3 border-t border-slate-100">
+                    <button type="button" onclick="submitEdit()" class="inline-flex justify-center rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-white shadow-sm shadow-indigo-200 hover:bg-primary/90 transition-all active:scale-95">保存修改</button>
+                    <button type="button" onclick="closeModal('editModal')" class="inline-flex justify-center rounded-lg bg-white border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-800 transition-all active:scale-95">取消</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -452,7 +201,7 @@
 <script>
     // === 全局变量 ===
     let currentPage = 1;
-    const pageSize = 15;
+    const pageSize = 10;
     let searchTimeout;
 
     // 初始化
@@ -464,6 +213,7 @@
     function loadUsers(page) {
         currentPage = page;
         const tbody = document.getElementById('tableBody');
+        const badge = document.getElementById('totalCountBadge');
 
         // 获取查询参数
         const status = document.getElementById('statusSelect').value;
@@ -474,7 +224,7 @@
                 page: page,
                 size: pageSize,
                 keyword: keyword,
-                status: status // 传递状态参数
+                status: status
             }
         })
             .then(res => {
@@ -483,14 +233,18 @@
                     renderTable(data.records);
                     renderPagination(data.total, data.pages, data.current);
 
+                    // 更新总数 Badge
+                    if(badge) badge.textContent = `共 ${data.total} 人`;
+
                     document.getElementById('paginationContainer').style.display = 'flex';
                 } else {
-                    Swal.fire('错误', res.data.msg, 'error');
+                    tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-12 text-center text-danger">加载失败: ${res.data.msg}</td></tr>`;
+                    badge.textContent = '数据加载失败';
                 }
             })
             .catch(err => {
                 console.error(err);
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:red;padding:30px;">加载失败</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-12 text-center text-slate-400 flex flex-col items-center gap-2"><i class="fas fa-exclamation-triangle"></i><span>网络错误，请稍后重试</span></td></tr>`;
             });
     }
 
@@ -500,7 +254,18 @@
         tbody.innerHTML = '';
 
         if(!users || users.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:#999;">未找到匹配的用户</td></tr>`;
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="px-6 py-20 text-center">
+                        <div class="flex flex-col items-center gap-3 text-slate-400">
+                            <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-2">
+                                <i class="fas fa-search text-2xl opacity-40"></i>
+                            </div>
+                            <span class="text-sm font-medium">未找到匹配的用户</span>
+                            <span class="text-xs text-slate-300">尝试更换搜索关键词</span>
+                        </div>
+                    </td>
+                </tr>`;
             return;
         }
 
@@ -509,35 +274,60 @@
             const isBanned = user.status === 0;
 
             const statusBadge = isBanned
-                ? `<span class="status-badge status-banned"><i class="fas fa-ban"></i> 已封禁</span>`
-                : `<span class="status-badge status-active">正常</span>`;
+                ? `<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-600 border border-red-100">
+                    <span class="relative flex h-2 w-2">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-20"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
+                    已封禁
+                   </div>`
+                : `<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> 正常
+                   </div>`;
 
             const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-none group";
+
             tr.innerHTML = `
-                    <td>#${user.id}</td>
-                    <td>
-                        <div class="user-cell">
-                            <img src="${avatarUrl}" class="user-avatar" alt="av">
-                            <div class="user-details">
-                                <div class="user-nick">${user.nickname || user.username}</div>
-                                <div class="user-no">${user.studentNo}</div>
+                    <td class="px-6 py-4">
+                        <span class="text-xs text-slate-400 font-mono">#${user.id}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-4">
+                            <div class="relative shrink-0">
+                                <img src="${avatarUrl}" class="w-10 h-10 rounded-full object-cover border border-slate-100 shadow-sm bg-white" alt="av">
+                                ${isBanned ? '<div class="absolute -bottom-1 -right-1 bg-red-500 border-2 border-white w-4 h-4 rounded-full flex items-center justify-center"><i class="fas fa-ban text-[8px] text-white"></i></div>' : ''}
+                            </div>
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-sm font-bold text-slate-700 truncate group-hover:text-primary transition-colors">${user.nickname || user.username}</span>
+                                <span class="text-xs text-slate-400 font-mono truncate bg-slate-100 px-1.5 py-0.5 rounded w-fit mt-0.5">${user.studentNo}</span>
                             </div>
                         </div>
                     </td>
-                    <td>${user.role}</td>
-                    <td>${statusBadge}</td>
-                    <td>${formatDate(user.createdAt)}</td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="btn-icon btn-edit" title="编辑信息" onclick="openEditModal(${user.id}, '${user.studentNo}', '${user.nickname || ''}')">
-                                <i class="fas fa-pen"></i>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center gap-1.5 px-2 py-1 bg-slate-100 text-slate-600 text-xs font-medium rounded border border-slate-200">
+                            <i class="fas fa-user-tag text-[10px] text-slate-400"></i> ${user.role}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">${statusBadge}</td>
+                    <td class="px-6 py-4">
+                        <span class="text-sm text-slate-600 font-mono">${formatDate(user.createdAt)}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center justify-center gap-2">
+                            <button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 bg-white border border-slate-200 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all shadow-sm"
+                                    title="编辑信息" onclick="openEditModal(${user.id}, '${user.studentNo}', '${user.nickname || ''}')">
+                                <i class="fas fa-pen text-xs"></i>
                             </button>
-                            <button class="btn-icon btn-key" title="重置密码" onclick="resetPassword(${user.id}, '${user.username}')">
-                                <i class="fas fa-key"></i>
+
+                            <button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 bg-white border border-slate-200 hover:border-warning hover:bg-warning/5 hover:text-warning transition-all shadow-sm"
+                                    title="重置密码" onclick="resetPassword(${user.id}, '${user.username}')">
+                                <i class="fas fa-key text-xs"></i>
                             </button>
+
                             ${isBanned
-                ? `<button class="btn-icon btn-unban" title="解封" onclick="toggleStatus(${user.id}, 1)"><i class="fas fa-check"></i></button>`
-                : `<button class="btn-icon btn-ban" title="封禁" onclick="toggleStatus(${user.id}, 0)"><i class="fas fa-ban"></i></button>`
+                ? `<button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 bg-white border border-slate-200 hover:border-success hover:bg-success/5 hover:text-success transition-all shadow-sm" title="解封" onclick="toggleStatus(${user.id}, 1)"><i class="fas fa-unlock text-xs"></i></button>`
+                : `<button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 bg-white border border-slate-200 hover:border-danger hover:bg-danger/5 hover:text-danger transition-all shadow-sm" title="封禁" onclick="toggleStatus(${user.id}, 0)"><i class="fas fa-ban text-xs"></i></button>`
             }
                         </div>
                     </td>
@@ -546,7 +336,7 @@
         });
     }
 
-    // 3. 渲染分页 (样式与 Rankings 一致)
+    // 3. 渲染分页 (样式统一)
     function renderPagination(total, totalPages, current) {
         const info = document.getElementById('pageInfo');
         const container = document.getElementById('pagination');
@@ -554,36 +344,37 @@
         const startRecord = (current - 1) * pageSize + 1;
         const endRecord = Math.min(current * pageSize, total);
 
-        info.textContent = `第 ${startRecord}-${endRecord} 条 / 共 ${total} 条`;
+        info.textContent = `显示 ${startRecord} - ${endRecord} / 共 ${total}`;
 
         let html = '';
-        html += `<button class="page-btn" ${current === 1 ? 'disabled' : ''} onclick="loadUsers(${current - 1})"><i class="fas fa-chevron-left"></i></button>`;
+        const btnBase = "w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-all border ml-1";
+        const activeClass = "bg-primary border-primary text-white shadow-sm shadow-indigo-200";
+        const normalClass = "bg-white border-slate-200 text-slate-600 hover:text-primary hover:border-primary hover:bg-primary/5";
+        const disabledClass = "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed";
 
-        // 简单逻辑：首页...当前页...尾页
+        html += `<button class="${btnBase} ${current === 1 ? disabledClass : normalClass}" ${current === 1 ? 'disabled' : ''} onclick="loadUsers(${current - 1})"><i class="fas fa-chevron-left"></i></button>`;
+
+        const renderPageBtn = (i) => `<button class="${btnBase} ${i === current ? activeClass : normalClass}" onclick="loadUsers(${i})">${i}</button>`;
+        const dots = `<span class="w-8 h-8 flex items-center justify-center text-slate-300 text-[10px]">...</span>`;
+
         if (totalPages <= 7) {
-            for (let i = 1; i <= totalPages; i++) html += pageBtn(i, current);
+            for (let i = 1; i <= totalPages; i++) html += renderPageBtn(i);
         } else {
-            html += pageBtn(1, current);
-            if (current > 3) html += `<span style="line-height:28px; padding:0 5px; color:#ccc;">...</span>`;
-
+            html += renderPageBtn(1);
+            if (current > 3) html += dots;
             let start = Math.max(2, current - 1);
             let end = Math.min(totalPages - 1, current + 1);
-            for (let i = start; i <= end; i++) html += pageBtn(i, current);
-
-            if (current < totalPages - 2) html += `<span style="line-height:28px; padding:0 5px; color:#ccc;">...</span>`;
-            html += pageBtn(totalPages, current);
+            for (let i = start; i <= end; i++) html += renderPageBtn(i);
+            if (current < totalPages - 2) html += dots;
+            html += renderPageBtn(totalPages);
         }
 
-        html += `<button class="page-btn" ${current === totalPages ? 'disabled' : ''} onclick="loadUsers(${current + 1})"><i class="fas fa-chevron-right"></i></button>`;
+        html += `<button class="${btnBase} ${current === totalPages ? disabledClass : normalClass}" ${current === totalPages ? 'disabled' : ''} onclick="loadUsers(${current + 1})"><i class="fas fa-chevron-right"></i></button>`;
 
         container.innerHTML = html;
     }
 
-    function pageBtn(i, current) {
-        return `<button class="page-btn ${i === current ? 'active' : ''}" onclick="loadUsers(${i})">${i}</button>`;
-    }
-
-    // 4. 搜索处理 (立即搜索 + 防抖)
+    // 4. 搜索处理
     function handleSearch() {
         loadUsers(1);
     }
@@ -595,17 +386,38 @@
         }, 500);
     }
 
-    // === 业务操作 ===
+    // === 业务操作与模态框 ===
 
     function openEditModal(id, studentNo, nickname) {
         document.getElementById('editUserId').value = id;
         document.getElementById('editStudentNo').value = studentNo;
         document.getElementById('editNickname').value = nickname;
-        document.getElementById('editModal').classList.add('show');
+
+        const modal = document.getElementById('editModal');
+        const backdrop = document.getElementById('modalBackdrop');
+        const panel = document.getElementById('modalPanel');
+
+        modal.classList.remove('hidden');
+        // 动画
+        setTimeout(() => {
+            backdrop.classList.remove('opacity-0');
+            panel.classList.remove('scale-95', 'opacity-0');
+            panel.classList.add('scale-100', 'opacity-100');
+        }, 10);
     }
 
     function closeModal(modalId) {
-        document.getElementById(modalId).classList.remove('show');
+        const modal = document.getElementById(modalId);
+        const backdrop = document.getElementById('modalBackdrop');
+        const panel = document.getElementById('modalPanel');
+
+        backdrop.classList.add('opacity-0');
+        panel.classList.remove('scale-100', 'opacity-100');
+        panel.classList.add('scale-95', 'opacity-0');
+
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 300);
     }
 
     function submitEdit() {
@@ -613,7 +425,13 @@
         const nickname = document.getElementById('editNickname').value;
 
         if(!nickname) {
-            Swal.fire('提示', '昵称不能为空', 'warning');
+            Swal.fire({
+                title: '提示',
+                text: '昵称不能为空',
+                icon: 'warning',
+                confirmButtonColor: '#4e54c8',
+                confirmButtonText: '知道了'
+            });
             return;
         }
 
@@ -633,22 +451,33 @@
 
     function toggleStatus(id, newStatus) {
         const actionText = newStatus === 1 ? '解封' : '封禁';
-        const color = newStatus === 1 ? '#2ecc71' : '#e74c3c';
+        const confirmColor = newStatus === 1 ? '#10b981' : '#ef4444';
+        const iconHtml = newStatus === 1 ? '<i class="fas fa-unlock text-4xl text-emerald-500 mb-2"></i>' : '<i class="fas fa-ban text-4xl text-red-500 mb-2"></i>';
 
         Swal.fire({
-            title: `确定要${actionText}该用户吗？`,
-            icon: 'warning',
+            html: `
+                <div class="flex flex-col items-center">
+                    ${iconHtml}
+                    <h3 class="text-lg font-bold text-slate-700">确定要${actionText}该用户吗？</h3>
+                    <p class="text-sm text-slate-500 mt-1">此操作将立即生效。</p>
+                </div>
+            `,
             showCancelButton: true,
-            confirmButtonColor: color,
-            cancelButtonColor: '#95a5a6',
-            confirmButtonText: `是的，${actionText}`,
-            cancelButtonText: '取消'
+            confirmButtonColor: confirmColor,
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: `确认${actionText}`,
+            cancelButtonText: '取消',
+            customClass: {
+                popup: 'rounded-2xl',
+                confirmButton: 'rounded-lg px-6',
+                cancelButton: 'rounded-lg px-6'
+            }
         }).then((result) => {
             if (result.isConfirmed) {
                 axios.put(`/api/admin/users/${id}/status`, { status: newStatus })
                     .then(res => {
                         if(res.data.code === 200) {
-                            Swal.fire('已完成', `用户已${actionText}`, 'success');
+                            Swal.fire({ icon: 'success', title: `用户已${actionText}`, toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
                             loadUsers(currentPage);
                         } else {
                             Swal.fire('失败', res.data.msg, 'error');
@@ -660,19 +489,29 @@
 
     function resetPassword(id, username) {
         Swal.fire({
-            title: '重置密码',
-            text: `用户 [${username}] 的密码将重置为默认值。`,
-            icon: 'warning',
+            html: `
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-key text-4xl text-amber-400 mb-2"></i>
+                    <h3 class="text-lg font-bold text-slate-700">重置密码</h3>
+                    <p class="text-sm text-slate-500 mt-1">用户 [${username}] 的密码将重置为默认值。</p>
+                </div>
+            `,
             showCancelButton: true,
-            confirmButtonColor: '#f1c40f',
-            cancelButtonColor: '#95a5a6',
-            confirmButtonText: '确认重置'
+            confirmButtonColor: '#f59e0b',
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: '确认重置',
+            cancelButtonText: '取消',
+            customClass: {
+                popup: 'rounded-2xl',
+                confirmButton: 'rounded-lg px-6',
+                cancelButton: 'rounded-lg px-6'
+            }
         }).then((result) => {
             if (result.isConfirmed) {
                 axios.put(`/api/admin/users/${id}/reset-password`)
                     .then(res => {
                         if(res.data.code === 200) {
-                            Swal.fire('成功', '密码已重置', 'success');
+                            Swal.fire({ icon: 'success', title: '密码已重置', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
                         } else {
                             Swal.fire('失败', res.data.msg, 'error');
                         }

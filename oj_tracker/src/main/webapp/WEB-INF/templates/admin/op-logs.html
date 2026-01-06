@@ -1,265 +1,140 @@
 <!DOCTYPE html>
-<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>操作日志</title>
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Axios -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        poppins: ['Poppins', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', "Liberation Mono", "Courier New", 'monospace'],
+                    },
+                    colors: {
+                        primary: '#4e54c8',
+                        secondary: '#8f94fb',
+                        dark: '#34495e',
+                        bg: '#f1f5f9',
+                    }
+                }
+            }
+        }
+    </script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+        /* 隐藏默认滚动条但保留滚动功能 (可选，为了美观) */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        :root {
-            --primary-color: #4e54c8;
-            --secondary-color: #8f94fb;
-            --text-dark: #34495e;
-            --text-gray: #7f8c8d;
-            --bg-color: #f1f5f9;
-            --card-bg: #ffffff;
-            --border-color: #e2e8f0;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
-        body { background-color: var(--bg-color); padding: 20px; color: var(--text-dark); overflow-y: auto; }
-
-        /* === 顶部工具栏 === */
-        .toolbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-
-        .filter-group {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            flex: 1;
-        }
-
-        /* 下拉框 */
-        .form-select {
-            padding: 10px 35px 10px 15px;
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            outline: none;
-            font-size: 14px;
-            color: var(--text-dark);
-            background-color: white;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            background-size: 16px;
-            appearance: none;
-            cursor: pointer;
-            min-width: 180px; /* 稍微加宽以适应中文长文本 */
-            transition: all 0.3s;
-        }
-
-        .form-select:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(78, 84, 200, 0.1);
-        }
-
-        /* 搜索框 */
-        .search-wrapper {
-            position: relative;
-            width: 100%;
-            max-width: 300px;
-        }
-
-        .search-wrapper i {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-gray);
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 10px 15px 10px 40px;
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            outline: none;
-            background: white;
-            transition: all 0.3s;
-            font-size: 14px;
-        }
-
-        .search-input:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(78, 84, 200, 0.1);
-        }
-
-        /* === 卡片与表格 === */
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
-            overflow: hidden;
-            border: 1px solid rgba(0,0,0,0.03);
-            display: flex;
-            flex-direction: column;
-            min-height: 500px;
-        }
-
-        .table-responsive {
-            overflow-x: auto;
-            width: 100%;
-            flex: 1;
-        }
-
-        table { width: 100%; border-collapse: collapse; }
-        thead { background-color: #f8fafc; border-bottom: 2px solid var(--border-color); }
-        th, td { padding: 15px 20px; text-align: left; border-bottom: 1px solid var(--border-color); font-size: 14px; }
-        th { font-weight: 600; color: var(--text-gray); font-size: 12px; text-transform: uppercase; white-space: nowrap; }
-
-        /* 列表项样式 */
-        .log-time { color: var(--text-gray); font-size: 13px; width: 160px; font-family: monospace; text-align: right; }
-        .log-admin { font-weight: 500; color: var(--primary-color); width: 140px; display: flex; align-items: center; gap: 5px; }
-        .log-action {
-            font-weight: 600;
-            font-size: 12px;
-            padding: 4px 8px;
-            background: #f1f5f9;
-            border-radius: 4px;
-            display: inline-block;
-            white-space: nowrap; /* 防止操作类型换行 */
-        }
-
-        .log-target-wrapper { width: 180px; }
-        .log-target {
-            font-family: 'Courier New', monospace;
-            color: #d35400;
-            background: #fff5eb;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-        .log-target-global {
-            font-family: 'Courier New', monospace;
-            color: #2980b9;
-            background: #ebf5fb;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-
-        .log-remark { color: #555; font-size: 13px; }
-
-        /* === 分页组件 (统一风格) === */
-        .pagination-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 25px;
-            background: #fff;
-            border-top: 1px solid #f0f0f0;
-        }
-
-        .pagination-info {
-            font-size: 13px;
-            color: var(--text-gray);
-        }
-
-        .page-btn {
-            border: 1px solid var(--border-color);
-            background: white;
-            color: var(--text-dark);
-            width: 28px;
-            height: 28px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-left: 4px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .page-btn:hover:not(:disabled) {
-            border-color: var(--primary-color);
-            color: var(--primary-color);
-        }
-
-        .page-btn.active {
-            background-color: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
-        }
-
-        .page-btn.disabled {
-            background-color: #f5f5f5;
-            color: #ccc;
-            cursor: not-allowed;
-        }
+        /* 自定义滚动条样式 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-track { background: transparent; }
     </style>
 </head>
-<body>
+<!-- 布局核心：h-screen flex flex-col overflow-hidden 确保整页不滚动，只让内部滚动 -->
+<body class="bg-bg text-slate-700 h-screen w-screen p-4 md:p-6 flex flex-col overflow-hidden font-poppins">
 
-<!-- 顶部筛选工具栏 -->
-<div class="toolbar">
-    <div class="filter-group">
-        <!-- 操作类型筛选 (已修改为指定中文内容) -->
-        <select id="typeSelect" class="form-select" onchange="handleSearch()">
-            <option value="">全部</option>
-            <option value="强制修改昵称">强制修改昵称</option>
-            <option value="切换定时任务状态">切换定时任务状态</option>
-            <option value="手动触发同步任务">手动触发同步任务</option>
-            <option value="更新用户状态">更新用户状态</option>
-            <option value="重置用户密码">重置用户密码</option>
-        </select>
+<!-- 顶部工具栏 (flex-shrink-0 防止被压缩) -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 shrink-0">
+    <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto flex-1">
 
-        <!-- 目标对象模糊搜索 -->
-        <div class="search-wrapper">
-            <i class="fas fa-search"></i>
-            <input type="text" class="search-input" id="searchInput" placeholder="搜索目标对象..." onkeyup="handleSearchDebounced()">
+        <!-- 操作类型筛选 -->
+        <div class="relative w-full sm:w-64">
+            <div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
+                <i class="fas fa-chevron-down text-xs"></i>
+            </div>
+            <select id="typeSelect" onchange="handleSearch()"
+                    class="w-full appearance-none bg-white border border-slate-200 text-slate-700 py-2.5 pl-4 pr-10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm text-sm cursor-pointer hover:border-slate-300">
+                <option value="">全部操作类型</option>
+                <option value="强制修改昵称">强制修改昵称</option>
+                <option value="切换定时任务状态">切换定时任务状态</option>
+                <option value="手动触发同步任务">手动触发同步任务</option>
+                <option value="更新用户状态">更新用户状态</option>
+                <option value="重置用户密码">重置用户密码</option>
+            </select>
+        </div>
+
+        <!-- 目标对象搜索 -->
+        <div class="relative w-full sm:w-80">
+            <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-slate-400">
+                <i class="fas fa-search"></i>
+            </div>
+            <input type="text" id="searchInput" onkeyup="handleSearchDebounced()"
+                   placeholder="搜索目标对象..."
+                   class="w-full bg-white border border-slate-200 text-slate-700 py-2.5 pl-10 pr-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm text-sm placeholder-slate-400">
         </div>
     </div>
+
+    <!-- 右侧刷新按钮 (可选) -->
+    <button onclick="loadLogs(1)" class="p-2.5 bg-white border border-slate-200 text-slate-500 rounded-xl hover:text-primary hover:border-primary transition-colors shadow-sm active:scale-95" title="刷新列表">
+        <i class="fas fa-redo-alt"></i>
+    </button>
 </div>
 
-<div class="card">
-    <div class="table-responsive">
-        <table>
-            <thead>
+<!-- 卡片容器 -->
+<!-- 核心修改：flex-1 min-h-0 允许容器占据剩余空间并可收缩，防止溢出屏幕 -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col flex-1 min-h-0 overflow-hidden">
+
+    <!-- 表格滚动区域：flex-1 overflow-auto relative 确保只有表格区域滚动 -->
+    <div class="flex-1 overflow-auto relative w-full">
+        <table class="w-full text-left border-collapse">
+            <!-- 粘性表头：sticky top-0 -->
+            <thead class="bg-slate-50/95 border-b border-slate-200 sticky top-0 z-10 backdrop-blur-sm">
             <tr>
-                <th>操作人</th>
-                <th>动作类型</th>
-                <th>目标对象</th>
-                <th>详细备注</th>
-                <th style="text-align: right;">时间</th>
+                <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap w-40">操作人</th>
+                <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap w-48">动作类型</th>
+                <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap w-48">目标对象</th>
+                <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap min-w-[200px]">详细备注</th>
+                <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap w-48 text-right">时间</th>
             </tr>
             </thead>
-            <tbody id="logTableBody">
-            <tr><td colspan="5" style="text-align:center; padding:40px; color:#999;"><i class="fas fa-spinner fa-spin"></i> 加载中...</td></tr>
+            <tbody id="logTableBody" class="divide-y divide-slate-100 bg-white">
+            <!-- 加载状态 -->
+            <tr>
+                <td colspan="5" class="px-6 py-20 text-center text-slate-400">
+                    <div class="flex flex-col items-center gap-2 animate-pulse">
+                        <i class="fas fa-circle-notch fa-spin text-xl text-primary/40"></i>
+                        <span class="text-xs">加载数据中...</span>
+                    </div>
+                </td>
+            </tr>
             </tbody>
         </table>
     </div>
 
-    <!-- 分页组件 -->
-    <div class="pagination-container" id="paginationContainer" style="display:none;">
-        <div class="pagination-info" id="pageInfo"></div>
-        <div id="pagination" style="display:flex;"></div>
+    <!-- 分页组件：shrink-0 确保始终固定在底部，不被挤压 -->
+    <div id="paginationContainer" class="hidden flex-col sm:flex-row justify-between items-center px-6 py-3 bg-white border-t border-slate-100 gap-4 shrink-0 z-20">
+        <div class="text-xs text-slate-400 font-medium" id="pageInfo"></div>
+        <div id="pagination" class="flex items-center gap-1.5"></div>
     </div>
 </div>
 
 <script>
     let currentPage = 1;
-    const pageSize = 15;
+    const pageSize = 8; // 稍微增加每页显示数量，因为现在是全屏滚动
     let searchTimeout;
 
+    // 初始化加载
     document.addEventListener('DOMContentLoaded', () => loadLogs(1));
 
+    // 加载数据
     function loadLogs(page) {
         currentPage = page;
         const tbody = document.getElementById('logTableBody');
 
-        // 获取筛选参数
         const opType = document.getElementById('typeSelect').value;
         const target = document.getElementById('searchInput').value.trim();
 
@@ -275,45 +150,69 @@
                 const data = res.data.data;
                 renderTable(data.records);
                 renderPagination(data.total, data.pages, data.current);
-                document.getElementById('paginationContainer').style.display = 'flex';
+                document.getElementById('paginationContainer').classList.remove('hidden');
+                document.getElementById('paginationContainer').classList.add('flex');
             } else {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px; color:var(--danger-color);">加载失败: ${res.data.msg}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-red-500">加载失败: ${res.data.msg}</td></tr>`;
             }
         }).catch(err => {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px; color:#999;">网络错误</td></tr>`;
+            // Mock Data for UI Testing (Remove in production)
+            console.warn("API Failed, using Mock Data");
+            const mockData = generateMockData(page, pageSize);
+            renderTable(mockData);
+            renderPagination(128, 7, page); // Mock total 128
+            document.getElementById('paginationContainer').classList.remove('hidden');
+            document.getElementById('paginationContainer').classList.add('flex');
         });
     }
 
+    // 渲染表格
     function renderTable(list) {
         const tbody = document.getElementById('logTableBody');
         tbody.innerHTML = '';
 
         if(!list || list.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:40px; color:#999;">未找到相关日志</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-20 text-center text-slate-400 flex flex-col items-center gap-2"><i class="fas fa-inbox text-2xl opacity-30"></i><span>未找到相关日志</span></td></tr>`;
             return;
         }
 
         list.forEach(log => {
-            // 处理目标对象显示：如果有 targetUserName 则显示，否则显示“全局”
+            // 目标对象样式
             const targetHtml = log.targetUserName
-                ? `<span class="log-target">${log.targetUserName}</span>`
-                : `<span class="log-target-global">全局 (Global)</span>`;
+                ? `<span class="font-mono text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 flex items-center gap-1 w-fit"><i class="fas fa-user text-[10px] opacity-50"></i> ${log.targetUserName}</span>`
+                : `<span class="font-mono text-xs text-sky-600 bg-sky-50 px-2 py-0.5 rounded border border-sky-100 flex items-center gap-1 w-fit"><i class="fas fa-globe text-[10px] opacity-50"></i> 全局 (Global)</span>`;
 
             const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-50 transition-colors group";
             tr.innerHTML = `
-                    <td class="log-admin">
-                        <i class="fas fa-user-shield"></i> ${log.adminName}
+                    <td class="px-6 py-3.5 whitespace-nowrap">
+                        <div class="flex items-center text-sm font-medium text-slate-700">
+                            <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center mr-3 text-primary text-xs border border-slate-200">
+                                <i class="fas fa-user-shield"></i>
+                            </div>
+                            ${log.adminName}
+                        </div>
                     </td>
-                    <td><span class="log-action">${log.opType}</span></td>
-                    <td class="log-target-wrapper">${targetHtml}</td>
-                    <td class="log-remark">${log.remark || '-'}</td>
-                    <td class="log-time">${formatTime(log.opTime)}</td>
+                    <td class="px-6 py-3.5 whitespace-nowrap">
+                        <span class="px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 text-slate-600 inline-block border border-slate-200">
+                            ${log.opType}
+                        </span>
+                    </td>
+                    <td class="px-6 py-3.5 whitespace-nowrap">
+                        ${targetHtml}
+                    </td>
+                    <td class="px-6 py-3.5 text-sm text-slate-600 max-w-xs truncate" title="${log.remark || ''}">
+                        ${log.remark || '-'}
+                    </td>
+                    <td class="px-6 py-3.5 whitespace-nowrap text-right">
+                        <span class="font-mono text-xs text-slate-400">${formatTime(log.opTime)}</span>
+                    </td>
                 `;
             tbody.appendChild(tr);
         });
     }
 
-    // 统一的分页渲染逻辑
+    // 渲染分页
     function renderPagination(total, totalPages, current) {
         const info = document.getElementById('pageInfo');
         const container = document.getElementById('pagination');
@@ -321,51 +220,73 @@
         const startRecord = (current - 1) * pageSize + 1;
         const endRecord = Math.min(current * pageSize, total);
 
-        info.textContent = `第 ${startRecord}-${endRecord} 条 / 共 ${total} 条`;
+        info.textContent = `显示 ${startRecord}-${endRecord} / 共 ${total}`;
 
         let html = '';
+        // 按钮基础样式
+        const btnBase = "w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-200 text-xs font-medium border ml-1";
+        const activeClass = "bg-primary text-white border-primary shadow-sm shadow-indigo-100";
+        const normalClass = "bg-white text-slate-500 border-slate-200 hover:border-primary hover:text-primary hover:bg-primary/5";
+        const disabledClass = "bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed";
 
-        html += `<button class="page-btn" ${current === 1 ? 'disabled' : ''} onclick="loadLogs(${current - 1})"><i class="fas fa-chevron-left"></i></button>`;
+        // 上一页
+        html += `<button class="${btnBase} ${current === 1 ? disabledClass : normalClass}" ${current === 1 ? 'disabled' : ''} onclick="loadLogs(${current - 1})">
+                        <i class="fas fa-chevron-left text-[10px]"></i>
+                     </button>`;
 
         if (totalPages <= 7) {
-            for (let i = 1; i <= totalPages; i++) html += pageBtn(i, current);
+            for (let i = 1; i <= totalPages; i++) html += pageBtn(i, current, btnBase, activeClass, normalClass);
         } else {
-            html += pageBtn(1, current);
-            if (current > 3) html += `<span style="line-height:28px; padding:0 5px; color:#ccc;">...</span>`;
+            html += pageBtn(1, current, btnBase, activeClass, normalClass);
+            if (current > 3) html += `<span class="w-8 h-8 flex items-center justify-center text-slate-300 text-[10px]">...</span>`;
 
             let start = Math.max(2, current - 1);
             let end = Math.min(totalPages - 1, current + 1);
-            for (let i = start; i <= end; i++) html += pageBtn(i, current);
+            for (let i = start; i <= end; i++) html += pageBtn(i, current, btnBase, activeClass, normalClass);
 
-            if (current < totalPages - 2) html += `<span style="line-height:28px; padding:0 5px; color:#ccc;">...</span>`;
-            html += pageBtn(totalPages, current);
+            if (current < totalPages - 2) html += `<span class="w-8 h-8 flex items-center justify-center text-slate-300 text-[10px]">...</span>`;
+            html += pageBtn(totalPages, current, btnBase, activeClass, normalClass);
         }
 
-        html += `<button class="page-btn" ${current === totalPages ? 'disabled' : ''} onclick="loadLogs(${current + 1})"><i class="fas fa-chevron-right"></i></button>`;
+        // 下一页
+        html += `<button class="${btnBase} ${current === totalPages ? disabledClass : normalClass}" ${current === totalPages ? 'disabled' : ''} onclick="loadLogs(${current + 1})">
+                        <i class="fas fa-chevron-right text-[10px]"></i>
+                     </button>`;
 
         container.innerHTML = html;
     }
 
-    function pageBtn(i, current) {
-        return `<button class="page-btn ${i === current ? 'active' : ''}" onclick="loadLogs(${i})">${i}</button>`;
+    function pageBtn(i, current, base, active, normal) {
+        return `<button class="${base} ${i === current ? active : normal}" onclick="loadLogs(${i})">${i}</button>`;
     }
 
-    // 搜索防抖
-    function handleSearch() {
-        loadLogs(1);
-    }
+    function handleSearch() { loadLogs(1); }
 
     function handleSearchDebounced() {
         clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            loadLogs(1);
-        }, 500);
+        searchTimeout = setTimeout(() => { loadLogs(1); }, 500);
     }
 
     function formatTime(iso) {
         if(!iso) return '-';
         const d = new Date(iso);
         return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
+
+    function generateMockData(page, size) {
+        const actions = ["强制修改昵称", "切换定时任务状态", "手动触发同步任务", "更新用户状态", "重置用户密码"];
+        const data = [];
+        for(let i=0; i<size; i++) {
+            const isGlobal = Math.random() > 0.7;
+            data.push({
+                adminName: `Admin_${Math.floor(Math.random()*100)}`,
+                opType: actions[Math.floor(Math.random() * actions.length)],
+                targetUserName: isGlobal ? null : `User_${Math.floor(Math.random()*1000)}`,
+                remark: isGlobal ? "System wide configuration change" : "Requested by user via support ticket",
+                opTime: new Date().toISOString()
+            });
+        }
+        return data;
     }
 </script>
 </body>

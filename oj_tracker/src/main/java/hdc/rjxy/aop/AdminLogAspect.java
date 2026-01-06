@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.time.LocalDateTime;
 
@@ -53,8 +54,8 @@ public class AdminLogAspect {
             ex = e;
             throw e;
         } finally {
-            // 3. 记录日志
-            saveLog(point, logAnno, ex, oldData);
+            // 3. 记录日志 (传入 result 以便解析返回值中的状态)
+            saveLog(point, logAnno, ex, oldData, result);
         }
     }
 
@@ -88,7 +89,7 @@ public class AdminLogAspect {
         return null;
     }
 
-    private void saveLog(ProceedingJoinPoint point, LogAdminOp logAnno, Exception ex, String oldData) {
+    private void saveLog(ProceedingJoinPoint point, LogAdminOp logAnno, Exception ex, String oldData, Object result) {
         try {
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             HttpServletRequest request = (attributes != null) ? attributes.getRequest() : null;
@@ -111,8 +112,8 @@ public class AdminLogAspect {
             if (ex != null) {
                 opLog.setRemark("操作失败: " + ex.getMessage());
             } else {
-                // 传入 oldData 进行解析
-                String detail = resolveDetailRemark(point, oldData);
+                // 传入 oldData 和 result 进行解析
+                String detail = resolveDetailRemark(point, oldData, result);
                 opLog.setRemark(detail.isEmpty() ? "" : detail);
             }
 
@@ -160,10 +161,31 @@ public class AdminLogAspect {
     /**
      * 解析操作详情
      */
-    private String resolveDetailRemark(ProceedingJoinPoint point, String oldData) {
+    private String resolveDetailRemark(ProceedingJoinPoint point, String oldData, Object result) {
         try {
             MethodSignature signature = (MethodSignature) point.getSignature();
             String methodName = signature.getName();
+
+            // --- 新增逻辑：切换定时任务状态 ---
+            if ("toggleSchedule".equals(methodName)) {
+                if (result != null) {
+                    try {
+                        // 使用反射获取 R 对象的 data 字段 (假设返回类型为 R<Boolean>)
+                        // 这样可以避免直接依赖 R 类可能带来的导入问题
+                        Method getDataMethod = result.getClass().getMethod("getData");
+                        Object data = getDataMethod.invoke(result);
+                        if (data instanceof Boolean) {
+                            return ((Boolean) data) ? "动作: 启动定时任务" : "动作: 禁用定时任务";
+                        }
+                    } catch (Exception e) {
+                        // 忽略反射异常，返回默认值
+                        log.debug("解析定时任务状态返回值失败", e);
+                    }
+                }
+                return "动作: 切换定时任务状态";
+            }
+            // --------------------------------
+
             if ("resetPassword".equals(methodName)) {
                 return "动作: 重置为默认密码";
             }

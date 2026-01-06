@@ -10,388 +10,152 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <!-- 引入 SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
-
-        :root {
-            --primary-color: #4e54c8;
-            --secondary-color: #8f94fb;
-            /* 侧边栏宽度配置 */
-            --sidebar-width: 240px;
-            --sidebar-collapsed-width: 70px;
-            --header-height: 70px;
-            --bg-color: #f1f5f9;
-            --text-color: #333;
-            --text-muted: #888;
-            --white: #ffffff;
-            --hover-bg: rgba(255, 255, 255, 0.1);
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4e54c8',
+                        secondary: '#8f94fb',
+                        bg: '#f1f5f9',
+                        dark: '#333',
+                    },
+                    fontFamily: {
+                        poppins: ['Poppins', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        sidebar: '4px 0 10px rgba(0,0,0,0.1)',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(-10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.2s ease-out forwards',
+                    }
+                }
+            }
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
-            text-decoration: none;
-            list-style: none;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* === 侧边栏样式 === */
-        .sidebar {
-            width: var(--sidebar-width);
-            background: linear-gradient(180deg, #4e54c8 0%, #3f2b96 100%);
-            color: var(--white);
-            display: flex;
-            flex-direction: column;
-            transition: width 0.3s ease;
-            box-shadow: 4px 0 10px rgba(0,0,0,0.1);
-            z-index: 100;
-            white-space: nowrap;
-        }
-
-        .sidebar-brand {
-            height: var(--header-height);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            overflow: hidden;
-        }
-
-        .sidebar-brand i {
-            margin-right: 10px;
-            font-size: 24px;
-            min-width: 30px;
-            text-align: center;
-        }
-
-        .sidebar-menu {
-            flex: 1;
-            padding-top: 20px;
-            overflow-y: auto;
-            overflow-x: hidden;
-        }
-
-        .sidebar-menu li {
-            margin-bottom: 5px;
-        }
-
-        .sidebar-menu a {
-            display: flex;
-            align-items: center;
-            padding: 15px 20px;
-            color: rgba(255,255,255,0.8);
-            font-size: 14px;
-            transition: all 0.3s;
-            border-left: 4px solid transparent;
-            overflow: hidden;
-        }
-
-        .sidebar-menu a:hover, .sidebar-menu a.active {
-            background-color: var(--hover-bg);
-            color: var(--white);
-            border-left-color: var(--white);
-        }
-
-        .sidebar-menu a i {
-            width: 30px;
-            font-size: 18px;
-            text-align: center;
-            margin-right: 10px;
-            transition: margin 0.3s;
-        }
-
-        .menu-label {
-            padding: 15px 20px 5px;
-            font-size: 11px;
-            text-transform: uppercase;
-            color: rgba(255,255,255,0.4);
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            transition: all 0.3s;
-        }
-
-        /* === 折叠状态样式 (Collapsed) === */
-        body.collapsed .sidebar {
-            width: var(--sidebar-collapsed-width);
-        }
-
-        body.collapsed .main-content {
-            width: calc(100% - var(--sidebar-collapsed-width));
-        }
-
-        body.collapsed .sidebar-brand span,
-        body.collapsed .sidebar-menu a span {
-            display: none;
-        }
-
-        body.collapsed .menu-label {
-            opacity: 0;
-            height: 0;
-            padding: 0;
-        }
-
-        body.collapsed .sidebar-menu a {
-            justify-content: center;
-            padding: 15px 0;
-        }
-
-        body.collapsed .sidebar-menu a i {
-            margin-right: 0;
-            font-size: 20px;
-        }
-
-        body.collapsed .sidebar-brand {
-            justify-content: center;
-        }
-
-        body.collapsed .sidebar-brand i {
-            margin-right: 0;
-        }
-
-        /* === 主内容区域 === */
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            width: calc(100% - var(--sidebar-width));
-            transition: width 0.3s ease;
-        }
-
-        /* === 顶部导航栏 === */
-        header {
-            height: var(--header-height);
-            background-color: var(--white);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 30px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            z-index: 90;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        /* 缩放按钮样式 */
-        .toggle-btn {
-            cursor: pointer;
-            font-size: 20px;
-            color: var(--text-dark);
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            transition: background 0.3s;
-        }
-
-        .toggle-btn:hover {
-            background-color: #f1f5f9;
-            color: var(--primary-color);
-        }
-
-        .header-title h2 {
-            font-size: 20px;
-            color: var(--text-color);
-            font-weight: 500;
-            margin: 0;
-        }
-
-        /* 用户区域 */
-        .user-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            position: relative;
-            cursor: pointer;
-            padding: 5px 10px;
-            border-radius: 30px;
-            transition: background-color 0.2s;
-        }
-
-        .user-wrapper:hover {
-            background-color: #f1f5f9;
-        }
-
-        .user-wrapper img {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid var(--secondary-color);
-        }
-
-        .user-info {
-            text-align: right;
-        }
-
-        .user-info h4 {
-            font-size: 14px;
-            color: var(--text-color);
-            margin-bottom: 0;
-            line-height: 1.2;
-        }
-
-        .user-info small {
-            display: block;
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-
-        .dropdown-indicator {
-            color: var(--text-muted);
-            font-size: 12px;
-            margin-left: 5px;
-            transition: transform 0.2s;
-        }
-
-        .user-wrapper.active .dropdown-indicator {
-            transform: rotate(180deg);
-        }
-
-        .dropdown-menu {
-            position: absolute;
-            top: calc(100% + 5px);
-            right: 0;
-            background: var(--white);
-            width: 100%;
-            min-width: 140px;
-            border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            display: none;
-            flex-direction: column;
-            overflow: hidden;
-            animation: fadeIn 0.2s ease;
-            border: 1px solid #f0f0f0;
-        }
-
-        .dropdown-menu.show {
-            display: flex;
-        }
-
-        .dropdown-item {
-            padding: 12px 20px;
-            color: var(--text-color);
-            font-size: 14px;
-            transition: background 0.2s;
-            display: flex;
-            align-items: center;
-        }
-
-        .dropdown-item i {
-            margin-right: 12px;
-            color: var(--primary-color);
-            width: 16px;
-            text-align: center;
-        }
-
-        .dropdown-item:hover {
-            background-color: #f8f9fa;
-            color: var(--primary-color);
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .iframe-container {
-            flex: 1;
-            padding: 0;
-            overflow: hidden;
-            background-color: #f1f5f9;
-        }
-
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            display: block;
-        }
-
-        @media (max-width: 768px) {
-            .sidebar { width: 70px; }
-            .sidebar-brand span, .sidebar-menu a span, .menu-label, .user-info, .dropdown-indicator { display: none; }
-            .main-content { width: calc(100% - 70px); }
-            .sidebar-menu a { padding: 15px; justify-content: center; }
-            .sidebar-menu a i { margin: 0; font-size: 24px; }
-            .sidebar-brand { justify-content: center; }
-            .sidebar-brand i { margin: 0; }
-            .toggle-btn { display: none; }
-        }
-    </style>
+    </script>
 </head>
-<body>
+<!--
+    Body 添加 'group' 类，用于控制子元素对 .collapsed 状态的响应
+    添加 'group-[.collapsed]' 逻辑：当JS给body添加collapsed类时，侧边栏宽度变窄
+-->
+<body class="bg-bg flex h-screen overflow-hidden font-poppins group">
 
 <!-- 侧边栏 -->
-<nav class="sidebar">
-    <div class="sidebar-brand">
-        <i class="fas fa-code-branch"></i>
-        <span>OJ Tracker</span>
+<!--
+    宽度逻辑：
+    1. w-[70px]: 默认（移动端）宽度为70px
+    2. md:w-[240px]: PC端默认宽度240px
+    3. group-[.collapsed]:md:w-[70px]: 当body有collapsed类时，PC端宽度变回70px
+-->
+<nav class="w-[70px] md:w-[240px] group-[.collapsed]:md:w-[70px]
+            bg-gradient-to-b from-primary to-[#3f2b96] text-white flex flex-col
+            transition-[width] duration-300 shadow-sidebar z-50 whitespace-nowrap shrink-0">
+
+    <!-- Brand -->
+    <div class="h-[70px] flex items-center justify-center text-xl font-semibold tracking-wide border-b border-white/10 overflow-hidden shrink-0">
+        <!-- 图标：在移动端或折叠时取消右边距 -->
+        <i class="fas fa-code-branch text-2xl min-w-[30px] text-center mr-0 md:mr-2 md:group-[.collapsed]:mr-0 transition-all duration-300"></i>
+        <!-- 文字：移动端隐藏，折叠时隐藏 -->
+        <span class="hidden md:block group-[.collapsed]:hidden animate-fade-in-up">OJ Tracker</span>
     </div>
 
-    <div class="sidebar-menu">
+    <!-- Menu -->
+    <div class="flex-1 pt-5 overflow-y-auto overflow-x-hidden scrollbar-none">
         <ul id="menuList">
             <li>
-                <a href="/dashboard" class="menu-link active" data-title="仪表盘">
-                    <i class="fas fa-chart-line"></i>
-                    <span>仪表盘</span>
+                <!--
+                    菜单链接样式：
+                    [&.active] 语法用于匹配 JS 添加的 .active 类
+                -->
+                <a href="/dashboard" class="menu-link flex items-center py-4 px-0 md:px-5 group-[.collapsed]:justify-center group-[.collapsed]:px-0 md:group-[.collapsed]:px-0
+                                          text-white/80 text-sm transition-all border-l-4 border-transparent
+                                          hover:bg-white/10 hover:text-white hover:border-white
+                                          [&.active]:bg-white/10 [&.active]:text-white [&.active]:border-white
+                                          justify-center md:justify-start"
+                   data-title="仪表盘">
+                    <i class="fas fa-chart-line w-8 text-xl text-center mr-0 md:mr-2 md:text-lg md:group-[.collapsed]:mr-0 md:group-[.collapsed]:text-xl transition-all"></i>
+                    <span class="hidden md:block group-[.collapsed]:hidden">仪表盘</span>
                 </a>
             </li>
             <li>
-                <a href="/views/submissions" class="menu-link" data-title="解题详情">
-                    <i class="fas fa-file-code"></i>
-                    <span>解题详情</span>
+                <a href="/views/submissions" class="menu-link flex items-center py-4 px-0 md:px-5 group-[.collapsed]:justify-center group-[.collapsed]:px-0 md:group-[.collapsed]:px-0
+                                                  text-white/80 text-sm transition-all border-l-4 border-transparent
+                                                  hover:bg-white/10 hover:text-white hover:border-white
+                                                  [&.active]:bg-white/10 [&.active]:text-white [&.active]:border-white
+                                                  justify-center md:justify-start"
+                   data-title="解题详情">
+                    <i class="fas fa-file-code w-8 text-xl text-center mr-0 md:mr-2 md:text-lg md:group-[.collapsed]:mr-0 md:group-[.collapsed]:text-xl transition-all"></i>
+                    <span class="hidden md:block group-[.collapsed]:hidden">解题详情</span>
                 </a>
             </li>
             <li>
-                <a href="/views/rankings" class="menu-link" data-title="排行榜">
-                    <i class="fas fa-trophy"></i>
-                    <span>团队榜单</span>
+                <a href="/views/rankings" class="menu-link flex items-center py-4 px-0 md:px-5 group-[.collapsed]:justify-center group-[.collapsed]:px-0 md:group-[.collapsed]:px-0
+                                               text-white/80 text-sm transition-all border-l-4 border-transparent
+                                               hover:bg-white/10 hover:text-white hover:border-white
+                                               [&.active]:bg-white/10 [&.active]:text-white [&.active]:border-white
+                                               justify-center md:justify-start"
+                   data-title="排行榜">
+                    <i class="fas fa-trophy w-8 text-xl text-center mr-0 md:mr-2 md:text-lg md:group-[.collapsed]:mr-0 md:group-[.collapsed]:text-xl transition-all"></i>
+                    <span class="hidden md:block group-[.collapsed]:hidden">团队榜单</span>
                 </a>
             </li>
             <li>
-                <a href="/views/profile" class="menu-link" data-title="个人中心">
-                    <i class="fas fa-user-circle"></i>
-                    <span>个人中心</span>
+                <a href="/views/profile" class="menu-link flex items-center py-4 px-0 md:px-5 group-[.collapsed]:justify-center group-[.collapsed]:px-0 md:group-[.collapsed]:px-0
+                                              text-white/80 text-sm transition-all border-l-4 border-transparent
+                                              hover:bg-white/10 hover:text-white hover:border-white
+                                              [&.active]:bg-white/10 [&.active]:text-white [&.active]:border-white
+                                              justify-center md:justify-start"
+                   data-title="个人中心">
+                    <i class="fas fa-user-circle w-8 text-xl text-center mr-0 md:mr-2 md:text-lg md:group-[.collapsed]:mr-0 md:group-[.collapsed]:text-xl transition-all"></i>
+                    <span class="hidden md:block group-[.collapsed]:hidden">个人中心</span>
                 </a>
             </li>
 
             <div id="adminSection" style="display: none;">
-                <div class="menu-label">后台管理</div>
+                <!-- 分割标题：折叠时隐藏 -->
+                <div class="px-5 pt-4 pb-1 text-[11px] uppercase text-white/40 font-semibold whitespace-nowrap overflow-hidden transition-all hidden md:block group-[.collapsed]:hidden">后台管理</div>
+
                 <li>
-                    <a href="/views/users" class="menu-link" data-title="用户管理">
-                        <i class="fas fa-users-cog"></i>
-                        <span>用户管理</span>
+                    <a href="/views/users" class="menu-link flex items-center py-4 px-0 md:px-5 group-[.collapsed]:justify-center group-[.collapsed]:px-0 md:group-[.collapsed]:px-0
+                                                text-white/80 text-sm transition-all border-l-4 border-transparent
+                                                hover:bg-white/10 hover:text-white hover:border-white
+                                                [&.active]:bg-white/10 [&.active]:text-white [&.active]:border-white
+                                                justify-center md:justify-start"
+                       data-title="用户管理">
+                        <i class="fas fa-users-cog w-8 text-xl text-center mr-0 md:mr-2 md:text-lg md:group-[.collapsed]:mr-0 md:group-[.collapsed]:text-xl transition-all"></i>
+                        <span class="hidden md:block group-[.collapsed]:hidden">用户管理</span>
                     </a>
                 </li>
                 <li>
-                    <a href="/views/sync" class="menu-link" data-title="同步管理">
-                        <i class="fas fa-sync-alt"></i>
-                        <span>同步任务</span>
+                    <a href="/views/sync" class="menu-link flex items-center py-4 px-0 md:px-5 group-[.collapsed]:justify-center group-[.collapsed]:px-0 md:group-[.collapsed]:px-0
+                                               text-white/80 text-sm transition-all border-l-4 border-transparent
+                                               hover:bg-white/10 hover:text-white hover:border-white
+                                               [&.active]:bg-white/10 [&.active]:text-white [&.active]:border-white
+                                               justify-center md:justify-start"
+                       data-title="同步管理">
+                        <i class="fas fa-sync-alt w-8 text-xl text-center mr-0 md:mr-2 md:text-lg md:group-[.collapsed]:mr-0 md:group-[.collapsed]:text-xl transition-all"></i>
+                        <span class="hidden md:block group-[.collapsed]:hidden">同步任务</span>
                     </a>
                 </li>
                 <li>
-                    <a href="/views/logs" class="menu-link" data-title="操作日志">
-                        <i class="fas fa-history"></i>
-                        <span>操作日志</span>
+                    <a href="/views/logs" class="menu-link flex items-center py-4 px-0 md:px-5 group-[.collapsed]:justify-center group-[.collapsed]:px-0 md:group-[.collapsed]:px-0
+                                               text-white/80 text-sm transition-all border-l-4 border-transparent
+                                               hover:bg-white/10 hover:text-white hover:border-white
+                                               [&.active]:bg-white/10 [&.active]:text-white [&.active]:border-white
+                                               justify-center md:justify-start"
+                       data-title="操作日志">
+                        <i class="fas fa-history w-8 text-xl text-center mr-0 md:mr-2 md:text-lg md:group-[.collapsed]:mr-0 md:group-[.collapsed]:text-xl transition-all"></i>
+                        <span class="hidden md:block group-[.collapsed]:hidden">操作日志</span>
                     </a>
                 </li>
             </div>
@@ -400,42 +164,45 @@
 </nav>
 
 <!-- 主内容区 -->
-<div class="main-content">
+<!-- Flex-1 自动占据剩余空间 -->
+<div class="flex-1 flex flex-col min-w-0 transition-all duration-300">
     <!-- 顶部 Header -->
-    <header>
-        <div class="header-left">
-            <!-- 侧边栏缩放开关 -->
-            <div class="toggle-btn" id="sidebarToggle" title="切换侧边栏">
+    <header class="h-[70px] bg-white flex justify-between items-center px-4 md:px-8 shadow-sm z-40 shrink-0">
+        <div class="flex items-center gap-5">
+            <!-- 侧边栏缩放开关：移动端隐藏 -->
+            <div class="hidden md:flex cursor-pointer text-xl w-10 h-10 items-center justify-center rounded-full hover:bg-bg hover:text-primary transition-colors" id="sidebarToggle" title="切换侧边栏">
                 <i class="fas fa-outdent"></i>
             </div>
             <div class="header-title">
-                <h2 id="pageTitle">仪表盘</h2>
+                <h2 id="pageTitle" class="text-lg md:text-xl text-dark font-medium m-0">仪表盘</h2>
             </div>
         </div>
 
         <!-- 用户区域 -->
-        <div class="user-wrapper" id="userDropdownTrigger">
-            <img id="userAvatar" src="https://ui-avatars.com/api/?name=User&background=random" alt="Avatar">
-            <div class="user-info">
-                <h4 id="userNickname">加载中...</h4>
-                <small id="userRole">Student</small>
+        <div class="relative flex items-center gap-3 cursor-pointer p-1.5 rounded-[30px] hover:bg-bg transition-colors select-none [&.active]:bg-bg group/user" id="userDropdownTrigger">
+            <img id="userAvatar" src="https://ui-avatars.com/api/?name=User&background=random" alt="Avatar" class="w-10 h-10 rounded-full object-cover border-2 border-secondary">
+            <div class="hidden md:block text-right">
+                <h4 id="userNickname" class="text-sm text-dark leading-tight">加载中...</h4>
+                <small id="userRole" class="block text-xs text-gray-400">Student</small>
             </div>
-            <i class="fas fa-chevron-down dropdown-indicator"></i>
+            <i class="fas fa-chevron-down text-gray-400 text-xs ml-1 transition-transform duration-200 group-[.active]/user:rotate-180 hidden md:block"></i>
 
-            <div class="dropdown-menu" id="userDropdown">
-                <a href="/views/profile" class="dropdown-item menu-link" data-title="个人中心">
-                    <i class="fas fa-user"></i> 个人资料
+            <!-- 下拉菜单 -->
+            <!-- 使用 [&.show]:flex 来响应 JS 的 classList.toggle('show') -->
+            <div class="absolute top-[calc(100%+5px)] right-0 bg-white w-full min-w-[140px] rounded-lg shadow-xl hidden flex-col overflow-hidden animate-fade-in-up border border-gray-100 z-50 [&.show]:flex" id="userDropdown">
+                <a href="/views/profile" class="menu-link flex items-center py-3 px-5 text-dark text-sm hover:bg-gray-50 hover:text-primary transition-colors" data-title="个人中心">
+                    <i class="fas fa-user mr-3 text-primary w-4 text-center"></i> 个人资料
                 </a>
-                <a href="#" class="dropdown-item" id="btnLogout">
-                    <i class="fas fa-sign-out-alt"></i> 退出登录
+                <a href="#" class="flex items-center py-3 px-5 text-dark text-sm hover:bg-gray-50 hover:text-primary transition-colors" id="btnLogout">
+                    <i class="fas fa-sign-out-alt mr-3 text-primary w-4 text-center"></i> 退出登录
                 </a>
             </div>
         </div>
     </header>
 
     <!-- 内容区域 iframe -->
-    <div class="iframe-container">
-        <iframe id="contentFrame" src="/dashboard" title="Content"></iframe>
+    <div class="flex-1 overflow-hidden bg-bg relative">
+        <iframe id="contentFrame" src="/dashboard" title="Content" class="w-full h-full border-none block"></iframe>
     </div>
 </div>
 
@@ -505,19 +272,19 @@
         pageTitle.textContent = '个人中心';
 
         // 2. 锁定侧边栏链接
-        const allLinks = document.querySelectorAll('.sidebar-menu a');
+        const allLinks = document.querySelectorAll('.menu-link'); // 修正选择器
         allLinks.forEach(link => {
             const href = link.getAttribute('href');
 
             // 如果是个人中心，视觉上激活，但逻辑上也无需额外点击
             if (href === profilePath) {
                 link.classList.add('active');
-                link.style.opacity = '1';
+                link.classList.remove('opacity-50', 'cursor-not-allowed');
             } else {
                 // 其他链接变灰且禁用
                 link.classList.remove('active');
-                link.style.opacity = '0.5';
-                link.style.cursor = 'not-allowed';
+                // 使用 Tailwind 类名处理禁用状态
+                link.classList.add('opacity-50', 'cursor-not-allowed');
                 // 覆盖点击事件
                 link.onclick = function(e) {
                     e.preventDefault();
@@ -549,6 +316,7 @@
     // 2. 侧边栏缩放逻辑
     function setupSidebarToggle() {
         sidebarToggle.addEventListener('click', () => {
+            // 这里切换 body 的 class，Tailwind 的 group-[.collapsed] 会自动响应
             document.body.classList.toggle('collapsed');
 
             const icon = sidebarToggle.querySelector('i');
@@ -565,13 +333,10 @@
     // 3. 菜单导航逻辑
     function setupMenuNavigation() {
         menuLinks.forEach(link => {
-            // 如果已经被上面的 handleMustChangePassword 覆盖了 onclick，这里就不会执行
-            // 或者我们可以检查 body 是否有特定标记
-
             link.addEventListener('click', function(e) {
                 if (this.getAttribute('href') === '#') return;
-                // 如果已经被禁用（通过 style 检测或者 class），则不执行后续逻辑
-                if (this.style.cursor === 'not-allowed') return;
+                // 检查是否禁用 (Tailwind class check)
+                if (this.classList.contains('cursor-not-allowed')) return;
 
                 e.preventDefault();
 
@@ -580,7 +345,7 @@
 
                 const targetUrl = this.getAttribute('href');
                 // 确保折叠后展开菜单也能高亮
-                document.querySelectorAll(`.sidebar-menu a[href="${targetUrl}"]`).forEach(l => l.classList.add('active'));
+                document.querySelectorAll(`.menu-link[href="${targetUrl}"]`).forEach(l => l.classList.add('active'));
 
                 contentFrame.src = targetUrl;
                 const title = this.getAttribute('data-title');

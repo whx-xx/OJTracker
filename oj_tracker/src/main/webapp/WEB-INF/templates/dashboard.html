@@ -12,393 +12,171 @@
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
-
-        :root {
-            --primary-color: #4e54c8;
-            --secondary-color: #8f94fb;
-            --success-color: #2ecc71;
-            --warning-color: #f1c40f;
-            --danger-color: #e74c3c;
-            --text-dark: #34495e;
-            --text-gray: #7f8c8d;
-            --bg-color: #f1f5f9;
-            --card-bg: #ffffff;
-            --heat-l0: #ebedf0;
-            --heat-l1: #9be9a8;
-            --heat-l2: #40c463;
-            --heat-l3: #30a14e;
-            --heat-l4: #216e39;
-            --cell-size: 13px;
-            --cell-gap: 3px;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            padding: 20px;
-            color: var(--text-dark);
-            overflow-y: auto;
-        }
-
-        /* === 欢迎 Banner === */
-        .welcome-banner {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 12px;
-            padding: 30px;
-            color: white;
-            margin-bottom: 25px;
-            box-shadow: 0 4px 15px rgba(118, 75, 162, 0.25);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .welcome-text h1 {
-            font-size: 24px;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-
-        .welcome-text p {
-            opacity: 0.9;
-            font-size: 14px;
-        }
-
-        .refresh-btn {
-            background: rgba(255,255,255,0.2);
-            border: 1px solid rgba(255,255,255,0.4);
-            color: white;
-            padding: 8px 20px;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-        }
-
-        .refresh-btn:hover {
-            background: rgba(255,255,255,0.3);
-            transform: translateY(-2px);
-        }
-
-        .refresh-btn i.rotating {
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-
-        /* === 统计卡片网格 === */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 25px;
-        }
-
-        .stat-card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            display: flex;
-            align-items: center;
-            border: 1px solid rgba(0,0,0,0.02);
-        }
-
-        .stat-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-        }
-
-        .stat-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            margin-right: 15px;
-            flex-shrink: 0;
-        }
-
-        .icon-blue { background: rgba(78, 84, 200, 0.1); color: var(--primary-color); }
-        .icon-green { background: rgba(46, 204, 113, 0.1); color: var(--success-color); }
-        .icon-orange { background: rgba(241, 196, 15, 0.1); color: var(--warning-color); }
-        .icon-red { background: rgba(231, 76, 60, 0.1); color: var(--danger-color); }
-
-        .stat-info h3 {
-            font-size: 22px;
-            font-weight: 600;
-            margin-bottom: 2px;
-            color: var(--text-dark);
-        }
-
-        .stat-info p {
-            color: var(--text-gray);
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        /* === 热力图样式 === */
-        .heatmap-card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px 25px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-            margin-bottom: 25px;
-            overflow-x: auto;
-            border: 1px solid rgba(0,0,0,0.02);
-            scroll-behavior: smooth;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .heatmap-card::-webkit-scrollbar { height: 6px; }
-        .heatmap-card::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
-
-        .heatmap-container {
-            display: grid;
-            grid-template-rows: repeat(7, var(--cell-size));
-            grid-auto-flow: column;
-            gap: var(--cell-gap);
-            padding-bottom: 5px;
-            width: max-content;
-            min-width: 100%;
-        }
-
-        .heatmap-cell {
-            width: var(--cell-size);
-            height: var(--cell-size);
-            border-radius: 2px;
-            background-color: var(--heat-l0);
-            position: relative;
-            cursor: pointer;
-        }
-
-        .heatmap-cell:hover {
-            border: 1px solid rgba(0,0,0,0.4);
-            transform: scale(1.15);
-            z-index: 5;
-        }
-
-        .color-l0 { background-color: var(--heat-l0); }
-        .color-l1 { background-color: var(--heat-l1); }
-        .color-l2 { background-color: var(--heat-l2); }
-        .color-l3 { background-color: var(--heat-l3); }
-        .color-l4 { background-color: var(--heat-l4); }
-
-        /* 全局 Tooltip */
-        #global-tooltip {
-            position: fixed;
-            background: rgba(30, 30, 30, 0.95);
-            color: #fff;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            pointer-events: none;
-            z-index: 9999;
-            opacity: 0;
-            transition: opacity 0.15s ease, transform 0.1s ease;
-            white-space: nowrap;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            font-weight: 500;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-
-        /* === 图表 Tab 样式 (新增) === */
-        .chart-tabs {
-            display: flex;
-            background: #f1f5f9;
-            padding: 3px;
-            border-radius: 8px;
-        }
-
-        .chart-tab {
-            border: none;
-            background: transparent;
-            padding: 5px 12px;
-            font-size: 12px;
-            color: var(--text-gray);
-            cursor: pointer;
-            border-radius: 6px;
-            transition: all 0.2s;
-            font-weight: 500;
-        }
-
-        .chart-tab.active {
-            background: white;
-            color: var(--primary-color);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .chart-tab:hover:not(.active) {
-            color: var(--text-dark);
-        }
-
-        /* === 内容分栏 === */
-        .content-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr; /* 改为 1:1，更适合两个图表并排 */
-            gap: 20px;
-        }
-
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px 25px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            border: 1px solid rgba(0,0,0,0.02);
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .card-header h2 {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-dark);
-        }
-
-        @media (max-width: 1000px) {
-            .content-grid {
-                grid-template-columns: 1fr;
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4e54c8',
+                        secondary: '#8f94fb',
+                        success: '#2ecc71',
+                        warning: '#f1c40f',
+                        error: '#e74c3c', // 对应原 danger-color
+                        dark: '#34495e',
+                        graytext: '#7f8c8d',
+                        bg: '#f1f5f9',
+                    },
+                    fontFamily: {
+                        poppins: ['Poppins', 'sans-serif'],
+                    },
+                    keyframes: {
+                        spin: {
+                            'to': { transform: 'rotate(360deg)' }
+                        }
+                    },
+                    animation: {
+                        spin: 'spin 1s linear infinite',
+                    }
+                }
             }
         }
-    </style>
+    </script>
 </head>
-<body>
+<body class="bg-bg p-5 text-dark overflow-y-auto font-poppins">
 
-<div id="global-tooltip"></div>
+<!-- 全局 Tooltip -->
+<div id="global-tooltip" class="fixed bg-gray-900/95 text-white py-2 px-3 rounded-md text-xs pointer-events-none z-[9999] opacity-0 transition-opacity duration-150 shadow-lg font-medium border border-white/10 whitespace-nowrap top-0 left-0"></div>
 
-<div class="welcome-banner">
-    <div class="welcome-text">
-        <h1 id="welcomeUser">欢迎回来!</h1>
-        <p>每一行代码，都是通往梦想的脚印。</p>
+<!-- 欢迎 Banner -->
+<div class="bg-gradient-to-br from-[#667eea] to-[#764ba2] rounded-xl p-8 text-white shadow-lg mb-6 flex justify-between items-center relative overflow-hidden">
+    <!-- 装饰背景 -->
+    <div class="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+
+    <div class="welcome-text relative z-10">
+        <h1 id="welcomeUser" class="text-2xl font-semibold mb-2">欢迎回来!</h1>
+        <p class="text-white/90 text-sm">Roots change, but the tree stands strong — so should your logic.</p>
     </div>
-    <button class="refresh-btn" onclick="triggerSync()">
-        <i class="fas fa-sync-alt" id="syncIcon"></i>
+
+    <button class="relative z-10 bg-white/20 border border-white/40 text-white py-2 px-5 rounded-full cursor-pointer transition-all duration-300 hover:bg-white/30 hover:-translate-y-0.5 flex items-center gap-2 text-sm group" onclick="triggerSync()">
+        <i class="fas fa-sync-alt transition-transform" id="syncIcon"></i>
         <span id="syncText">同步数据</span>
     </button>
 </div>
 
-<div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-icon icon-blue">
+<!-- 统计卡片网格 -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+    <!-- 卡片 1 -->
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-50 flex items-center transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+        <div class="w-12 h-12 rounded-lg flex items-center justify-center text-xl mr-4 shrink-0 bg-primary/10 text-primary">
             <i class="fas fa-check-double"></i>
         </div>
         <div class="stat-info">
-            <h3 id="valSolved">--</h3>
-            <p>总解题数</p>
+            <h3 id="valSolved" class="text-2xl font-semibold text-dark mb-0.5">--</h3>
+            <p class="text-graytext text-xs font-medium">总解题数</p>
         </div>
     </div>
 
-    <div class="stat-card">
-        <div class="stat-icon icon-green">
+    <!-- 卡片 2 -->
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-50 flex items-center transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+        <div class="w-12 h-12 rounded-lg flex items-center justify-center text-xl mr-4 shrink-0 bg-success/10 text-success">
             <i class="fas fa-chart-line"></i>
         </div>
         <div class="stat-info">
-            <h3 id="valRating">--</h3>
-            <p>当前 Rating</p>
+            <h3 id="valRating" class="text-2xl font-semibold text-dark mb-0.5">--</h3>
+            <p class="text-graytext text-xs font-medium">当前 Rating</p>
         </div>
     </div>
 
-    <div class="stat-card">
-        <div class="stat-icon icon-orange">
+    <!-- 卡片 3 -->
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-50 flex items-center transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+        <div class="w-12 h-12 rounded-lg flex items-center justify-center text-xl mr-4 shrink-0 bg-warning/10 text-warning">
             <i class="fas fa-calendar-week"></i>
         </div>
         <div class="stat-info">
-            <h3 id="valWeeklySolved">--</h3>
-            <p>本周解题</p>
+            <h3 id="valWeeklySolved" class="text-2xl font-semibold text-dark mb-0.5">--</h3>
+            <p class="text-graytext text-xs font-medium">本周解题</p>
         </div>
     </div>
 
-    <div class="stat-card">
-        <div class="stat-icon icon-red">
+    <!-- 卡片 4 -->
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-50 flex items-center transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+        <div class="w-12 h-12 rounded-lg flex items-center justify-center text-xl mr-4 shrink-0 bg-error/10 text-error">
             <i class="fas fa-fire"></i>
         </div>
         <div class="stat-info">
-            <h3 id="valActiveDays">--</h3>
-            <p>活跃天数</p>
+            <h3 id="valActiveDays" class="text-2xl font-semibold text-dark mb-0.5">--</h3>
+            <p class="text-graytext text-xs font-medium">活跃天数</p>
         </div>
     </div>
 </div>
 
-<div class="heatmap-card">
-    <div class="card-header" style="margin-bottom: 15px;">
-        <h2>活跃度 (近一年)</h2>
-        <div style="font-size: 11px; display: flex; align-items: center; gap: 4px; color: #888;">
+<!-- 热力图卡片 -->
+<div class="bg-white rounded-xl p-6 shadow-sm mb-6 border border-gray-50 flex flex-col overflow-x-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
+    <div class="flex justify-between items-center mb-4 min-w-[700px]">
+        <h2 class="text-base font-semibold text-dark">活跃度 (近一年)</h2>
+        <div class="text-[11px] flex items-center gap-1 text-gray-400">
             <span>少</span>
-            <div class="heatmap-cell color-l0" style="width:12px;height:12px;cursor:default;"></div>
-            <div class="heatmap-cell color-l2" style="width:12px;height:12px;cursor:default;"></div>
-            <div class="heatmap-cell color-l4" style="width:12px;height:12px;cursor:default;"></div>
+            <div class="w-3 h-3 rounded-[2px] bg-gray-200"></div>
+            <div class="w-3 h-3 rounded-[2px] bg-green-400"></div>
+            <div class="w-3 h-3 rounded-[2px] bg-green-800"></div>
             <span>多</span>
         </div>
     </div>
-    <div class="heatmap-container" id="heatmapContainer">
-        <div style="grid-column: span 10; color: #999; font-size: 12px;">正在加载热力图...</div>
+
+    <!-- 热力图容器 -->
+    <!-- 使用 grid-flow-col 和 grid-rows-7 来实现周视图 -->
+    <div class="grid grid-flow-col grid-rows-7 gap-[3px] pb-1 w-max min-w-full" id="heatmapContainer">
+        <div class="col-span-10 text-gray-400 text-xs">正在加载热力图...</div>
     </div>
 </div>
 
-<div class="content-grid">
-    <!-- 左侧：Codeforces 风格 Rating 曲线图 -->
-    <div class="card">
-        <div class="card-header">
-            <h2>Rating 积分趋势</h2>
-            <!-- 新增：时间切换 Tab -->
-            <div class="chart-tabs">
-                <button class="chart-tab active" onclick="switchRatingTab(5000, this)">全部</button>
-                <button class="chart-tab" onclick="switchRatingTab(365, this)">近一年</button>
-                <button class="chart-tab" onclick="switchRatingTab(30, this)">近一月</button>
+<!-- 图表分栏 -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <!-- 左侧：Rating 趋势 -->
+    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-50 h-full flex flex-col">
+        <div class="flex justify-between items-center mb-5">
+            <h2 class="text-base font-semibold text-dark">Rating 积分趋势</h2>
+            <!-- 时间切换 Tab -->
+            <div class="flex bg-slate-100 p-1 rounded-lg">
+                <button class="chart-tab border-none bg-transparent px-3 py-1 text-xs text-gray-500 cursor-pointer rounded-md transition-all font-medium hover:text-dark [&.active]:bg-white [&.active]:text-primary [&.active]:shadow-sm active"
+                        onclick="switchRatingTab(5000, this)">全部</button>
+                <button class="chart-tab border-none bg-transparent px-3 py-1 text-xs text-gray-500 cursor-pointer rounded-md transition-all font-medium hover:text-dark [&.active]:bg-white [&.active]:text-primary [&.active]:shadow-sm"
+                        onclick="switchRatingTab(365, this)">近一年</button>
+                <button class="chart-tab border-none bg-transparent px-3 py-1 text-xs text-gray-500 cursor-pointer rounded-md transition-all font-medium hover:text-dark [&.active]:bg-white [&.active]:text-primary [&.active]:shadow-sm"
+                        onclick="switchRatingTab(30, this)">近一月</button>
             </div>
         </div>
-        <div style="position: relative; height: 350px; width: 100%;">
-            <!-- ECharts Container: Replaces Canvas -->
-            <div id="ratingChart" style="width: 100%; height: 100%;"></div>
+        <div class="relative w-full h-[350px]">
+            <div id="ratingChart" class="w-full h-full"></div>
         </div>
     </div>
 
-    <!-- 右侧：Rating 分布柱状图 (ECharts) [修改：移除了原本的表格，替换为柱状图] -->
-    <div class="card">
-        <div class="card-header">
-            <h2>已解决题目难度分布</h2>
+    <!-- 右侧：Rating 分布 -->
+    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-50 h-full flex flex-col">
+        <div class="flex justify-between items-center mb-5">
+            <h2 class="text-base font-semibold text-dark">已解决题目难度分布</h2>
         </div>
-        <div style="position: relative; height: 350px; width: 100%;">
-            <div id="ratingDistChart" style="width: 100%; height: 100%;"></div>
+        <div class="relative w-full h-[350px]">
+            <div id="ratingDistChart" class="w-full h-full"></div>
         </div>
     </div>
 </div>
 
 <script>
-    // 定义 Codeforces 风格的 Rating 颜色区间 (背景色带)
+    // 定义 Codeforces 风格的 Rating 颜色区间
     const CF_BANDS = [
-        { min: 0, max: 1199, color: '#f2f2f2', name: 'Newbie' },    // Newbie (Gray)
-        { min: 1200, max: 1399, color: '#e6ffe6', name: 'Pupil' }, // Pupil (Green)
-        { min: 1400, max: 1599, color: '#e6ffff', name: 'Specialist' }, // Specialist (Cyan)
-        { min: 1600, max: 1899, color: '#e6e6ff', name: 'Expert' }, // Expert (Blue)
-        { min: 1900, max: 2099, color: '#ffe6ff', name: 'Candidate Master' }, // CM (Violet)
-        { min: 2100, max: 2399, color: '#fff0e6', name: 'Master' }, // Master (Orange)
-        { min: 2400, max: 2999, color: '#ffe6e6', name: 'Grandmaster' }, // GM (Red)
-        { min: 3000, max: 5000, color: '#ffe6e6', name: 'Legendary Grandmaster' }  // LGM (Red)
+        { min: 0, max: 1199, color: '#f2f2f2', name: 'Newbie' },
+        { min: 1200, max: 1399, color: '#e6ffe6', name: 'Pupil' },
+        { min: 1400, max: 1599, color: '#e6ffff', name: 'Specialist' },
+        { min: 1600, max: 1899, color: '#e6e6ff', name: 'Expert' },
+        { min: 1900, max: 2099, color: '#ffe6ff', name: 'Candidate Master' },
+        { min: 2100, max: 2399, color: '#fff0e6', name: 'Master' },
+        { min: 2400, max: 2999, color: '#ffe6e6', name: 'Grandmaster' },
+        { min: 3000, max: 5000, color: '#ffe6e6', name: 'Legendary Grandmaster' }
     ];
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -406,7 +184,7 @@
         loadUserProfile();
         loadHeatmap();
         loadRatingHistory(5000); // 默认加载全部
-        loadRatingDistribution(); // [新增] 加载难度分布图
+        loadRatingDistribution();
         initGlobalTooltip();
     });
 
@@ -414,24 +192,22 @@
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(() => {
-            loadHeatmap();
-            // Resize ECharts
-            if (window.myRatingChart) {
-                window.myRatingChart.resize();
-            }
-            if (window.myDistChart) {
-                window.myDistChart.resize();
-            }
+            // 热力图使用 grid 布局，不需要重绘逻辑，只需重置 CSS 变量计算
+            // loadHeatmap(); // 重新加载可能太重，这里只调整图表即可
+            if (window.myRatingChart) window.myRatingChart.resize();
+            if (window.myDistChart) window.myDistChart.resize();
         }, 300);
     });
 
+    // Tooltip 逻辑保持不变，只需适配类名选择器
     function initGlobalTooltip() {
         const tooltip = document.getElementById('global-tooltip');
         let isHovering = false;
 
         document.addEventListener('mouseover', (e) => {
-            if (e.target.classList.contains('heatmap-cell')) {
-                const text = e.target.getAttribute('data-tooltip');
+            // 使用 contains 检查 Tailwind 类或 data 属性
+            if (e.target.hasAttribute('data-tooltip-content')) {
+                const text = e.target.getAttribute('data-tooltip-content');
                 if (text) {
                     tooltip.textContent = text;
                     tooltip.style.opacity = '1';
@@ -441,7 +217,7 @@
         });
 
         document.addEventListener('mouseout', (e) => {
-            if (e.target.classList.contains('heatmap-cell')) {
+            if (e.target.hasAttribute('data-tooltip-content')) {
                 tooltip.style.opacity = '0';
                 isHovering = false;
             }
@@ -451,12 +227,11 @@
             if (!isHovering) return;
             let x = e.clientX + 12;
             let y = e.clientY + 12;
-            const tooltipWidth = tooltip.offsetWidth;
-            const windowWidth = window.innerWidth;
-            if (x + tooltipWidth > windowWidth - 10) x = e.clientX - tooltipWidth - 12;
-            const tooltipHeight = tooltip.offsetHeight;
-            const windowHeight = window.innerHeight;
-            if (y + tooltipHeight > windowHeight - 10) y = e.clientY - tooltipHeight - 12;
+
+            // 简单的边界检查
+            if (x + tooltip.offsetWidth > window.innerWidth) x = e.clientX - tooltip.offsetWidth - 12;
+            if (y + tooltip.offsetHeight > window.innerHeight) y = e.clientY - tooltip.offsetHeight - 12;
+
             tooltip.style.left = x + 'px';
             tooltip.style.top = y + 'px';
         });
@@ -494,26 +269,16 @@
             }).catch(console.error);
     }
 
+    // 热力图重构：使用 Tailwind 类名
     function loadHeatmap() {
         const container = document.getElementById('heatmapContainer');
-        const card = document.querySelector('.heatmap-card');
         const daysToFetch = 365;
-        const gap = 3;
-        const numCols = 53;
-        const availableWidth = card.clientWidth - 50;
-        let cellSize = Math.floor((availableWidth - (numCols - 1) * gap) / numCols);
-        if (cellSize < 10) cellSize = 10;
-        if (cellSize > 40) cellSize = 40;
-
-        document.documentElement.style.setProperty('--cell-size', cellSize + 'px');
-        document.documentElement.style.setProperty('--cell-gap', gap + 'px');
 
         axios.get('/api/user/activity/heatmap', { params: { platformCode: 'CF', days: daysToFetch } })
             .then(res => {
                 if (res.data.code === 200) {
                     const dataList = res.data.data || [];
                     renderHeatmap(container, dataList, daysToFetch);
-                    setTimeout(() => { if (card) { card.scrollLeft = card.scrollWidth; } }, 50);
                 }
             });
     }
@@ -528,13 +293,17 @@
         const endDate = new Date();
         const startDate = new Date();
         startDate.setDate(endDate.getDate() - (totalDays - 1));
-        const startDay = startDate.getDay();
+        const startDay = startDate.getDay(); // 0(Sun) - 6(Sat)
+
+        // 补充前面的空白格 (对齐星期)
+        // grid-rows-7 意味着按列填充：Sun, Mon, Tue...
+        // 所以我们只需要补齐 offset 即可
         const offset = startDay;
 
         for (let i = 0; i < offset; i++) {
             const empty = document.createElement('div');
-            empty.className = 'heatmap-cell';
-            empty.style.backgroundColor = 'transparent';
+            // Tailwind: w-3 h-3
+            empty.className = 'w-3 h-3';
             container.appendChild(empty);
         }
 
@@ -543,39 +312,38 @@
             const dateStr = loopDate.toISOString().split('T')[0];
             const data = activityMap.get(dateStr) || { solved: 0, submit: 0 };
             const count = data.solved;
+
             const cell = document.createElement('div');
-            cell.className = `heatmap-cell ${getColorClass(count)}`;
-            cell.setAttribute('data-tooltip', `${dateStr} | AC: ${count} | 提交: ${data.submit}`);
+            // 基础样式 + 动态颜色
+            cell.className = `w-3 h-3 rounded-[2px] cursor-pointer transition-transform duration-200 hover:scale-125 hover:z-10 hover:border hover:border-black/30 ${getColorClass(count)}`;
+            // 使用新属性适配 Tooltip
+            cell.setAttribute('data-tooltip-content', `${dateStr} | AC: ${count} | 提交: ${data.submit}`);
+
             container.appendChild(cell);
             loopDate.setDate(loopDate.getDate() + 1);
         }
     }
 
+    // 返回 Tailwind 背景色类名
     function getColorClass(count) {
-        if (count === 0) return 'color-l0';
-        if (count <= 1) return 'color-l1';
-        if (count <= 3) return 'color-l2';
-        if (count <= 6) return 'color-l3';
-        return 'color-l4';
+        if (count === 0) return 'bg-gray-200'; // 对应原 #ebedf0
+        if (count <= 1) return 'bg-green-300'; // 原 #9be9a8
+        if (count <= 3) return 'bg-green-400'; // 原 #40c463
+        if (count <= 6) return 'bg-green-600'; // 原 #30a14e
+        return 'bg-green-800';                 // 原 #216e39
     }
 
     // 切换 Tab 逻辑
     function switchRatingTab(days, btn) {
-        // 更新按钮样式
         const tabs = document.querySelectorAll('.chart-tab');
         tabs.forEach(t => t.classList.remove('active'));
         btn.classList.add('active');
-
-        // 重新加载图表
         loadRatingHistory(days);
     }
 
-    // 加载 Rating 历史图表 (ECharts 版本)
     function loadRatingHistory(days) {
         const chartDom = document.getElementById('ratingChart');
         if (!chartDom) return;
-
-        // 如果没有传 days，默认加载全部
         if (!days) days = 5000;
 
         axios.get('/api/user/rating/history', { params: { platformCode: 'CF', days: days } })
@@ -586,126 +354,60 @@
                     const ratings = history.map(item => item.rating);
                     const metaData = history;
 
-                    // 计算 Y 轴范围
                     const minRating = ratings.length ? Math.min(...ratings) : 1000;
                     const maxRating = ratings.length ? Math.max(...ratings) : 1500;
                     const yMin = Math.floor(Math.min(minRating, 1100) / 100) * 100;
                     const yMax = Math.ceil(Math.max(maxRating, 1600) / 100) * 100 + 100;
 
-                    // 准备 markArea 数据
                     const markAreaData = [];
                     CF_BANDS.forEach(band => {
-                        // 只添加在显示范围内的区域，或者简单添加所有区域
-                        markAreaData.push([
-                            {
-                                yAxis: band.min,
-                                itemStyle: {
-                                    color: band.color,
-                                    opacity: 1 // ECharts中可以通过 opacity 控制透明度，这里直接用配置好的颜色
-                                }
-                            },
-                            {
-                                yAxis: band.max
-                            }
-                        ]);
+                        markAreaData.push([{ yAxis: band.min, itemStyle: { color: band.color } }, { yAxis: band.max }]);
                     });
 
-                    // 初始化或获取 ECharts 实例
                     let myChart = echarts.getInstanceByDom(chartDom);
-                    if (myChart) {
-                        myChart.dispose(); // 销毁旧实例以防万一
-                    }
+                    if (myChart) myChart.dispose();
                     myChart = echarts.init(chartDom);
-                    window.myRatingChart = myChart; // 存到全局以便 resize
+                    window.myRatingChart = myChart;
 
                     const option = {
-                        grid: {
-                            top: 20,
-                            bottom: 30,
-                            left: 50,
-                            right: 30,
-                            containLabel: false
-                        },
+                        grid: { top: 20, bottom: 20, left: 40, right: 30, containLabel: false },
                         tooltip: {
                             trigger: 'axis',
                             backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                            borderColor: '#ddd',
-                            textStyle: {
-                                color: '#333',
-                                fontSize: 12
-                            },
+                            borderColor: '#e5e7eb',
+                            textStyle: { color: '#333', fontSize: 12 },
                             formatter: function (params) {
-                                // params[0] 是系列数据
                                 if (!params || params.length === 0) return '';
                                 const dataIndex = params[0].dataIndex;
                                 const item = metaData[dataIndex];
                                 const deltaSign = item.delta >= 0 ? '+' : '';
-
                                 return `
-                                    <div style="font-weight: 600; font-size: 13px; margin-bottom: 4px;">${item.contestName}</div>
-                                    <div style="color: #666;">Rating: <span style="font-weight: 600; color: #333;">${item.rating}</span></div>
-                                    <div style="color: #666;">排名: ${item.rank}</div>
-                                    <div style="color: #666;">变动: ${deltaSign}${item.delta}</div>
-                                    <div style="color: #999; font-size: 11px; margin-top: 4px;">${formatDate(item.time)}</div>
+                                    <div class="font-bold text-xs mb-1">${item.contestName}</div>
+                                    <div class="text-gray-500">Rating: <span class="font-bold text-gray-800">${item.rating}</span></div>
+                                    <div class="text-gray-500">排名: ${item.rank}</div>
+                                    <div class="text-gray-500">变动: ${deltaSign}${item.delta}</div>
+                                    <div class="text-gray-400 text-[10px] mt-1">${formatDate(item.time)}</div>
                                 `;
                             }
                         },
-                        xAxis: {
-                            type: 'category',
-                            boundaryGap: false,
-                            data: dates,
-                            axisLine: { show: false },
-                            axisTick: { show: false },
-                            axisLabel: {
-                                show: false // 如果你想隐藏X轴标签，或者设为 true 显示
-                            }
-                        },
+                        xAxis: { type: 'category', boundaryGap: false, data: dates, show: false },
                         yAxis: {
-                            type: 'value',
-                            min: yMin,
-                            max: yMax,
-                            splitLine: {
-                                lineStyle: {
-                                    type: 'dashed',
-                                    color: 'rgba(0,0,0,0.05)'
-                                }
-                            },
-                            axisLabel: {
-                                color: '#999',
-                                fontSize: 11
-                            }
+                            type: 'value', min: yMin, max: yMax,
+                            splitLine: { lineStyle: { type: 'dashed', color: 'rgba(0,0,0,0.05)' } },
+                            axisLabel: { color: '#9ca3af', fontSize: 10 }
                         },
-                        series: [
-                            {
-                                name: 'Rating',
-                                type: 'line',
-                                data: ratings,
-                                smooth: false,
-                                symbol: 'circle',
-                                symbolSize: 6,
-                                itemStyle: {
-                                    color: '#FFFFFF', // 点的内部颜色
-                                    borderColor: '#FFC107', // 点的边框颜色
-                                    borderWidth: 2
-                                },
-                                lineStyle: {
-                                    color: '#FFC107',
-                                    width: 2
-                                },
-                                markArea: {
-                                    silent: true, // 鼠标悬停不触发效果
-                                    data: markAreaData
-                                }
-                            }
-                        ]
+                        series: [{
+                            name: 'Rating', type: 'line', data: ratings, smooth: false, symbol: 'circle', symbolSize: 6,
+                            itemStyle: { color: '#FFFFFF', borderColor: '#F59E0B', borderWidth: 2 },
+                            lineStyle: { color: '#F59E0B', width: 2 },
+                            markArea: { silent: true, data: markAreaData }
+                        }]
                     };
-
                     myChart.setOption(option);
                 }
             });
     }
 
-    // === [新增] ECharts 加载难度分布图 ===
     function loadRatingDistribution() {
         const chartDom = document.getElementById('ratingDistChart');
         if (!chartDom) return;
@@ -721,44 +423,19 @@
                 myChart.hideLoading();
                 if (res.data.code === 200) {
                     const dataMap = res.data.data || {};
-                    // 将 map 转为数组并排序
                     const ratings = Object.keys(dataMap).map(Number).sort((a,b) => a - b);
                     const counts = ratings.map(r => dataMap[r]);
 
                     const option = {
-                        tooltip: {
-                            trigger: 'axis',
-                            axisPointer: { type: 'shadow' },
-                            formatter: '{b}: {c} 题'
-                        },
-                        grid: {
-                            left: '3%', right: '4%', bottom: '3%', top: '10%',
-                            containLabel: true
-                        },
-                        xAxis: {
-                            type: 'category',
-                            data: ratings,
-                            axisTick: { alignWithLabel: true },
-                            axisLabel: {
-                                interval: 'auto',
-                                color: '#666'
-                            }
-                        },
-                        yAxis: {
-                            type: 'value',
-                            splitLine: {
-                                lineStyle: { type: 'dashed', color: '#eee' }
-                            }
-                        },
+                        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: '{b}: {c} 题' },
+                        grid: { left: '3%', right: '4%', bottom: '3%', top: '10%', containLabel: true },
+                        xAxis: { type: 'category', data: ratings, axisTick: { alignWithLabel: true }, axisLabel: { interval: 'auto', color: '#6b7280' } },
+                        yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#f3f4f6' } } },
                         series: [{
-                            name: 'solved',
-                            type: 'bar',
-                            barWidth: '60%',
+                            name: 'solved', type: 'bar', barWidth: '60%',
                             data: counts.map((val, idx) => ({
                                 value: val,
-                                itemStyle: {
-                                    color: getBarColor(ratings[idx]) // 使用自定义颜色函数
-                                }
+                                itemStyle: { color: getBarColor(ratings[idx]) }
                             }))
                         }]
                     };
@@ -767,25 +444,27 @@
             });
     }
 
-    // [新增] 柱状图颜色逻辑 (参考 GreasyFork 脚本)
     function getBarColor(rating) {
-        if (rating >= 3000) return '#aa0100'; // LGM (Dark Red)
-        if (rating >= 2600) return '#ff3333'; // IGM (Red)
-        if (rating >= 2400) return '#ff7777'; // GM (Light Red)
-        if (rating >= 2300) return '#ffbb55'; // IM (Orange)
-        if (rating >= 2100) return '#ffcc87'; // Master (Light Orange)
-        if (rating >= 1900) return '#ff88ff'; // CM (Violet)
-        if (rating >= 1600) return '#aaaaff'; // Expert (Blue)
-        if (rating >= 1400) return '#76ddbb'; // Specialist (Cyan)
-        if (rating >= 1200) return '#76ff77'; // Pupil (Green)
-        return '#cccccc'; // Newbie (Gray)
+        if (rating >= 3000) return '#aa0100';
+        if (rating >= 2600) return '#ff3333';
+        if (rating >= 2400) return '#ff7777';
+        if (rating >= 2300) return '#ffbb55';
+        if (rating >= 2100) return '#ffcc87';
+        if (rating >= 1900) return '#ff88ff';
+        if (rating >= 1600) return '#aaaaff';
+        if (rating >= 1400) return '#76ddbb';
+        if (rating >= 1200) return '#76ff77';
+        return '#d1d5db';
     }
 
     window.triggerSync = function() {
         const icon = document.getElementById('syncIcon');
         const text = document.getElementById('syncText');
-        if(icon.classList.contains('rotating')) return;
-        icon.classList.add('rotating'); text.textContent = '同步中...';
+        if(icon.classList.contains('animate-spin')) return;
+
+        icon.classList.add('animate-spin');
+        text.textContent = '同步中...';
+
         const Toast = Swal.mixin({
             toast: true, position: 'top-end', showConfirmButton: false, timerProgressBar: true,
             didOpen: (toast) => { toast.addEventListener('mouseenter', Swal.stopTimer); toast.addEventListener('mouseleave', Swal.resumeTimer); }
@@ -802,7 +481,10 @@
                 }
             })
             .catch(err => { Toast.fire({ icon: 'error', title: '请求错误', text: '无法连接到服务器' }); })
-            .finally(() => { icon.classList.remove('rotating'); text.textContent = '同步数据'; });
+            .finally(() => {
+                icon.classList.remove('animate-spin');
+                text.textContent = '同步数据';
+            });
     }
 
     function animateValue(id, start, end, duration) {

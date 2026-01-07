@@ -19,6 +19,27 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    /**
+     * 处理业务逻辑异常 (如参数校验失败、账号禁用等)
+     * 解决前端 Axios 遇到 500 错误直接进 catch 的问题
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.OK) // <--- 返回 HTTP 200，确保前端进入 .then()
+    public Object handleIllegalArgumentException(IllegalArgumentException e, HttpServletRequest request) {
+        // 如果是 API 请求，返回 JSON
+        if (isAjax(request)) {
+            // 这里返回 code 400 或其他你约定的失败码，msg 直接使用异常信息
+            Map<String, Object> map = new HashMap<>();
+            map.put("code", 400);
+            map.put("msg", e.getMessage()); // 直接显示 "账号已被禁用"，不加前缀
+            map.put("success", false);
+            return ResponseEntity.ok(map);
+        }
+
+        // 如果是页面请求，可以跳到 500 页面或者登录页并带上错误信息
+        return "error/500";
+    }
+
     // ... (保留之前的 handle404 代码) ...
     @ExceptionHandler(NoHandlerFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)

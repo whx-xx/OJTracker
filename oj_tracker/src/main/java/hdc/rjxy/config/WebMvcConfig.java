@@ -67,20 +67,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 );
         // 注册强制修改密码拦截器
         registry.addInterceptor(new ForcePasswordChangeInterceptor())
-                .addPathPatterns("/**")
-                .excludePathPatterns(
-                        "/login",
-                        "/register",
-                        "/api/auth/**",
-                        "/static/**",
-                        "/favicon.ico",
-                        "/css/**",
-                        "/js/**",
-                        "/error",
-                        "/webjars/**",
-                        "/swagger-ui/**",
-                        "/v3/api-docs/**"
-                );
+                .addPathPatterns("/**"); // 拦截所有路径，具体的白名单逻辑在拦截器内部处理
     }
 
     // --- JSON 转换器配置 ---

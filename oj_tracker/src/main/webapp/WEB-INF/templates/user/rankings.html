@@ -10,121 +10,214 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 
     <!-- Tailwind 配置 -->
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: {
-                        primary: '#4e54c8',
-                        secondary: '#8f94fb',
-                        dark: '#1e293b', // Slate-800
-                        graytext: '#64748b', // Slate-500
-                        bg: '#f8fafc', // Slate-50
-                    },
                     fontFamily: {
-                        poppins: ['Poppins', 'sans-serif'],
-                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', "Liberation Mono", "Courier New", 'monospace'],
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        // CF 标准色系参考
+                        cf: {
+                            gray: '#808080',
+                            green: '#008000',
+                            cyan: '#03a89e',
+                            blue: '#0000ff',
+                            violet: '#a0a',
+                            orange: '#ff8c00',
+                            red: '#ff0000',
+                            legendary: '#000000' // LGM 首字母黑
+                        }
+                    },
+                    boxShadow: {
+                        'card': '0 2px 8px -2px rgba(0, 0, 0, 0.05), 0 1px 3px 0 rgba(0, 0, 0, 0.02)',
+                        'card-hover': '0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.01)',
                     }
                 }
             }
         }
     </script>
+    <style>
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        /* 动画类 */
+        .fade-in-up {
+            animation: fadeInUp 0.4s ease-out forwards;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* CF 名字颜色类 */
+        .cf-user-gray { color: #808080 !important; font-weight: bold; }
+        .cf-user-green { color: #008000 !important; font-weight: bold; }
+        .cf-user-cyan { color: #03a89e !important; font-weight: bold; }
+        .cf-user-blue { color: #0000ff !important; font-weight: bold; }
+        .cf-user-violet { color: #a0a !important; font-weight: bold; }
+        .cf-user-orange { color: #ff8c00 !important; font-weight: bold; }
+        .cf-user-red { color: #ff0000 !important; font-weight: bold; }
+        .cf-user-legendary { color: #ff0000 !important; font-weight: bold; }
+        .cf-user-legendary::first-letter { color: black !important; }
+
+        /* 排行榜网格布局定义 - 调整列宽以获得更舒适的对齐 */
+        .rank-grid {
+            display: grid;
+            grid-template-columns: 3.5rem minmax(0, 1fr) 4rem; /* 移动端：Rank | User | Rating */
+            align-items: center;
+            gap: 1rem;
+        }
+        @media (min-width: 640px) { /* sm */
+            .rank-grid {
+                /* Rank | User (Larger) | Handle | Rating | Updated */
+                grid-template-columns: 4rem 5fr 3fr 1.5fr 1.5fr;
+                gap: 1.5rem; /* 增加列间距让视觉更透气 */
+            }
+        }
+        @media (min-width: 1024px) { /* lg */
+            .rank-grid {
+                grid-template-columns: 4.5rem 6fr 4fr 1.5fr 1.5fr;
+            }
+        }
+    </style>
 </head>
-<body class="bg-bg text-dark font-poppins min-h-screen p-4 md:p-8 pb-24 overflow-y-auto relative">
+<body class="bg-slate-50/80 text-slate-800 font-sans min-h-screen selection:bg-blue-100 selection:text-blue-700">
 
-<div class="max-w-6xl mx-auto space-y-6">
+<!-- 主容器 -->
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32">
 
-    <!-- 工具栏：标题与搜索 -->
-    <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div>
-            <h1 class="text-2xl font-bold text-dark flex items-center gap-2">
-                <i class="fas fa-trophy text-yellow-500"></i> 团队积分榜
-            </h1>
-            <p class="text-sm text-graytext mt-1">实时追踪团队成员 Codeforces 竞技积分</p>
+    <!-- 顶部功能区：搜索 -->
+    <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4 fade-in-up">
+        <!-- 统计概览 -->
+        <div class="text-sm text-slate-500 font-medium">
+            <i class="fas fa-chart-simple mr-2 text-slate-400"></i> Codeforces Rating Leaderboard
         </div>
 
-        <div class="relative w-full sm:w-80 group">
-            <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors"></i>
+        <!-- 搜索框 -->
+        <div class="relative w-full sm:w-72 group">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-search text-slate-300 group-focus-within:text-blue-500 transition-colors"></i>
+            </div>
             <input type="text" id="searchInput" onkeyup="handleSearch()"
-                   placeholder="搜索昵称 / Handle / 学号..."
-                   class="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-full text-sm shadow-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all placeholder-gray-400">
+                   class="block w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-full text-sm placeholder-slate-400 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-300 hover:shadow-md"
+                   placeholder="搜索选手...">
+            <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                <span class="text-[10px] text-slate-300 border border-slate-100 rounded px-1.5 py-0.5 hidden group-focus-within:inline-block bg-slate-50">ESC</span>
+            </div>
         </div>
     </div>
 
-    <!-- 排行榜卡片 -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[500px]">
-        <!-- 表格容器 (响应式滚动) -->
-        <div class="overflow-x-auto w-full">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                <tr class="bg-slate-50/80 border-b border-slate-100 text-xs font-semibold text-graytext uppercase tracking-wider">
-                    <th class="px-6 py-4 text-center w-20">排名</th>
-                    <th class="px-6 py-4 w-1/3 min-w-[200px]">选手信息</th>
-                    <th class="px-6 py-4 w-1/4 min-w-[150px]">Handle</th>
-                    <th class="px-6 py-4 text-center w-24">积分</th>
-                    <th class="px-6 py-4 text-center hidden md:table-cell w-32">同步时间</th>
-                </tr>
-                </thead>
-                <tbody id="rankingBody" class="divide-y divide-slate-50">
-                <tr>
-                    <td colspan="5" class="px-6 py-16 text-center text-graytext">
-                        <div class="flex flex-col items-center gap-3">
-                            <i class="fas fa-spinner fa-spin text-2xl text-primary/50"></i>
-                            <span>数据加载中...</span>
-                        </div>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
+    <!-- 表头 (隐形 Grid，增加下划线和清晰度) -->
+    <div class="rank-grid px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 select-none hidden sm:grid fade-in-up border-b border-slate-200 bg-white/50 backdrop-blur-sm rounded-t-lg" style="animation-delay: 0.1s;">
+        <div class="text-center">排名</div>
+        <div class="pl-2">选手信息</div> <!-- 增加 pl-2 微调对齐头像 -->
+        <div class="hidden sm:block">CF Handle</div>
+        <div class="text-center">Rating</div>
+        <div class="text-right hidden lg:block">最近活跃</div>
+    </div>
+
+    <!-- 列表容器 -->
+    <div id="rankingList" class="space-y-3 relative min-h-[400px]">
+        <!-- JS 将在这里插入卡片 -->
+
+        <!-- Loading 占位 -->
+        <div class="flex flex-col items-center justify-center py-20 fade-in-up" id="loadingState">
+            <div class="w-10 h-10 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin mb-4"></div>
+            <span class="text-slate-400 text-sm">正在同步数据...</span>
         </div>
 
-        <!-- 分页 -->
-        <div class="mt-auto border-t border-slate-100 p-4 bg-white flex flex-col sm:flex-row justify-between items-center gap-4" id="paginationContainer" style="display:none;">
-            <div class="text-xs text-graytext font-medium" id="pageInfo"></div>
-            <div class="flex items-center gap-1" id="pagination"></div>
+        <!-- 空状态占位 -->
+        <div id="emptyState" class="hidden flex flex-col items-center justify-center py-20 text-center fade-in-up">
+            <div class="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-300">
+                <i class="fas fa-search text-xl"></i>
+            </div>
+            <h3 class="text-slate-700 font-medium">无匹配结果</h3>
         </div>
     </div>
 
+    <!-- 分页 -->
+    <div class="mt-8 flex justify-center fade-in-up" id="paginationContainer" style="display:none; animation-delay: 0.2s;">
+        <div class="bg-white p-1.5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-1" id="pagination">
+            <!-- JS 生成页码 -->
+        </div>
+    </div>
 </div>
 
-<!-- 底部悬浮：我的排名 -->
-<div id="myRankBar" class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-3xl bg-slate-800 text-white rounded-full shadow-2xl p-2 pr-6 pl-2 flex justify-between items-center z-50 transition-all duration-500 translate-y-[150%] opacity-0 backdrop-blur-md bg-opacity-95 border border-white/10">
-    <div class="flex items-center gap-4">
-        <div class="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-white/20 overflow-hidden shadow-md shrink-0">
-            <img id="myAvatar" src="" class="w-full h-full object-cover">
-        </div>
-        <div class="flex flex-col">
-            <span class="text-[10px] text-white/50 font-bold uppercase tracking-wider">我的排名</span>
-            <span class="text-sm md:text-base font-bold text-white truncate max-w-[120px]" id="myName">User</span>
-        </div>
-    </div>
+<!-- 底部悬浮：我的排名 (Dock Style - Modern Dark) -->
+<div id="myRankBar" class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-xl z-50 transition-all duration-700 translate-y-[150%] opacity-0">
+    <div class="bg-slate-900/85 backdrop-blur-xl border border-white/10 text-white rounded-2xl shadow-2xl shadow-slate-900/30 p-2 pr-5 flex items-center justify-between ring-1 ring-white/5">
 
-    <div class="flex items-center gap-4 md:gap-8">
-        <div class="text-right">
-            <div class="text-[10px] text-white/50 font-bold">RATING</div>
-            <div class="text-sm md:text-lg font-bold text-yellow-400 font-mono" id="myRating">--</div>
+        <div class="flex items-center gap-3">
+            <div class="relative">
+                <img id="myAvatar" src="" class="w-10 h-10 rounded-full object-cover border border-white/20">
+                <div id="myRankBadge" class="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 bg-blue-500 text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-slate-900 shadow-sm px-1">
+                    -
+                </div>
+            </div>
+            <div class="flex flex-col">
+                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-tight">My Rank</span>
+                <span class="text-sm font-bold text-slate-100 truncate max-w-[120px]" id="myName">User</span>
+            </div>
         </div>
-        <div class="bg-white/10 px-3 py-1 md:px-4 md:py-1.5 rounded-full text-xs md:text-sm font-bold text-white border border-white/10 shadow-inner" id="myRankNum">
-            --
+
+        <div class="flex items-center gap-4">
+            <div class="h-8 w-px bg-white/10"></div>
+            <div class="text-right">
+                <div class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-0.5">Rating</div>
+                <div class="text-lg font-bold font-mono tracking-tight leading-none" id="myRatingDisplay">
+                    <span id="myRating" class="text-white">--</span>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
+    // --- Configuration ---
     let allRankings = [];
     let filteredRankings = [];
     let currentPage = 1;
     const pageSize = 20;
     let currentUser = null;
 
+    // --- Initialization ---
     document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'Escape') {
+                const input = document.getElementById('searchInput');
+                if(document.activeElement === input) {
+                    input.value = '';
+                    handleSearch();
+                    input.blur();
+                }
+            }
+        });
+
         fetchCurrentUser().then(() => {
             loadRankings('CF');
         });
     });
 
+    // --- API Calls ---
     function fetchCurrentUser() {
         return axios.get('/api/me')
             .then(res => {
@@ -136,20 +229,10 @@
     }
 
     function loadRankings(platformCode) {
-        const tbody = document.getElementById('rankingBody');
-        // Tailwind Loading 样式
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="5" class="px-6 py-16 text-center text-graytext">
-                    <div class="flex flex-col items-center gap-3">
-                        <i class="fas fa-spinner fa-spin text-2xl text-primary/50"></i>
-                        <span>数据加载中...</span>
-                    </div>
-                </td>
-            </tr>`;
-
         axios.get('/api/team/rankings', { params: { platformCode: platformCode } })
             .then(res => {
+                document.getElementById('loadingState').remove(); // 移除 Loading
+
                 if (res.data.code === 200) {
                     allRankings = res.data.data || [];
                     allRankings.sort((a, b) => b.rating - a.rating);
@@ -159,23 +242,26 @@
                     });
 
                     filteredRankings = [...allRankings];
+
                     renderMyRank();
 
                     if (filteredRankings.length === 0) {
-                        showEmpty();
+                        showEmpty(true);
                     } else {
-                        document.getElementById('paginationContainer').style.display = 'flex';
+                        showEmpty(false);
                         changePage(1);
                     }
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-red-500">获取失败: ${res.data.msg}</td></tr>`;
+                    alert("数据加载失败: " + res.data.msg);
                 }
             })
             .catch(err => {
-                tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-gray-400">暂无数据或网络错误</td></tr>`;
+                const loading = document.getElementById('loadingState');
+                if(loading) loading.innerHTML = `<span class="text-red-400">网络请求失败</span>`;
             });
     }
 
+    // --- Interaction ---
     function handleSearch() {
         const input = document.getElementById('searchInput');
         const keyword = input.value.toLowerCase().trim();
@@ -198,7 +284,7 @@
     function changePage(page) {
         const total = filteredRankings.length;
         if (total === 0) {
-            showEmpty();
+            showEmpty(true);
             return;
         }
 
@@ -211,153 +297,156 @@
         const end = start + pageSize;
         const pageData = filteredRankings.slice(start, end);
 
-        renderTable(pageData);
+        renderList(pageData, start);
         renderPagination(total, totalPages);
     }
 
-    function renderTable(list) {
-        const tbody = document.getElementById('rankingBody');
-        tbody.innerHTML = '';
+    // --- Rendering Core (Card List) ---
+    function renderList(list, startIndex) {
+        const container = document.getElementById('rankingList');
+        // 保留 Loading 和 Empty div，只清空生成的卡片
+        const staticElements = Array.from(container.children).filter(el => el.id === 'loadingState' || el.id === 'emptyState');
+        container.innerHTML = '';
+        staticElements.forEach(el => container.appendChild(el));
 
-        list.forEach((item) => {
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-slate-50/80 transition-colors border-b border-slate-50 last:border-none group";
+        list.forEach((item, index) => {
+            const card = document.createElement('div');
+            // Card Styles
+            // 确保 padding 与表头对齐: px-6 (desktop)
+            card.className = "rank-grid bg-white rounded-xl p-3 sm:px-6 sm:py-4 shadow-card hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-300 border border-slate-100 group cursor-default relative overflow-hidden";
+
+            // Animation Stagger
+            card.style.animation = `fadeInUp 0.4s ease-out forwards ${index * 0.05}s`;
+            card.style.opacity = '0'; // Initial state for animation
 
             const rank = item.originalRank;
 
-            // 排名徽章逻辑
-            let rankHtml = `<span class="text-slate-400 font-bold font-mono text-sm">${rank}</span>`;
-
-            // 前三名高亮样式
-            let rowBgClass = '';
+            // Rank Display
+            let rankHtml;
             if (rank <= 3) {
-                const badgeStyle = {
-                    1: 'bg-yellow-400 text-white shadow-lg shadow-yellow-200 ring-4 ring-yellow-50',
-                    2: 'bg-slate-300 text-white shadow-lg shadow-slate-200 ring-4 ring-slate-50',
-                    3: 'bg-orange-400 text-white shadow-lg shadow-orange-200 ring-4 ring-orange-50'
+                const colors = {
+                    1: 'text-yellow-500 bg-yellow-50 border-yellow-100',
+                    2: 'text-slate-500 bg-slate-100 border-slate-200',
+                    3: 'text-orange-500 bg-orange-50 border-orange-100'
                 };
-                const icon = rank === 1 ? '<i class="fas fa-crown text-[10px]"></i>' : rank;
-                rankHtml = `<div class="w-7 h-7 rounded-full flex items-center justify-center mx-auto ${badgeStyle[rank]} font-bold text-xs transform group-hover:scale-110 transition-transform">${icon}</div>`;
+                const icons = { 1: 'fa-trophy', 2: 'fa-medal', 3: 'fa-medal' };
 
-                // 给前三名的行加一点点背景色
-                if(rank === 1) tr.classList.add('bg-yellow-50/30');
+                rankHtml = `
+                    <div class="flex justify-center">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full ${colors[rank]} border flex items-center justify-center shadow-sm">
+                            <i class="fas ${icons[rank]} text-sm sm:text-base"></i>
+                        </div>
+                    </div>
+                `;
+                // Side accent for top 3
+                const accentColors = { 1: 'bg-yellow-400', 2: 'bg-slate-300', 3: 'bg-orange-400' };
+                card.innerHTML += `<div class="absolute left-0 top-0 bottom-0 w-1 ${accentColors[rank]}"></div>`;
+            } else {
+                rankHtml = `<div class="text-center font-mono font-bold text-slate-400 text-sm sm:text-lg">#${rank}</div>`;
             }
 
+            // Data Prep
             const avatar = item.avatar || `https://ui-avatars.com/api/?name=${item.nickname || 'User'}&background=random&color=fff&size=64`;
-            const ratingClass = getRatingColorClass(item.rating);
+            const cfClass = getCfColorClass(item.rating);
             const displayName = item.nickname || 'Unknown';
-            const displayId = item.studentNo || 'No ID';
+            const displayId = item.studentNo || '';
             const handleDisplay = item.handle ? item.handle : '--';
 
-            tr.innerHTML = `
-                    <td class="px-6 py-4 text-center align-middle">${rankHtml}</td>
+            // HTML Structure (Matches Grid CSS)
+            card.innerHTML += `
+                <!-- Rank -->
+                ${rankHtml}
 
-                    <td class="px-6 py-4 align-middle">
-                        <div class="flex items-center gap-4">
-                            <img src="${avatar}" class="w-10 h-10 rounded-full object-cover border border-slate-100 shadow-sm shrink-0 bg-white">
-                            <div class="flex flex-col min-w-0">
-                                <span class="text-sm font-bold text-dark truncate max-w-[140px] ${ratingClass}">${displayName}</span>
-                                <span class="text-xs text-graytext flex items-center gap-1.5 md:flex hidden">
-                                    <i class="fas fa-id-card text-[10px] opacity-70"></i> ${displayId}
-                                </span>
-                            </div>
-                        </div>
-                    </td>
+                <!-- User Info -->
+                <div class="flex items-center gap-3 sm:gap-4 overflow-hidden pl-1">
+                    <img src="${avatar}" class="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover bg-slate-50 border border-slate-100 group-hover:scale-105 transition-transform duration-300 shrink-0">
+                    <div class="flex flex-col min-w-0">
+                        <span class="text-sm sm:text-base truncate font-semibold text-slate-700">${displayName}</span>
+                        ${displayId ? `<span class="text-xs text-slate-400 font-mono mt-0.5 truncate">${displayId}</span>` : ''}
+                    </div>
+                </div>
 
-                    <td class="px-6 py-4 align-middle">
-                        <span class="font-mono font-semibold text-sm ${handleDisplay !== '--' ? 'text-primary bg-primary/5 px-2 py-0.5 rounded' : 'text-gray-300'}">
-                            ${handleDisplay !== '--' ? '@' + handleDisplay : '--'}
-                        </span>
-                    </td>
+                <!-- Handle (Hidden on Mobile) -->
+                <div class="hidden sm:block truncate">
+                     ${handleDisplay !== '--'
+                ? `<a href="https://codeforces.com/profile/${handleDisplay}" target="_blank" class="inline-flex items-center gap-0.5 text-xs sm:text-sm font-mono font-medium hover:opacity-75 transition-opacity">
+                             <span class="text-slate-400 mr-0.5">@</span><span class="${cfClass}">${handleDisplay}</span> <i class="fas fa-external-link-alt text-[10px] opacity-40 ml-1 text-slate-400"></i>
+                           </a>`
+                : '<span class="text-slate-300 text-sm font-mono">--</span>'}
+                </div>
 
-                    <td class="px-6 py-4 text-center align-middle">
-                        <span class="font-mono font-bold text-sm ${ratingClass}">${item.rating}</span>
-                    </td>
+                <!-- Rating -->
+                <div class="text-center">
+                    <span class="font-mono font-bold text-base sm:text-lg ${cfClass}">${item.rating}</span>
+                    <div class="text-[10px] text-slate-400 uppercase tracking-wide sm:hidden">Rating</div>
+                </div>
 
-                    <td class="px-6 py-4 text-center align-middle hidden md:table-cell">
-                        <span class="text-xs text-gray-400 font-medium">${formatTimeAgo(item.snapshotTime)}</span>
-                    </td>
-                `;
-            tbody.appendChild(tr);
+                <!-- Updated (Hidden on smaller screens) -->
+                <div class="text-right hidden lg:block">
+                    <span class="text-xs text-slate-400 font-medium bg-slate-50 px-2 py-1 rounded-full border border-slate-100">
+                        ${formatTimeAgo(item.snapshotTime)}
+                    </span>
+                </div>
+            `;
+            container.appendChild(card);
         });
-    }
 
-    function renderMyRank() {
-        if (!currentUser) return;
-
-        const myEntry = allRankings.find(r => r.userId === currentUser.id || r.studentNo === currentUser.studentNo);
-
-        if (myEntry) {
-            const bar = document.getElementById('myRankBar');
-            const avatar = currentUser.avatar || `https://ui-avatars.com/api/?name=${currentUser.username}&background=random&color=fff`;
-
-            document.getElementById('myAvatar').src = avatar;
-            document.getElementById('myName').textContent = myEntry.nickname || currentUser.username;
-            document.getElementById('myRating').textContent = myEntry.rating;
-            document.getElementById('myRankNum').textContent = `#${myEntry.originalRank}`;
-
-            // 显示并播放入场动画
-            bar.classList.remove('translate-y-[150%]', 'opacity-0');
-            bar.classList.add('translate-y-0', 'opacity-100');
-        }
-    }
-
-    function showEmpty() {
-        document.getElementById('rankingBody').innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-gray-400">未找到匹配的用户</td></tr>`;
-        document.getElementById('paginationContainer').style.display = 'none';
+        document.getElementById('emptyState').classList.add('hidden');
+        document.getElementById('paginationContainer').style.display = 'flex';
     }
 
     function renderPagination(total, totalPages) {
-        const info = document.getElementById('pageInfo');
         const container = document.getElementById('pagination');
-
-        const startRecord = (currentPage - 1) * pageSize + 1;
-        const endRecord = Math.min(currentPage * pageSize, total);
-
-        info.textContent = `显示 ${startRecord}-${endRecord} 条 / 共 ${total} 条`;
-
         let html = '';
-        const btnClass = "w-8 h-8 flex items-center justify-center rounded-lg border text-xs font-medium transition-all ml-1";
-        const activeClass = "bg-primary border-primary text-white shadow-md shadow-primary/30";
-        const normalClass = "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-primary";
-        const disabledClass = "bg-slate-50 border-slate-200 text-slate-300 cursor-not-allowed";
 
-        // 上一页
-        html += `<button class="${btnClass} ${currentPage === 1 ? disabledClass : normalClass}" ${currentPage === 1 ? 'disabled' : ''} onclick="changePage(${currentPage - 1})"><i class="fas fa-chevron-left"></i></button>`;
+        const btnBase = "w-8 h-8 flex items-center justify-center rounded-lg text-xs font-medium transition-all duration-200";
+        const activeClass = "bg-blue-600 text-white shadow-md shadow-blue-200";
+        const normalClass = "text-slate-500 hover:bg-slate-100 hover:text-blue-600";
+        const disabledClass = "text-slate-300 cursor-not-allowed";
 
-        // 页码生成逻辑
-        const renderPageBtn = (i) => `<button class="${btnClass} ${i === currentPage ? activeClass : normalClass}" onclick="changePage(${i})">${i}</button>`;
-        const dots = `<span class="w-8 h-8 flex items-center justify-center text-slate-300 text-xs">...</span>`;
+        // Prev
+        html += `<button class="${btnBase} ${currentPage === 1 ? disabledClass : normalClass}" ${currentPage === 1 ? 'disabled' : ''} onclick="changePage(${currentPage - 1})"><i class="fas fa-chevron-left"></i></button>`;
 
+        // Simple dots logic
+        const range = [];
         if (totalPages <= 7) {
-            for (let i = 1; i <= totalPages; i++) html += renderPageBtn(i);
+            for(let i=1; i<=totalPages; i++) range.push(i);
         } else {
-            html += renderPageBtn(1);
-            if (currentPage > 3) html += dots;
-
+            range.push(1);
+            if (currentPage > 3) range.push('...');
             let start = Math.max(2, currentPage - 1);
             let end = Math.min(totalPages - 1, currentPage + 1);
-            for (let i = start; i <= end; i++) html += renderPageBtn(i);
-
-            if (currentPage < totalPages - 2) html += dots;
-            html += renderPageBtn(totalPages);
+            for (let i = start; i <= end; i++) range.push(i);
+            if (currentPage < totalPages - 2) range.push('...');
+            range.push(totalPages);
         }
 
-        // 下一页
-        html += `<button class="${btnClass} ${currentPage === totalPages ? disabledClass : normalClass}" ${currentPage === totalPages ? 'disabled' : ''} onclick="changePage(${currentPage + 1})"><i class="fas fa-chevron-right"></i></button>`;
+        range.forEach(p => {
+            if (p === '...') {
+                html += `<span class="${btnBase} text-slate-300">...</span>`;
+            } else {
+                html += `<button class="${btnBase} ${p === currentPage ? activeClass : normalClass}" onclick="changePage(${p})">${p}</button>`;
+            }
+        });
+
+        // Next
+        html += `<button class="${btnBase} ${currentPage === totalPages ? disabledClass : normalClass}" ${currentPage === totalPages ? 'disabled' : ''} onclick="changePage(${currentPage + 1})"><i class="fas fa-chevron-right"></i></button>`;
 
         container.innerHTML = html;
     }
 
-    // Codeforces 风格颜色类 (Tailwind)
-    function getRatingColorClass(rating) {
-        if (rating < 1200) return 'text-gray-400'; // Newbie
-        if (rating < 1400) return 'text-green-600'; // Pupil
-        if (rating < 1600) return 'text-cyan-600'; // Specialist
-        if (rating < 1900) return 'text-blue-600'; // Expert
-        if (rating < 2100) return 'text-purple-600'; // Candidate Master
-        if (rating < 2400) return 'text-orange-500'; // Master
-        return 'text-red-600'; // Grandmaster+
+    // --- Helpers ---
+    function getCfColorClass(rating) {
+        if (rating < 1200) return 'cf-user-gray';
+        if (rating < 1400) return 'cf-user-green';
+        if (rating < 1600) return 'cf-user-cyan';
+        if (rating < 1900) return 'cf-user-blue';
+        if (rating < 2100) return 'cf-user-violet';
+        if (rating < 2300) return 'cf-user-orange';
+        if (rating < 2400) return 'cf-user-orange';
+        if (rating < 2600) return 'cf-user-red';
+        if (rating < 3000) return 'cf-user-red';
+        return 'cf-user-legendary';
     }
 
     function formatTimeAgo(isoStr) {
@@ -365,11 +454,40 @@
         const date = new Date(isoStr);
         const now = new Date();
         const diff = (now - date) / 1000;
-
         if (diff < 60) return '刚刚';
         if (diff < 3600) return Math.floor(diff / 60) + '分钟前';
         if (diff < 86400) return Math.floor(diff / 3600) + '小时前';
-        return `${date.getMonth() + 1}-${date.getDate()}`;
+        return `${date.getMonth() + 1}/${date.getDate()}`;
+    }
+
+    // --- My Rank Bar ---
+    function renderMyRank() {
+        if (!currentUser) return;
+        const myEntry = allRankings.find(r => r.userId === currentUser.id || r.studentNo === currentUser.studentNo);
+        if (myEntry) {
+            const bar = document.getElementById('myRankBar');
+            document.getElementById('myAvatar').src = currentUser.avatar || `https://ui-avatars.com/api/?name=${currentUser.username}&background=random&color=fff`;
+            document.getElementById('myName').textContent = myEntry.nickname || currentUser.username;
+            const ratingEl = document.getElementById('myRating');
+            ratingEl.textContent = myEntry.rating;
+            ratingEl.className = `${getCfColorClass(myEntry.rating)} text-xl`;
+            document.getElementById('myRankBadge').textContent = myEntry.originalRank;
+            setTimeout(() => {
+                bar.classList.remove('translate-y-[150%]', 'opacity-0');
+                bar.classList.add('translate-y-0', 'opacity-100');
+            }, 500);
+        }
+    }
+
+    function showEmpty(isEmpty) {
+        const emptyDiv = document.getElementById('emptyState');
+        const pagination = document.getElementById('paginationContainer');
+        if (isEmpty) {
+            emptyDiv.classList.remove('hidden');
+            pagination.style.display = 'none';
+        } else {
+            emptyDiv.classList.add('hidden');
+        }
     }
 </script>
 </body>

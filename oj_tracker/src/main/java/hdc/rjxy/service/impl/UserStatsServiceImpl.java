@@ -103,8 +103,12 @@ public class UserStatsServiceImpl implements UserStatsService {
         // 2. 解题数统计 (Solved)
         int solvedTotal = solvedProblemMapper.countSolvedInRange(userId, p.getId(), handle, startTime, endTime);
 
-        // 3. 本周解题数 (最近7天)
-        LocalDateTime weeklyStart = today.minusDays(6).atStartOfDay();
+        // 3. 本周解题数 (从周一开始算)
+        // 获取本周一的日期 (如果你希望周日作为一周的第一天，请改用 SUNDAY)
+        LocalDate monday = today.with(java.time.DayOfWeek.MONDAY);
+        LocalDateTime weeklyStart = monday.atStartOfDay();
+
+        // 依然查到 endTime (即今天结束)，范围就是 [本周一 00:00:00, 明天 00:00:00)
         int weeklySolved = solvedProblemMapper.countSolvedInRange(userId, p.getId(), handle, weeklyStart, endTime);
 
         // 4. Rating 首尾数据 (用于计算 Delta)

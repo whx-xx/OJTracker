@@ -33,6 +33,13 @@
             }
         }
     </script>
+    <style>
+        /* 自定义滚动条样式，防止弹窗时页面抖动 */
+        body.swal2-shown > [aria-hidden="true"] {
+            transition: 0.1s filter;
+            filter: blur(2px);
+        }
+    </style>
 </head>
 <body class="bg-bg text-dark font-poppins min-h-screen p-4 md:p-8 overflow-y-auto">
 
@@ -52,7 +59,8 @@
         <div class="flex gap-3 w-full md:w-auto">
             <div class="relative w-full md:w-64 group">
                 <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors"></i>
-                <input type="text" id="searchInput" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all placeholder-slate-400" placeholder="搜索题目..." onkeyup="handleSearchDebounced()">
+                <!-- 更新 Placeholder 提示支持标签搜索 -->
+                <input type="text" id="searchInput" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all placeholder-slate-400" placeholder="搜索题目或标签 (如: dp)..." onkeyup="handleSearchDebounced()">
             </div>
             <button type="button" class="bg-primary hover:bg-primary/90 text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm shadow-indigo-200 transition-all active:scale-95 flex items-center gap-2 whitespace-nowrap" onclick="refreshData()">
                 <i class="fas fa-sync-alt"></i> <span class="hidden sm:inline">同步</span>
@@ -88,7 +96,7 @@
     let currentState = {
         range: 'TODAY',
         page: 1,
-        size: 20,
+        size: 10,
         loading: false
     };
 
@@ -225,6 +233,58 @@
         });
     }
 
+    /**
+     * 打开标签编辑弹窗
+     * @param solvedProblemId 已解决题目表ID
+     * @param currentTags 当前标签字符串 (comma separated)
+     */
+    function openTagModal(solvedProblemId, currentTags) {
+        // 解码可能存在的 HTML 实体，虽然 SweetAlert 处理 input value 通常比较安全，但为了保险
+        const safeValue = currentTags || "";
+
+        Swal.fire({
+            title: '管理题目标签',
+            input: 'text',
+            inputLabel: '请输入标签，多个标签请用逗号或空格分隔',
+            inputPlaceholder: '例如: dp, 贪心, math',
+            inputValue: safeValue,
+            showCancelButton: true,
+            confirmButtonText: '保存标签',
+            cancelButtonText: '取消',
+            confirmButtonColor: '#4e54c8',
+            cancelButtonColor: '#94a3b8',
+            showLoaderOnConfirm: true,
+            preConfirm: (tagsStr) => {
+                // 处理输入的标签：分割、去空
+                // 支持中文逗号，英文逗号，空格
+                const tags = tagsStr.split(/[,\s，]+/).filter(t => t.trim().length > 0);
+
+                // 使用 axios 发送请求
+                return axios.post('/api/user/problems/update-tags', {
+                    id: solvedProblemId,
+                    tags: tags
+                }).then(response => {
+                    if (response.data.code !== 200) {
+                        throw new Error(response.data.msg || '更新失败');
+                    }
+                    return response.data;
+                }).catch(error => {
+                    Swal.showValidationMessage(
+                        `请求失败: ${error.message || error}`
+                    )
+                });
+            },
+            allowOutsideClick: () => !Swal.isLoading()
+        }).then((result) => {
+            if (result.isConfirmed) {
+                showToast('标签更新成功', 'success');
+                // 刷新列表以显示最新标签
+                // 为了用户体验，也可以直接操作 DOM，但刷新能保证数据一致性
+                loadData();
+            }
+        });
+    }
+
     function renderTimeline(list) {
         const container = $('#timeline-container');
         container.empty();
@@ -303,6 +363,42 @@
                 ratingHtml = `<span class="${rClass} text-xs font-bold border border-current px-1.5 rounded bg-opacity-10 opacity-80" title="难度: ${item.rating}">*${item.rating}</span>`;
             }
 
+            // --- 标签处理逻辑 (Start) ---
+            let tagsSection = '';
+            const tagList = item.tags ? item.tags.split(',') : [];
+            let tagsHtml = '';
+
+            // 生成标签 Badge
+            if (tagList.length > 0) {
+                tagList.forEach(tag => {
+                    if(tag.trim()) {
+                        tagsHtml += `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] md:text-xs font-medium bg-slate-100 text-slate-600 mr-1.5 border border-slate-200 hover:bg-slate-200 transition-colors cursor-default">${tag.trim()}</span>`;
+                    }
+                });
+            }
+
+            // 生成编辑按钮 (仅当 solvedProblemId 存在时，即 AC 的题目)
+            let editAction = '';
+            if (item.solvedProblemId) {
+                // 转义 tags 字符串以安全地放入 onclick
+                const safeTags = item.tags ? item.tags.replace(/'/g, "\\'") : "";
+                const btnText = tagList.length > 0 ? '' : '<span class="text-xs ml-1">添加标签</span>';
+                const btnIcon = '<i class="fas fa-tag"></i>';
+
+                // 如果没有标签，按钮显眼一点；如果有标签，按钮作为补充在末尾
+                let btnClass = tagList.length > 0
+                    ? "text-slate-300 hover:text-primary transition-colors text-xs p-1"
+                    : "text-primary/70 hover:text-primary transition-colors text-xs flex items-center border border-dashed border-primary/30 px-2 py-0.5 rounded hover:bg-primary/5";
+
+                editAction = `<button onclick="openTagModal(${item.solvedProblemId}, '${safeTags}')" class="${btnClass}" title="编辑标签">${btnIcon} ${btnText}</button>`;
+            }
+
+            // 组合标签区域
+            if (tagsHtml || editAction) {
+                tagsSection = `<div class="mt-2 flex flex-wrap items-center">${tagsHtml}${editAction}</div>`;
+            }
+            // --- 标签处理逻辑 (End) ---
+
             // 格式化时间
             const timeObj = new Date(item.submitTime);
             const dateStr = timeObj.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
@@ -327,20 +423,23 @@
 
                 <!-- 右侧卡片 -->
             <div class="ml-6 md:ml-12 flex-1 bg-white rounded-xl border border-slate-100 shadow-sm p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1 hover:border-indigo-100">
-            <div class="flex justify-between items-start mb-2">
+            <div class="flex justify-between items-start mb-1">
             <div class="flex items-center gap-2 flex-wrap">
             <span class="bg-slate-100 text-slate-600 text-xs font-mono px-2 py-0.5 rounded border border-slate-200">
             ${item.contestId}${item.problemIndex}
             </span>
-            <a href="${item.problemUrl}" target="_blank" class="text-sm font-bold text-dark hover:text-primary transition-colors line-clamp-1">
+            <a href="${item.problemUrl}" target="_blank" class="text-sm font-bold text-dark hover:text-primary transition-colors line-clamp-1 break-all">
             ${item.problemName}
             </a>
             ${ratingHtml}
             </div>
-            <span class="text-[10px] font-bold px-2 py-1 rounded-full border uppercase tracking-wider whitespace-nowrap ${verdictClass}">
+            <span class="text-[10px] font-bold px-2 py-1 rounded-full border uppercase tracking-wider whitespace-nowrap ml-2 ${verdictClass}">
             ${verdictShort}
             </span>
             </div>
+
+                <!-- 标签行 -->
+            ${tagsSection}
 
             <div class="flex justify-between items-end border-t border-slate-50 pt-2 mt-2">
             <div class="flex items-center gap-3 text-xs text-graytext">

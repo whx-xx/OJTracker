@@ -389,7 +389,7 @@
         icon.addClass('fa-spin');
         btn.prop('disabled', true).addClass('opacity-75');
 
-        $.post('/api/user/submissions/refresh?count=100', function(res) {
+        $.post('/api/user/submissions/refresh?count=999999999', function(res) {
             if(res.code === 200) {
                 showToast(`同步完成，新增 ${res.data.inserted} 条`, 'success');
                 currentState.page = 1;

@@ -40,7 +40,6 @@ public class GlobalExceptionHandler {
         return "error/500";
     }
 
-    // ... (保留之前的 handle404 代码) ...
     @ExceptionHandler(NoHandlerFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public Object handle404(NoHandlerFoundException e, HttpServletRequest request) {
@@ -50,7 +49,7 @@ public class GlobalExceptionHandler {
         return "error/404";
     }
 
-    // --- 新增：处理 403 权限不足 ---
+    // --- 处理 403 权限不足 ---
     @ExceptionHandler(AccessDeniedException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public Object handle403(AccessDeniedException e, HttpServletRequest request) {
@@ -62,7 +61,6 @@ public class GlobalExceptionHandler {
         return "error/403";
     }
 
-    // ... (保留之前的 handleGlobalException 代码) ...
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Object handleGlobalException(Exception e, HttpServletRequest request, Model model) {

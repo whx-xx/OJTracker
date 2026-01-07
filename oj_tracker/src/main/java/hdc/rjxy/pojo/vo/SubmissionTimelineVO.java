@@ -6,6 +6,10 @@ import java.time.LocalDateTime;
 @Data
 public class SubmissionTimelineVO {
     private Long submissionId;
+    private Long userId;
+    private String handle;
+    private Long platformId;
+    private String platformName;
 
     private Integer contestId;
     private String problemIndex;
@@ -18,4 +22,6 @@ public class SubmissionTimelineVO {
 
     private Long solvedProblemId;
     private String tags;
+
+    private String notes;
 }

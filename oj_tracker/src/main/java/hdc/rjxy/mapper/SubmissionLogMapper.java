@@ -17,7 +17,6 @@ import java.util.List;
 @Mapper
 public interface SubmissionLogMapper extends BaseMapper<SubmissionLog> {
 
-    // 忽略重复的 submission_id
     @Insert("INSERT IGNORE INTO submission_log(user_id, platform_id, handle, submission_id, contest_id, problem_index, problem_name, problem_url, verdict, rating, submit_time) " +
             "VALUES (#{userId}, #{platformId}, #{handle}, #{submissionId}, #{contestId}, #{problemIndex}, #{problemName}, #{problemUrl}, #{verdict}, #{rating}, #{submitTime})")
     int insertIgnore(@Param("userId") Long userId,
@@ -62,9 +61,7 @@ public interface SubmissionLogMapper extends BaseMapper<SubmissionLog> {
                                              @Param("handle") String handle,
                                              @Param("start") LocalDateTime start,
                                              @Param("end") LocalDateTime end);
-    /**
-     * 统计指定时间范围内该用户的总提交数
-     */
+
     @Select("SELECT COUNT(*) FROM submission_log " +
             "WHERE user_id = #{userId} AND platform_id = #{platformId} " +
             "AND submit_time >= #{start} AND submit_time <= #{end}")
@@ -73,9 +70,6 @@ public interface SubmissionLogMapper extends BaseMapper<SubmissionLog> {
                     @Param("start") LocalDateTime start,
                     @Param("end") LocalDateTime end);
 
-    /**
-     * 统计指定时间范围内该用户的 AC 提交数 (Verdict = 'OK')
-     */
     @Select("SELECT COUNT(*) FROM submission_log " +
             "WHERE user_id = #{userId} AND platform_id = #{platformId} " +
             "AND verdict = 'OK' " +
@@ -85,10 +79,6 @@ public interface SubmissionLogMapper extends BaseMapper<SubmissionLog> {
                           @Param("start") LocalDateTime start,
                           @Param("end") LocalDateTime end);
 
-    /**
-     * 统计指定时间范围内该用户的去重 AC 题目数
-     * 根据 contest_id + problem_index 去重
-     */
     @Select("SELECT COUNT(DISTINCT contest_id, problem_index) FROM submission_log " +
             "WHERE user_id = #{userId} AND platform_id = #{platformId} " +
             "AND verdict = 'OK' " +
@@ -99,13 +89,12 @@ public interface SubmissionLogMapper extends BaseMapper<SubmissionLog> {
                                   @Param("end") LocalDateTime end);
 
     /**
-     * 自定义查询：获取提交时间轴，同时关联 solved_problem 表以获取标签。
-     * 支持按 题目名称、题目编号、判题结果 或 标签(Tags) 进行搜索。
+     * 核心修改：在 SELECT 列表中添加了 sp.notes
      */
     @Select("<script>" +
             "SELECT s.submission_id, s.contest_id, s.problem_index, s.problem_name, s.problem_url, " +
             "       s.verdict, s.rating, s.submit_time, " +
-            "       sp.tags, sp.id as solvedProblemId " + // 查出 tags 和 solvedProblemId (用于前端编辑)
+            "       sp.tags, sp.notes, sp.id as solvedProblemId " +
             "FROM submission_log s " +
             "LEFT JOIN solved_problem sp " +
             "  ON s.user_id = sp.user_id " +
@@ -115,21 +104,16 @@ public interface SubmissionLogMapper extends BaseMapper<SubmissionLog> {
             "WHERE s.user_id = #{userId} " +
             "  AND s.platform_id = #{platformId} " +
             "  AND s.handle = #{handle} " +
-
-            // 动态时间筛选
             "<if test='startTime != null'> AND s.submit_time &gt;= #{startTime} </if>" +
             "<if test='endTime != null'> AND s.submit_time &lt; #{endTime} </if>" +
-
-            // 关键词搜索：同时匹配题目名、Verdict、Index 和 Tags
             "<if test='keyword != null and keyword != \"\"'>" +
             "  AND (" +
             "    s.problem_name LIKE CONCAT('%', #{keyword}, '%') " +
             "    OR s.problem_index LIKE CONCAT('%', #{keyword}, '%') " +
             "    OR s.verdict LIKE CONCAT('%', #{keyword}, '%') " +
-            "    OR sp.tags LIKE CONCAT('%', #{keyword}, '%') " + // 核心：支持按标签搜索
+            "    OR sp.tags LIKE CONCAT('%', #{keyword}, '%') " +
             "  )" +
             "</if>" +
-
             "ORDER BY s.submit_time DESC" +
             "</script>")
     IPage<SubmissionTimelineVO> selectTimelineWithTags(Page<?> page,
@@ -139,5 +123,4 @@ public interface SubmissionLogMapper extends BaseMapper<SubmissionLog> {
                                                        @Param("startTime") LocalDateTime startTime,
                                                        @Param("endTime") LocalDateTime endTime,
                                                        @Param("keyword") String keyword);
-
 }

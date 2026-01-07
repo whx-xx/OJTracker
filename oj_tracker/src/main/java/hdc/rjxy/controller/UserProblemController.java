@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import hdc.rjxy.common.R;
 import hdc.rjxy.pojo.SolvedProblem;
 import hdc.rjxy.pojo.UserSession;
+import hdc.rjxy.pojo.dto.UpdateProblemNotesReq;
 import hdc.rjxy.pojo.dto.UpdateProblemTagsReq;
 import hdc.rjxy.pojo.vo.WeeklyProblemVO;
 import hdc.rjxy.service.UserProblemService;
@@ -42,6 +43,16 @@ public class UserProblemController {
         if (me == null) return R.fail(401, "未登录");
 
         userProblemService.updateTags(me.getId(), req.getId(), req.getTags());
+        return R.ok();
+    }
+
+    @Operation(summary = "更新题目笔记")
+    @PostMapping("/update-notes")
+    public R<Void> updateNotes(@RequestBody UpdateProblemNotesReq req, HttpSession session) {
+        UserSession me = (UserSession) session.getAttribute("user");
+        if (me == null) return R.fail(401, "未登录");
+
+        userProblemService.updateNotes(me.getId(), req.getId(), req.getNotes());
         return R.ok();
     }
 }

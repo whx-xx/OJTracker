@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>提交记录</title>
+    <title>提交记录与笔记</title>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Axios -->
@@ -12,6 +12,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Markdown & Math Support -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+    <!-- KaTeX for LaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
     <!-- Tailwind 配置 -->
     <script>
@@ -34,11 +42,31 @@
         }
     </script>
     <style>
-        /* 自定义滚动条样式，防止弹窗时页面抖动 */
+        /* 自定义滚动条样式 */
         body.swal2-shown > [aria-hidden="true"] {
             transition: 0.1s filter;
             filter: blur(2px);
         }
+
+        /* Markdown Preview Styles (Simplified Typography) */
+        .prose h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; color: #1e293b; }
+        .prose h2 { font-size: 1.25rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; color: #334155; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem; }
+        .prose h3 { font-size: 1.1rem; font-weight: 600; margin-top: 0.75rem; margin-bottom: 0.25rem; }
+        .prose p { margin-bottom: 0.75rem; line-height: 1.6; color: #475569; }
+        .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+        .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+        .prose blockquote { border-left: 4px solid #cbd5e1; padding-left: 1rem; font-style: italic; color: #64748b; margin-bottom: 1rem; }
+        .prose code { background-color: #f1f5f9; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.875em; color: #ef4444; }
+        .prose pre { background-color: #1e293b; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 1rem; }
+        .prose pre code { background-color: transparent; color: #e2e8f0; padding: 0; }
+        .prose a { color: #4e54c8; text-decoration: underline; }
+        .prose img { max-width: 100%; border-radius: 0.5rem; }
+
+        /* Custom Scrollbar for Note Editor */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 <body class="bg-bg text-dark font-poppins min-h-screen p-4 md:p-8 overflow-y-auto">
@@ -59,7 +87,6 @@
         <div class="flex gap-3 w-full md:w-auto">
             <div class="relative w-full md:w-64 group">
                 <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors"></i>
-                <!-- 更新 Placeholder 提示支持标签搜索 -->
                 <input type="text" id="searchInput" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all placeholder-slate-400" placeholder="搜索题目或标签 (如: dp)..." onkeyup="handleSearchDebounced()">
             </div>
             <button type="button" class="bg-primary hover:bg-primary/90 text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm shadow-indigo-200 transition-all active:scale-95 flex items-center gap-2 whitespace-nowrap" onclick="refreshData()">
@@ -89,6 +116,63 @@
     </div>
 </div>
 
+<!-- Note Editor Modal -->
+<div id="noteModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <!-- Background backdrop -->
+    <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity backdrop-blur-sm" onclick="closeNoteModal()"></div>
+
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <!-- Modal panel -->
+            <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 w-full max-w-6xl h-[85vh] flex flex-col">
+
+                <!-- Header -->
+                <div class="bg-white px-4 py-3 sm:px-6 border-b border-slate-200 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-lg font-semibold leading-6 text-gray-900" id="modal-title">
+                            <i class="fas fa-edit text-primary mr-2"></i>题目笔记
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-1">支持 Markdown 和 LaTeX 公式 ($E=mc^2$)</p>
+                    </div>
+                    <button type="button" class="text-gray-400 hover:text-gray-500 focus:outline-none" onclick="closeNoteModal()">
+                        <span class="sr-only">Close</span>
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Content Area (Split View) -->
+                <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+                    <!-- Editor -->
+                    <div class="w-full md:w-1/2 p-4 border-r border-slate-200 bg-slate-50 flex flex-col">
+                        <label for="noteEditor" class="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">编辑内容 (Markdown)</label>
+                        <textarea id="noteEditor" class="flex-1 w-full p-4 rounded-lg border border-slate-300 focus:ring-2 focus:ring-primary focus:border-primary resize-none font-mono text-sm leading-relaxed custom-scrollbar focus:outline-none" placeholder="# 笔记标题&#10;&#10;- 核心思路&#10;- 时间复杂度 $O(N \log N)$&#10;&#10;```cpp&#10;int main() { ... }&#10;```"></textarea>
+                    </div>
+
+                    <!-- Preview -->
+                    <div class="w-full md:w-1/2 p-4 bg-white flex flex-col">
+                        <div class="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide flex justify-between items-center">
+                            <span>预览 (Preview)</span>
+                            <span class="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-400">Auto-render</span>
+                        </div>
+                        <div id="notePreview" class="flex-1 overflow-y-auto custom-scrollbar prose prose-sm max-w-none p-2">
+                            <!-- Rendered content goes here -->
+                            <div class="text-slate-400 italic text-center mt-10">输入内容以开始预览...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="bg-slate-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 border-t border-slate-200">
+                    <button type="button" id="saveNoteBtn" class="inline-flex w-full justify-center rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary/90 sm:ml-3 sm:w-auto transition-all active:scale-95 items-center gap-2" onclick="saveNotes()">
+                        <i class="fas fa-save"></i> 保存笔记
+                    </button>
+                    <button type="button" class="mt-3 inline-flex w-full justify-center rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto transition-all" onclick="closeNoteModal()">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
 
 <script>
@@ -101,9 +185,11 @@
     };
 
     let searchTimeout;
+    let currentEditingId = null; // 当前正在编辑的 SolvedProblem ID
 
     $(document).ready(function() {
         loadData();
+        initNoteEditor();
     });
 
     // --- 工具函数 ---
@@ -123,10 +209,119 @@
         Toast.fire({ icon: type, title: message });
     }
 
-    // --- 业务逻辑 ---
+    // --- 笔记/Markdown 功能 ---
+
+    function initNoteEditor() {
+        const editor = document.getElementById('noteEditor');
+
+        // 支持 Tab 缩进
+        editor.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                this.value = this.value.substring(0, start) + "\t" + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 1;
+            }
+        });
+
+        // 实时预览防抖
+        let renderTimeout;
+        editor.addEventListener('input', function() {
+            clearTimeout(renderTimeout);
+            renderTimeout = setTimeout(() => {
+                renderPreview(this.value);
+            }, 300);
+        });
+    }
+
+    function renderPreview(markdown) {
+        const previewDiv = document.getElementById('notePreview');
+        if (!markdown || markdown.trim() === '') {
+            previewDiv.innerHTML = '<div class="text-slate-400 italic text-center mt-10">输入内容以开始预览...</div>';
+            return;
+        }
+
+        // 1. Markdown -> HTML
+        const rawHtml = marked.parse(markdown);
+        // 2. Sanitize HTML
+        const cleanHtml = DOMPurify.sanitize(rawHtml);
+
+        previewDiv.innerHTML = cleanHtml;
+
+        // 3. Render Math (KaTeX)
+        renderMathInElement(previewDiv, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false},
+                {left: '\\(', right: '\\)', display: false},
+                {left: '\\[', right: '\\]', display: true}
+            ],
+            throwOnError: false
+        });
+    }
+
+    // 打开笔记模态框
+    // encodedNotes 需要解码
+    window.openNoteModal = function(solvedProblemId, encodedNotes) {
+        currentEditingId = solvedProblemId;
+        const modal = document.getElementById('noteModal');
+        const editor = document.getElementById('noteEditor');
+
+        // 解码内容 (Base64 or URL decode might be safer, but here we assume simple string passing)
+        // 注意：HTML 属性中传参已经被转义，这里可以直接用
+        // 为了安全起见，我们也可以选择从 data 属性读取，或者这里直接用 decodeURIComponent 如果之前 encode 了
+        const notes = encodedNotes ? decodeURIComponent(encodedNotes) : "";
+
+        editor.value = notes;
+        renderPreview(notes);
+
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden'; // 禁止背景滚动
+    }
+
+    window.closeNoteModal = function() {
+        const modal = document.getElementById('noteModal');
+        modal.classList.add('hidden');
+        document.body.style.overflow = ''; // 恢复背景滚动
+        currentEditingId = null;
+    }
+
+    window.saveNotes = function() {
+        if (!currentEditingId) return;
+
+        const editor = document.getElementById('noteEditor');
+        const content = editor.value;
+        const btn = document.getElementById('saveNoteBtn');
+        const originalText = btn.innerHTML;
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
+
+        axios.post('/api/user/problems/update-notes', {
+            id: currentEditingId,
+            notes: content
+        }).then(res => {
+            if (res.data.code === 200) {
+                showToast('笔记保存成功', 'success');
+                closeNoteModal();
+                loadData(); // 刷新列表以更新图标状态
+            } else {
+                showToast(res.data.msg || '保存失败', 'error');
+            }
+        }).catch(err => {
+            showToast('网络错误，保存失败', 'error');
+            console.error(err);
+        }).finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        });
+    }
+
+
+    // --- 列表业务逻辑 ---
 
     function changeRange(range) {
-        // Tailwind 样式切换逻辑
         $('.filter-btn').removeClass('bg-white text-primary shadow-sm').addClass('text-slate-500 hover:text-dark');
         $(`.filter-btn[data-range="${range}"]`).removeClass('text-slate-500 hover:text-dark').addClass('bg-white text-primary shadow-sm');
 
@@ -166,7 +361,6 @@
 
         const keyword = $('#searchInput').val().trim();
 
-        // 使用 jQuery ajax
         $.get(`/api/user/submissions/timeline`, {
             platform: 'CF',
             range: currentState.range,
@@ -179,7 +373,7 @@
                 const pageData = res.data;
                 renderTimeline(pageData.records);
                 renderPagination(pageData.total, pageData.pages, pageData.current);
-                pagination.css('display', 'flex'); // Tailwind 下恢复 flex
+                pagination.css('display', 'flex');
             } else {
                 container.html(`<div class="text-center py-16 text-red-500">${res.msg}</div>`);
                 showToast(res.msg, 'error');
@@ -235,11 +429,8 @@
 
     /**
      * 打开标签编辑弹窗
-     * @param solvedProblemId 已解决题目表ID
-     * @param currentTags 当前标签字符串 (comma separated)
      */
     function openTagModal(solvedProblemId, currentTags) {
-        // 解码可能存在的 HTML 实体，虽然 SweetAlert 处理 input value 通常比较安全，但为了保险
         const safeValue = currentTags || "";
 
         Swal.fire({
@@ -255,11 +446,7 @@
             cancelButtonColor: '#94a3b8',
             showLoaderOnConfirm: true,
             preConfirm: (tagsStr) => {
-                // 处理输入的标签：分割、去空
-                // 支持中文逗号，英文逗号，空格
                 const tags = tagsStr.split(/[,\s，]+/).filter(t => t.trim().length > 0);
-
-                // 使用 axios 发送请求
                 return axios.post('/api/user/problems/update-tags', {
                     id: solvedProblemId,
                     tags: tags
@@ -269,17 +456,13 @@
                     }
                     return response.data;
                 }).catch(error => {
-                    Swal.showValidationMessage(
-                        `请求失败: ${error.message || error}`
-                    )
+                    Swal.showValidationMessage(`请求失败: ${error.message || error}`)
                 });
             },
             allowOutsideClick: () => !Swal.isLoading()
         }).then((result) => {
             if (result.isConfirmed) {
                 showToast('标签更新成功', 'success');
-                // 刷新列表以显示最新标签
-                // 为了用户体验，也可以直接操作 DOM，但刷新能保证数据一致性
                 loadData();
             }
         });
@@ -291,15 +474,10 @@
 
         if (!list || list.length === 0) {
             let emptyText = "暂无提交记录";
-            if (currentState.range === 'TODAY') {
-                emptyText = "今日暂无提交记录，请点击右上角“同步”按钮获取最新数据";
-            } else if (currentState.range === 'WEEK') {
-                emptyText = "本周暂无提交记录";
-            } else if (currentState.range === 'MONTH') {
-                emptyText = "本月暂无提交记录";
-            } else {
-                emptyText = "未找到符合条件的提交记录";
-            }
+            if (currentState.range === 'TODAY') emptyText = "今日暂无提交记录，请点击右上角“同步”按钮获取最新数据";
+            else if (currentState.range === 'WEEK') emptyText = "本周暂无提交记录";
+            else if (currentState.range === 'MONTH') emptyText = "本月暂无提交记录";
+            else emptyText = "未找到符合条件的提交记录";
 
             container.html(`
                 <div class="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-dashed border-slate-200">
@@ -368,7 +546,6 @@
             const tagList = item.tags ? item.tags.split(',') : [];
             let tagsHtml = '';
 
-            // 生成标签 Badge
             if (tagList.length > 0) {
                 tagList.forEach(tag => {
                     if(tag.trim()) {
@@ -377,25 +554,45 @@
                 });
             }
 
-            // 生成编辑按钮 (仅当 solvedProblemId 存在时，即 AC 的题目)
-            let editAction = '';
-            if (item.solvedProblemId) {
-                // 转义 tags 字符串以安全地放入 onclick
-                const safeTags = item.tags ? item.tags.replace(/'/g, "\\'") : "";
-                const btnText = tagList.length > 0 ? '' : '<span class="text-xs ml-1">添加标签</span>';
-                const btnIcon = '<i class="fas fa-tag"></i>';
+            // --- 操作按钮区域 (标签 + 笔记) ---
+            let actionButtons = '';
 
-                // 如果没有标签，按钮显眼一点；如果有标签，按钮作为补充在末尾
-                let btnClass = tagList.length > 0
+            if (item.solvedProblemId) {
+                // 标签编辑按钮
+                const safeTags = item.tags ? item.tags.replace(/'/g, "\\'") : "";
+                const tagBtnClass = tagList.length > 0
                     ? "text-slate-300 hover:text-primary transition-colors text-xs p-1"
                     : "text-primary/70 hover:text-primary transition-colors text-xs flex items-center border border-dashed border-primary/30 px-2 py-0.5 rounded hover:bg-primary/5";
+                const tagBtnText = tagList.length > 0 ? '' : '<span class="text-xs ml-1">添加标签</span>';
 
-                editAction = `<button onclick="openTagModal(${item.solvedProblemId}, '${safeTags}')" class="${btnClass}" title="编辑标签">${btnIcon} ${btnText}</button>`;
+                const tagButton = `<button onclick="openTagModal(${item.solvedProblemId}, '${safeTags}')" class="${tagBtnClass} mr-2" title="编辑标签"><i class="fas fa-tag"></i> ${tagBtnText}</button>`;
+
+                // 笔记编辑按钮
+                const hasNotes = item.notes && item.notes.trim().length > 0;
+                // 对笔记内容进行 URL 编码以便安全传入 JS 函数
+                const encodedNotes = encodeURIComponent(item.notes || "");
+
+                let noteBtnClass = "";
+                let noteIcon = "";
+
+                if (hasNotes) {
+                    noteBtnClass = "text-amber-500 hover:text-amber-600 transition-colors text-xs p-1";
+                    noteIcon = '<i class="fas fa-sticky-note"></i>'; // 实心图标表示有内容
+                } else {
+                    noteBtnClass = "text-slate-300 hover:text-amber-500 transition-colors text-xs p-1";
+                    noteIcon = '<i class="far fa-sticky-note"></i>'; // 空心图标表示无内容
+                }
+
+                const noteButton = `<button onclick="openNoteModal(${item.solvedProblemId}, '${encodedNotes}')" class="${noteBtnClass}" title="编辑笔记">${noteIcon}</button>`;
+
+                actionButtons = tagButton + noteButton;
             }
 
-            // 组合标签区域
-            if (tagsHtml || editAction) {
-                tagsSection = `<div class="mt-2 flex flex-wrap items-center">${tagsHtml}${editAction}</div>`;
+            if (tagsHtml || actionButtons) {
+                tagsSection = `<div class="mt-2 flex flex-wrap items-center justify-between">
+                    <div class="flex flex-wrap items-center">${tagsHtml}</div>
+                    <div class="flex items-center ml-auto">${actionButtons}</div>
+                </div>`;
             }
             // --- 标签处理逻辑 (End) ---
 
@@ -404,10 +601,10 @@
             const dateStr = timeObj.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
             const timeStr = timeObj.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
 
-            // 生成 HTML (Tailwind 布局)
+            // 生成 HTML
             const html = `
                 <div class="relative pl-8 md:pl-0 flex group">
-                    <!-- 左侧时间 (大屏显示) -->
+                    <!-- 左侧时间 -->
             <div class="hidden md:flex flex-col items-end pr-8 w-24 pt-3 shrink-0 text-right">
             <span class="text-sm font-bold text-dark font-mono">${timeStr}</span>
             <span class="text-xs text-graytext font-medium">${dateStr}</span>
@@ -438,16 +635,14 @@
             </span>
             </div>
 
-                <!-- 标签行 -->
+                <!-- 标签和笔记行 -->
             ${tagsSection}
 
             <div class="flex justify-between items-end border-t border-slate-50 pt-2 mt-2">
             <div class="flex items-center gap-3 text-xs text-graytext">
-                <!-- 移动端显示时间 -->
             <span class="md:hidden flex items-center gap-1">
             <i class="far fa-clock"></i> ${dateStr} ${timeStr}
             </span>
-
             <a href="https://codeforces.com/contest/${item.contestId}/submission/${item.submissionId}" target="_blank" class="flex items-center gap-1 hover:text-primary transition-colors">
             <span>#${item.submissionId}</span>
             <i class="fas fa-external-link-alt text-[10px]"></i>
@@ -461,7 +656,6 @@
         });
     }
 
-    // Codeforces 风格颜色 (Tailwind Class)
     function getRatingColorClass(rating) {
         if (!rating) return '';
         if (rating < 1200) return 'text-slate-400';
@@ -490,10 +684,8 @@
         const normalClass = "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-primary";
         const disabledClass = "bg-slate-50 border-slate-200 text-slate-300 cursor-not-allowed";
 
-        // 上一页
         container.append(`<button class="${btnClass} ${current === 1 ? disabledClass : normalClass}" ${current === 1 ? 'disabled' : ''} onclick="changePage(${current - 1})"><i class="fas fa-chevron-left"></i></button>`);
 
-        // 页码逻辑
         const renderBtn = (i) => `<button class="${btnClass} ${i === current ? activeClass : normalClass}" onclick="changePage(${i})">${i}</button>`;
         const renderDots = () => `<span class="w-8 h-8 flex items-center justify-center text-slate-300 text-xs">...</span>`;
 
@@ -511,7 +703,6 @@
             container.append(renderBtn(totalPages));
         }
 
-        // 下一页
         container.append(`<button class="${btnClass} ${current === totalPages ? disabledClass : normalClass}" ${current === totalPages ? 'disabled' : ''} onclick="changePage(${current + 1})"><i class="fas fa-chevron-right"></i></button>`);
     }
 </script>

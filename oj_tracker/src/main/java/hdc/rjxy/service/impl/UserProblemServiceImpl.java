@@ -82,4 +82,22 @@ public class UserProblemServiceImpl implements UserProblemService {
         solvedProblemMapper.updateById(problem);
     }
 
+    @Override
+    public void updateNotes(Long userId, Long id, String notes) {
+        // 1. 检查记录是否存在以及归属权
+        SolvedProblem problem = solvedProblemMapper.selectById(id);
+        if (problem == null) {
+            throw new RuntimeException("记录不存在"); // 建议使用自定义业务异常
+        }
+        if (!problem.getUserId().equals(userId)) {
+            throw new RuntimeException("无权修改他人的笔记");
+        }
+
+        // 2. 更新笔记
+        SolvedProblem updateEntity = new SolvedProblem();
+        updateEntity.setId(id);
+        updateEntity.setNotes(notes);
+        solvedProblemMapper.updateById(updateEntity);
+    }
+
 }

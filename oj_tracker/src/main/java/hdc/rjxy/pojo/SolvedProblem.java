@@ -26,4 +26,5 @@ public class SolvedProblem {
     private LocalDateTime firstAcTime;
 
     private String tags;
+    private String notes;
 }

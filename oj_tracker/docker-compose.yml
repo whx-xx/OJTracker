@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # 1. 你的应用服务
+  oj-tracker:
+    build: .
+    container_name: oj_tracker_app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      # 【核心技巧】挂载外部的配置文件覆盖容器内的，这样不用重新打包就能改数据库连接
+      - ./src/main/resources/db.properties:/usr/local/tomcat/webapps/oj_tracker/WEB-INF/classes/db.properties
+    networks:
+      - oj_net
+
+  # 2. MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: oj_tracker_db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootroot  # 这里的密码要和 db.properties 对应
+      MYSQL_DATABASE: oj_tracker
+    ports:
+      - "3306:3306" # 开发时可暴露，生产环境建议注释掉
+    volumes:
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql # 自动初始化 SQL
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    networks:
+      - oj_net
+
+  # 3. Redis 缓存
+  redis:
+    image: redis:6.0
+    container_name: oj_tracker_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - oj_net
+
+networks:
+  oj_net:
+
+volumes:
+  mysql_data:

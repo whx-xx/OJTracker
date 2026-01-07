@@ -20,7 +20,7 @@ public class ForcePasswordChangeInterceptor implements HandlerInterceptor {
             "/api/me",
             "/api/auth/current",
             "/views/profile", // 只允许个人中心
-            "/css/", "/js/", "/images/", "/lib/", "/favicon.ico" // 静态资源建议加 / 结尾更精确
+            "/css/", "/js/", "/images/", "/lib/", "/favicon.ico" // 静态资源
     );
 
     @Override
@@ -39,7 +39,6 @@ public class ForcePasswordChangeInterceptor implements HandlerInterceptor {
             }
         }
 
-        // --- 以下逻辑保持不变 ---
 
         // 3. 获取当前用户
         HttpSession session = request.getSession(false);

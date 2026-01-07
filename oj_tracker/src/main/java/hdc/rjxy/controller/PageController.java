@@ -10,6 +10,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class PageController {
 
+    @GetMapping("/test/error")
+    public String triggerError() {
+        int i = 1 / 0; // 制造一个除以零异常
+        return "index";
+    }
+
     // === 登录与公共页 ===
     @GetMapping("/login")
     public String login() {
@@ -49,17 +55,17 @@ public class PageController {
     }
 
     // === 管理员功能页 ===
-    @GetMapping("/views/users")
+    @GetMapping("/admin/views/users")
     public String userList() {
         return "admin/user-list";
     }
 
-    @GetMapping("/views/sync")
+    @GetMapping("/admin/views/sync")
     public String syncManage() {
         return "admin/sync-manage";
     }
 
-    @GetMapping("/views/logs")
+    @GetMapping("/admin/views/logs")
     public String opLogs() {
         return "admin/op-logs";
     }

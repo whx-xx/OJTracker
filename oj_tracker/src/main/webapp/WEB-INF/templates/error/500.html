@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>500 - 服务器开小差了</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 flex items-center justify-center h-screen text-white">
+
+<div class="text-center px-4 max-w-lg">
+    <!-- 红色警告图标 -->
+    <div class="mb-6 flex justify-center">
+        <div class="relative">
+            <div class="absolute inset-0 bg-red-500 blur-xl opacity-20 rounded-full"></div>
+            <svg class="relative w-32 h-32 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+        </div>
+    </div>
+
+    <h1 class="text-6xl font-bold mb-4 tracking-tight">500 Error</h1>
+    <h2 class="text-2xl font-semibold text-gray-300 mb-4">服务器遇到了一点小麻烦</h2>
+
+    <p class="text-gray-400 mb-8 leading-relaxed">
+        我们的工程师正在紧急抢修中。这通常是临时的，请稍后再试。<br>
+        <span class="text-xs text-gray-600" th:if="${exception}" th:text="'错误详情: ' + ${exception}"></span>
+    </p>
+
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <button onclick="location.reload()" class="px-6 py-3 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800 transition">
+            刷新页面
+        </button>
+        <a th:href="@{/}" class="px-6 py-3 bg-red-600 rounded-lg text-white hover:bg-red-700 transition shadow-lg shadow-red-900/50">
+            回到首页
+        </a>
+    </div>
+</div>
+
+</body>
+</html>

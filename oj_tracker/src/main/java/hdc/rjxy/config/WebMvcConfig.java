@@ -56,6 +56,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/auth/**",
                         "/static/**",
                         "/favicon.ico",
+                        "/css/**",
+                        "/js/**",
+                        "/error",
                         // Swagger 放行
                         "/swagger-ui/**",
                         "/swagger-ui.html",
@@ -64,8 +67,20 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 );
         // 注册强制修改密码拦截器
         registry.addInterceptor(new ForcePasswordChangeInterceptor())
-                .addPathPatterns("/**") // 拦截所有
-                .excludePathPatterns("/login", "/register", "/css/**", "/js/**", "/error"); // 排除完全公开的资源
+                .addPathPatterns("/**")
+                .excludePathPatterns(
+                        "/login",
+                        "/register",
+                        "/api/auth/**",
+                        "/static/**",
+                        "/favicon.ico",
+                        "/css/**",
+                        "/js/**",
+                        "/error",
+                        "/webjars/**",
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**"
+                );
     }
 
     // --- JSON 转换器配置 ---
@@ -118,6 +133,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
         // 静态资源 (CSS/JS/Img)
         registry.addResourceHandler("/static/**")
                 .addResourceLocations("/static/");
+
+        // 将根路径的 /favicon.ico 映射到具体文件位置
+        registry.addResourceHandler("/favicon.ico")
+                .addResourceLocations("/static/images/favicon.ico");
 
         // Swagger UI
         registry.addResourceHandler("/swagger-ui/**")

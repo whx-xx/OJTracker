@@ -98,17 +98,7 @@
                     <span class="hidden md:block group-[.collapsed]:hidden">解题详情</span>
                 </a>
             </li>
-            <li>
-                <a href="/views/rankings" class="menu-link flex items-center py-4 px-0 md:px-5 group-[.collapsed]:justify-center group-[.collapsed]:px-0 md:group-[.collapsed]:px-0
-                                               text-white/80 text-sm transition-all border-l-4 border-transparent
-                                               hover:bg-white/10 hover:text-white hover:border-white
-                                               [&.active]:bg-white/10 [&.active]:text-white [&.active]:border-white
-                                               justify-center md:justify-start"
-                   data-title="排行榜">
-                    <i class="fas fa-trophy w-8 text-xl text-center mr-0 md:mr-2 md:text-lg md:group-[.collapsed]:mr-0 md:group-[.collapsed]:text-xl transition-all"></i>
-                    <span class="hidden md:block group-[.collapsed]:hidden">团队榜单</span>
-                </a>
-            </li>
+
             <li>
                 <a href="/views/profile" class="menu-link flex items-center py-4 px-0 md:px-5 group-[.collapsed]:justify-center group-[.collapsed]:px-0 md:group-[.collapsed]:px-0
                                               text-white/80 text-sm transition-all border-l-4 border-transparent
@@ -121,12 +111,25 @@
                 </a>
             </li>
 
+            <li>
+                <a href="/views/rankings" class="menu-link flex items-center py-4 px-0 md:px-5 group-[.collapsed]:justify-center group-[.collapsed]:px-0 md:group-[.collapsed]:px-0
+                                               text-white/80 text-sm transition-all border-l-4 border-transparent
+                                               hover:bg-white/10 hover:text-white hover:border-white
+                                               [&.active]:bg-white/10 [&.active]:text-white [&.active]:border-white
+                                               justify-center md:justify-start"
+                   data-title="排行榜">
+                    <i class="fas fa-trophy w-8 text-xl text-center mr-0 md:mr-2 md:text-lg md:group-[.collapsed]:mr-0 md:group-[.collapsed]:text-xl transition-all"></i>
+                    <span class="hidden md:block group-[.collapsed]:hidden">团队榜单</span>
+                </a>
+            </li>
+
             <div id="adminSection" style="display: none;">
                 <!-- 分割标题：折叠时隐藏 -->
                 <div class="px-5 pt-4 pb-1 text-[11px] uppercase text-white/40 font-semibold whitespace-nowrap overflow-hidden transition-all hidden md:block group-[.collapsed]:hidden">后台管理</div>
 
                 <li>
-                    <a href="/views/users" class="menu-link flex items-center py-4 px-0 md:px-5 group-[.collapsed]:justify-center group-[.collapsed]:px-0 md:group-[.collapsed]:px-0
+                    <!-- 关键修改：路径改为 /admin/views/users -->
+                    <a href="/admin/views/users" class="menu-link flex items-center py-4 px-0 md:px-5 group-[.collapsed]:justify-center group-[.collapsed]:px-0 md:group-[.collapsed]:px-0
                                                 text-white/80 text-sm transition-all border-l-4 border-transparent
                                                 hover:bg-white/10 hover:text-white hover:border-white
                                                 [&.active]:bg-white/10 [&.active]:text-white [&.active]:border-white
@@ -137,7 +140,8 @@
                     </a>
                 </li>
                 <li>
-                    <a href="/views/sync" class="menu-link flex items-center py-4 px-0 md:px-5 group-[.collapsed]:justify-center group-[.collapsed]:px-0 md:group-[.collapsed]:px-0
+                    <!-- 关键修改：路径改为 /admin/views/sync -->
+                    <a href="/admin/views/sync" class="menu-link flex items-center py-4 px-0 md:px-5 group-[.collapsed]:justify-center group-[.collapsed]:px-0 md:group-[.collapsed]:px-0
                                                text-white/80 text-sm transition-all border-l-4 border-transparent
                                                hover:bg-white/10 hover:text-white hover:border-white
                                                [&.active]:bg-white/10 [&.active]:text-white [&.active]:border-white
@@ -148,7 +152,8 @@
                     </a>
                 </li>
                 <li>
-                    <a href="/views/logs" class="menu-link flex items-center py-4 px-0 md:px-5 group-[.collapsed]:justify-center group-[.collapsed]:px-0 md:group-[.collapsed]:px-0
+                    <!-- 关键修改：路径改为 /admin/views/logs -->
+                    <a href="/admin/views/logs" class="menu-link flex items-center py-4 px-0 md:px-5 group-[.collapsed]:justify-center group-[.collapsed]:px-0 md:group-[.collapsed]:px-0
                                                text-white/80 text-sm transition-all border-l-4 border-transparent
                                                hover:bg-white/10 hover:text-white hover:border-white
                                                [&.active]:bg-white/10 [&.active]:text-white [&.active]:border-white

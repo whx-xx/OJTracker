@@ -115,15 +115,19 @@ public class WebMvcConfig implements WebMvcConfigurer {
     }
 
     // --- 静态资源映射 ---
+
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        // 将根路径的 /favicon.ico 请求，直接“转发”给静态资源路径
+        // 这样浏览器访问 /favicon.ico 时，服务器内部会自动去拿 /static/images/favicon.ico
+        registry.addViewController("/favicon.ico")
+                .setViewName("forward:/static/images/favicon.ico");
+    }
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         // 静态资源 (CSS/JS/Img)
         registry.addResourceHandler("/static/**")
                 .addResourceLocations("/static/");
-
-        // 将根路径的 /favicon.ico 映射到具体文件位置
-        registry.addResourceHandler("/favicon.ico")
-                .addResourceLocations("/static/images/favicon.ico");
 
         // Swagger UI
         registry.addResourceHandler("/swagger-ui/**")

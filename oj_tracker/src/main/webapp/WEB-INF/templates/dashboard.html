@@ -293,12 +293,11 @@
         const endDate = new Date();
         const startDate = new Date();
         startDate.setDate(endDate.getDate() - (totalDays - 1));
-        const startDay = startDate.getDay(); // 0(Sun) - 6(Sat)
-
+        // 0(Sun) - 6(Sat)
         // 补充前面的空白格 (对齐星期)
         // grid-rows-7 意味着按列填充：Sun, Mon, Tue...
         // 所以我们只需要补齐 offset 即可
-        const offset = startDay;
+        const offset = startDate.getDay();
 
         for (let i = 0; i < offset; i++) {
             const empty = document.createElement('div');
